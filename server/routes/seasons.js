@@ -16,6 +16,8 @@ router.get('/seasons/active', s.getActiveSeason);
 router.get('/seasons/:id', s.getSeason);
 router.post('/seasons', requireAuth, requireAdmin, s.createSeason);
 router.put('/seasons/:id', requireAuth, requireAdmin, s.updateSeason);
+router.post('/seasons/:id/archive', requireAuth, requireAdmin, s.archiveSeason);
+router.delete('/seasons/:id', requireAuth, requireAdmin, s.deleteSeason);
 
 // Circuiti
 router.get('/circuits', s.listCircuits);

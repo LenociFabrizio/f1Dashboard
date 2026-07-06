@@ -2,7 +2,7 @@
    admin/sections/seasons.js — CRUD stagioni + generazione calendario
    ============================================================= */
 import api from '../../../core/api.js';
-import { $, $$, esc, toast, modal, el } from '../../../core/ui.js';
+import { $, $$, esc, toast, modal, el, confirmDialog } from '../../../core/ui.js';
 import { state, loadRefs, sectionHead, formModal, empty } from '../shared.js';
 
 // Campi per la MODIFICA (semplice)
@@ -23,6 +23,10 @@ function row(s) {
       <td>${s.is_active ? '<span class="badge green">Attiva</span>' : '<span class="badge gray">Archivio</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn ghost sm" data-edit="${s.id}">Modifica</button>
+        ${s.is_active
+          ? `<button class="btn ghost sm" data-archive="${s.id}">Archivia</button>`
+          : `<button class="btn ghost sm" data-activate="${s.id}">Riattiva</button>`}
+        <button class="btn ghost sm danger" data-del="${s.id}">Elimina</button>
       </td>
     </tr>`;
 }
@@ -147,6 +151,43 @@ async function render(root) {
       onSubmit: (v) => api.put(`/seasons/${s.id}`, v),
     });
     if (ok) { toast.success('Stagione aggiornata.'); await loadRefs(); render(root); }
+  }));
+
+  // Archivia (disattiva) una stagione attiva
+  root.querySelectorAll('[data-archive]').forEach((b) => b.addEventListener('click', async () => {
+    const s = list.find((x) => x.id === Number(b.dataset.archive));
+    try {
+      await api.post(`/seasons/${s.id}/archive`, { active: false });
+      toast.success(`"${s.name}" archiviata.`);
+      await loadRefs(); render(root);
+    } catch (err) { toast.error(err.message || 'Operazione fallita.'); }
+  }));
+
+  // Riattiva una stagione archiviata (diventa quella attiva)
+  root.querySelectorAll('[data-activate]').forEach((b) => b.addEventListener('click', async () => {
+    const s = list.find((x) => x.id === Number(b.dataset.activate));
+    try {
+      await api.post(`/seasons/${s.id}/archive`, { active: true });
+      toast.success(`"${s.name}" è ora la stagione attiva.`);
+      await loadRefs(); render(root);
+    } catch (err) { toast.error(err.message || 'Operazione fallita.'); }
+  }));
+
+  // Elimina definitivamente una stagione e tutti i suoi dati
+  root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    const s = list.find((x) => x.id === Number(b.dataset.del));
+    const ok = await confirmDialog({
+      title: 'Eliminare la stagione?',
+      message: `"${s.name}" e tutti i suoi dati (gare, risultati, qualifiche, statistiche e news collegate) verranno rimossi definitivamente. Operazione irreversibile.`,
+      danger: true,
+      confirmText: 'Elimina stagione',
+    });
+    if (!ok) return;
+    try {
+      await api.del(`/seasons/${s.id}`);
+      toast.success(`"${s.name}" eliminata.`);
+      await loadRefs(); render(root);
+    } catch (err) { toast.error(err.message || 'Eliminazione fallita.'); }
   }));
 }
 

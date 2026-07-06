@@ -158,6 +158,48 @@ export const updateSeason = asyncHandler(async (req, res) => {
   res.json(await db.prepare('SELECT * FROM seasons WHERE id = ?').get(req.params.id));
 });
 
+/**
+ * POST /api/seasons/:id/archive (admin)
+ * Archivia (is_active = 0) o riattiva (is_active = 1) una stagione.
+ * Body: { active: boolean }. Se si riattiva, le altre vengono disattivate.
+ */
+export const archiveSeason = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id);
+  if (!season) throw new HttpError(404, 'Stagione non trovata');
+
+  const active = req.body.active ? 1 : 0;
+  if (active) await db.prepare('UPDATE seasons SET is_active = 0').run(); // solo una attiva
+  await db.prepare('UPDATE seasons SET is_active = ? WHERE id = ?').run(active, id);
+  res.json(await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id));
+});
+
+/**
+ * DELETE /api/seasons/:id (admin)
+ * Elimina definitivamente la stagione e TUTTI i dati collegati:
+ * risultati e qualifiche delle sue gare, le gare, le statistiche manuali e
+ * le news della stagione. Cancellazione esplicita dei figli (non ci
+ * affidiamo al cascade FK, non garantito su connessioni HTTP serverless).
+ */
+export const deleteSeason = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id);
+  if (!season) throw new HttpError(404, 'Stagione non trovata');
+
+  await db.raw.batch(
+    [
+      { sql: 'DELETE FROM results   WHERE race_id IN (SELECT id FROM races WHERE season_id = ?)', args: [id] },
+      { sql: 'DELETE FROM qualifying WHERE race_id IN (SELECT id FROM races WHERE season_id = ?)', args: [id] },
+      { sql: 'DELETE FROM races        WHERE season_id = ?', args: [id] },
+      { sql: 'DELETE FROM manual_stats WHERE season_id = ?', args: [id] },
+      { sql: 'DELETE FROM news         WHERE season_id = ?', args: [id] },
+      { sql: 'DELETE FROM seasons      WHERE id = ?',        args: [id] },
+    ],
+    'write'
+  );
+  res.json({ message: 'Stagione eliminata' });
+});
+
 // ----------------------- CIRCUITI -----------------------
 
 /** GET /api/circuits */
