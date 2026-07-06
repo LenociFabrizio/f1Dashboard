@@ -100,7 +100,12 @@ async function render(root) {
   });
 
   root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => {
-    const u = list.find((x) => x.id === Number(b.dataset.edit));
+    const summary = list.find((x) => x.id === Number(b.dataset.edit));
+    // Carica il record COMPLETO (la lista non include email/team_id/reserve_driver):
+    // senza questo, salvando si azzererebbero email e team.
+    let u;
+    try { u = await api.get(`/users/${summary.id}`, {}, { auth: false }); }
+    catch { u = summary; }
     const ok = await formModal({
       title: `Modifica: ${u.display_name || u.username}`,
       fields: commonFields(false),
