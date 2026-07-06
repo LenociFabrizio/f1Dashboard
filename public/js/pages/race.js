@@ -9,14 +9,6 @@ mountChrome();
 
 const raceId = qs.get('id');
 
-function weatherIcon(w) {
-  const s = (w || '').toLowerCase();
-  if (s.includes('piogg') || s.includes('rain') || s.includes('bagn')) return '🌧️';
-  if (s.includes('nuvol') || s.includes('cloud')) return '☁️';
-  if (s.includes('vari')) return '⛅';
-  return '☀️';
-}
-
 function posCell(r, idx) {
   if (r.dnf) return '<span class="pos" style="color:var(--danger)">DNF</span>';
   const p = r.position ?? idx + 1;
@@ -83,9 +75,7 @@ function render(race) {
 
   const infoTiles = [
     infoTile('Round', race.round),
-    infoTile('Meteo', `${weatherIcon(race.weather)} ${esc(race.weather || '—')}`),
     race.laps ? infoTile('Giri', race.laps) : '',
-    race.length_km ? infoTile('Lunghezza', `${race.length_km} km`) : '',
     winner ? infoTile('Vincitore', `🏆 ${esc(winner.display_name)}`) : '',
     race.mvp_name ? infoTile('MVP', `⭐ ${esc(race.mvp_name)}`) : '',
   ].filter(Boolean).join('');
