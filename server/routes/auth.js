@@ -12,8 +12,6 @@ const router = Router();
 
 router.post('/register', auth.register);
 router.post('/login', auth.login);
-router.post('/psn', auth.loginPsn);   // login PlayStation Network (mock)
-router.post('/ea', auth.loginEa);     // login EA Account (mock)
 router.post('/forgot-password', auth.forgotPassword);
 router.get('/me', requireAuth, auth.me);
 

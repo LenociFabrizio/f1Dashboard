@@ -1,5 +1,5 @@
 /* =============================================================
-   login.js — Login classico + OAuth mock (PSN/EA) + reset mock
+   login.js — Login classico (email/username) + reset mock
    ============================================================= */
 import api from '../core/api.js';
 import auth from '../core/auth.js';
@@ -38,40 +38,6 @@ form.addEventListener('submit', async (e) => {
     setLoading(submitBtn, false, 'Accedi');
   }
 });
-
-/* ---- OAuth mock: chiede il gamertag e simula il flusso ---- */
-function oauthFlow(provider, label) {
-  const input = el('input', { class: 'input', placeholder: provider === 'psn' ? 'Il tuo PSN ID' : 'Il tuo EA ID', value: '' });
-  const go = el('button', { class: 'btn btn-primary', text: 'Continua' });
-  const m = modal({
-    title: `Accedi con ${label}`,
-    content: el('div', {}, [
-      el('p', { class: 'text-lo', text: `Integrazione ${label} simulata. Inserisci il tuo identificativo per creare/accedere all'account collegato.`, style: 'margin-bottom:14px' }),
-      el('div', { class: 'field' }, [input]),
-    ]),
-    footer: [go],
-  });
-  input.focus();
-  const submit = async () => {
-    const handle = input.value.trim();
-    if (!handle) { toast.warning('Inserisci un identificativo.'); return; }
-    go.disabled = true; go.innerHTML = '<span class="spinner sm"></span>';
-    try {
-      const user = await auth.loginProvider(provider, handle);
-      m.close();
-      toast.success(`Collegato come ${user.display_name}`, { title: label });
-      setTimeout(() => (location.href = nextUrl()), 500);
-    } catch (err) {
-      toast.error(err.message || 'Errore OAuth.');
-      go.disabled = false; go.textContent = 'Continua';
-    }
-  };
-  go.addEventListener('click', submit);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-}
-
-$('#btn-psn').addEventListener('click', () => oauthFlow('psn', 'PlayStation Network'));
-$('#btn-ea').addEventListener('click', () => oauthFlow('ea', 'EA Account'));
 
 /* ---- Password dimenticata (mock) ---- */
 $('#forgot-link').addEventListener('click', (e) => {
