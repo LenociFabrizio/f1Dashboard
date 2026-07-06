@@ -63,7 +63,17 @@ export async function persistUpload(file, subdir = 'misc') {
     return blob.url;
   }
 
-  // Sviluppo: filesystem locale in public/uploads/<subdir>
+  // Ambiente serverless (Vercel) senza Blob configurato: il filesystem è
+  // in sola lettura, quindi diamo un errore chiaro invece di un ENOENT.
+  if (process.env.VERCEL) {
+    const err = new Error(
+      'Upload immagini non configurato: aggiungi un Vercel Blob store e la variabile BLOB_READ_WRITE_TOKEN, poi ridistribuisci.'
+    );
+    err.status = 503;
+    throw err;
+  }
+
+  // Sviluppo locale: filesystem in public/uploads/<subdir>
   const dir = path.join(config.paths.uploads, subdir);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, name), file.buffer);

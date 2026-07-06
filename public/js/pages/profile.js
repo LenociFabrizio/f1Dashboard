@@ -13,10 +13,6 @@ let me;
 function fillForm(u) {
   form.display_name.value = u.display_name || '';
   form.email.value = u.email || '';
-  form.nationality.value = u.nationality || '';
-  form.favorite_number.value = u.favorite_number ?? '';
-  form.favorite_driver.value = u.favorite_driver || '';
-  form.biography.value = u.biography || '';
   $('#avatar-preview').src = avatarUrl(u);
   $('#pv-name').textContent = u.display_name || u.username;
   $('#pv-team').textContent = u.team_name || 'Nessun team';
@@ -98,10 +94,6 @@ form.addEventListener('submit', async (e) => {
   const payload = {
     display_name: form.display_name.value.trim(),
     email: form.email.value.trim(),
-    nationality: form.nationality.value.trim().toUpperCase() || null,
-    favorite_number: form.favorite_number.value ? Number(form.favorite_number.value) : null,
-    favorite_driver: form.favorite_driver.value.trim() || null,
-    biography: form.biography.value.trim() || null,
     team_id: form.team_id.value ? Number(form.team_id.value) : null,
   };
   try {
