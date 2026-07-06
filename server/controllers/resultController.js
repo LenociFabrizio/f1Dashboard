@@ -35,10 +35,10 @@ export const saveResults = asyncHandler(async (req, res) => {
   const INSERT_SQL =
     `INSERT INTO results
       (race_id, user_id, team_id, grid_position, position, points, finish_time, gap,
-       fastest_lap, pole, dnf, dnf_reason, penalty_seconds, penalty_note, overtakes, notes)
+       fastest_lap, pole, dnf, dnf_reason, penalty_seconds, penalty_note, overtakes, notes, bot_driver)
      VALUES
       (@race_id, @user_id, @team_id, @grid_position, @position, @points, @finish_time, @gap,
-       @fastest_lap, @pole, @dnf, @dnf_reason, @penalty_seconds, @penalty_note, @overtakes, @notes)`;
+       @fastest_lap, @pole, @dnf, @dnf_reason, @penalty_seconds, @penalty_note, @overtakes, @notes, @bot_driver)`;
 
   const stmts = [{ sql: 'DELETE FROM results WHERE race_id = ?', args: [raceId] }];
 
@@ -74,6 +74,9 @@ export const saveResults = asyncHandler(async (req, res) => {
         penalty_note: r.penalty_note || '',
         overtakes: r.overtakes ? Number(r.overtakes) : 0,
         notes: r.notes || '',
+        // Se valorizzato, il bot (riserva) ha corso al posto del giocatore.
+        // I punti restano attribuiti al giocatore titolare (user_id).
+        bot_driver: r.bot_driver ? String(r.bot_driver).trim() : '',
       },
     });
   }

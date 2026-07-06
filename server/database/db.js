@@ -99,10 +99,14 @@ export async function initSchema() {
  * Migrazioni idempotenti per DB già esistenti (aggiunge colonne mancanti).
  */
 async function runMigrations() {
-  const cols = await db.all('PRAGMA table_info(users)');
-  const has = (name) => cols.some((c) => c.name === name);
-  if (!has('reserve_driver')) {
+  const userCols = await db.all('PRAGMA table_info(users)');
+  if (!userCols.some((c) => c.name === 'reserve_driver')) {
     await db.run('ALTER TABLE users ADD COLUMN reserve_driver TEXT');
+  }
+
+  const resultCols = await db.all('PRAGMA table_info(results)');
+  if (!resultCols.some((c) => c.name === 'bot_driver')) {
+    await db.run("ALTER TABLE results ADD COLUMN bot_driver TEXT DEFAULT ''");
   }
 }
 

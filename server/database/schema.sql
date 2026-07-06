@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS results (
   penalty_note    TEXT    DEFAULT '',
   overtakes       INTEGER NOT NULL DEFAULT 0,  -- sorpassi (inserimento manuale)
   notes           TEXT    DEFAULT '',
+  bot_driver      TEXT    DEFAULT '',           -- se valorizzato: ha guidato il bot (riserva) al posto del giocatore
   created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

@@ -22,10 +22,19 @@ function raceSelect() {
 function resultRowInput(u) {
   const ex = (race.results || []).find((r) => r.user_id === u.id) || {};
   const inGara = ex.user_id != null;
+  const bot = (u.reserve_driver || '').trim();
+  const byBot = !!(ex.bot_driver && ex.bot_driver.trim());
+  // Selettore "chi ha guidato": il titolare oppure il bot di riserva (se assegnato).
+  const driverSelect = bot
+    ? `<select class="r-driver dc-sub" style="margin-top:4px;max-width:190px;font-size:.8rem">
+         <option value="" ${byBot ? '' : 'selected'}>👤 ${esc(u.display_name || u.username)} (titolare)</option>
+         <option value="${esc(bot)}" ${byBot ? 'selected' : ''}>🤖 ${esc(bot)} (bot sostituto)</option>
+       </select>`
+    : `<div class="dc-sub text-dim" title="Nessun bot di riserva assegnato">nessun bot</div>`;
   return `
     <tr data-uid="${u.id}" data-team="${u.team_id ?? ''}">
       <td><input type="checkbox" class="r-in" ${inGara ? 'checked' : ''}></td>
-      <td><span class="text-hi">${esc(u.display_name || u.username)}</span><div class="dc-sub">${esc(u.team_name || '—')}</div></td>
+      <td><span class="text-hi">${esc(u.display_name || u.username)}</span><div class="dc-sub">${esc(u.team_name || '—')}</div>${driverSelect}</td>
       <td><input class="input sm r-grid" type="number" min="1" max="30" value="${ex.grid_position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-pos" type="number" min="1" max="30" value="${ex.position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-gap" placeholder="+0.000" value="${esc(ex.gap ?? '')}" style="width:90px"></td>
@@ -52,6 +61,7 @@ function collectResults() {
     penalty_seconds: tr.querySelector('.r-pen').value || 0,
     dnf_reason: tr.querySelector('.r-dnf').checked ? tr.querySelector('.r-notes').value : '',
     notes: tr.querySelector('.r-dnf').checked ? '' : tr.querySelector('.r-notes').value,
+    bot_driver: tr.querySelector('.r-driver')?.value || '',
   }));
 }
 
@@ -95,7 +105,7 @@ function renderEditor(root) {
 
     <!-- RISULTATI -->
     <section id="tab-res">
-      <div class="hint" style="margin-bottom:12px">Spunta i piloti in gara. I punti sono calcolati automaticamente (posizione + giro veloce). Per un DNF, spunta DNF e scrivi il motivo nelle note.</div>
+      <div class="hint" style="margin-bottom:12px">Spunta i piloti in gara. I punti sono calcolati automaticamente (posizione + giro veloce). Per un DNF, spunta DNF e scrivi il motivo nelle note. Sotto ogni pilota puoi indicare se ha corso il <strong>bot di riserva</strong> al posto del titolare: i punti restano comunque assegnati al titolare.</div>
       <div class="table-wrap">
         <table class="data compact">
           <thead><tr>

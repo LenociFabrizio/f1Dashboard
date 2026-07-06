@@ -33,7 +33,7 @@ export const listUsers = asyncHandler(async (_req, res) => {
   const users = await db
     .prepare(
       `SELECT u.id, u.username, u.display_name, u.avatar, u.nationality, u.favorite_number,
-              u.role, u.biography, u.favorite_driver, u.created_at,
+              u.role, u.biography, u.favorite_driver, u.reserve_driver, u.team_id, u.created_at,
               t.name AS team_name, t.color AS team_color
          FROM users u
          LEFT JOIN teams t ON t.id = u.team_id
