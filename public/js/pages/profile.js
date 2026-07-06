@@ -4,7 +4,7 @@
 import api from '../core/api.js';
 import auth, { guard } from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, esc, loader, toast, modal } from '../core/ui.js';
+import { $, esc, loader, toast, modal, confirmDialog } from '../core/ui.js';
 
 const form = $('#profile-form');
 const saveBtn = $('#save-btn');
@@ -69,6 +69,25 @@ $('#pwd-btn').addEventListener('click', () => {
       toast.success('Password aggiornata.');
     } catch (err) { toast.error(err.message); }
   });
+});
+
+/* ---- Elimina account ---- */
+$('#delete-account-btn').addEventListener('click', async () => {
+  const ok = await confirmDialog({
+    title: 'Eliminare il tuo account?',
+    message: 'Il tuo account e tutti i tuoi dati (risultati, qualifiche, statistiche) verranno rimossi definitivamente. Questa operazione è irreversibile.',
+    danger: true,
+    confirmText: 'Elimina il mio account',
+  });
+  if (!ok) return;
+  try {
+    await api.del('/users/me');
+    toast.success('Account eliminato. Arrivederci!');
+    auth.logout(false);
+    setTimeout(() => (location.href = '/index.html'), 800);
+  } catch (err) {
+    toast.error(err.message || 'Eliminazione fallita.');
+  }
 });
 
 /* ---- Salvataggio profilo ---- */

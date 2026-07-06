@@ -57,7 +57,7 @@ function row(u) {
       <td><span class="role-pill ${u.role === 'admin' ? 'admin' : 'pilota'}">${u.role === 'admin' ? 'Admin' : 'Pilota'}</span></td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn ghost sm" data-edit="${u.id}">Modifica</button>
-        <button class="btn ghost sm" data-del="${u.id}" style="color:var(--danger)">Disattiva</button>
+        <button class="btn ghost sm" data-del="${u.id}" style="color:var(--danger)">Elimina</button>
       </td>
     </tr>`;
 }
@@ -106,8 +106,12 @@ async function render(root) {
 
   root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     const u = list.find((x) => x.id === Number(b.dataset.del));
-    if (!(await confirmDialog({ title: 'Disattivare l\'utente?', message: `"${u.display_name || u.username}" non potrà più accedere.`, danger: true, confirmText: 'Disattiva' }))) return;
-    try { await api.del(`/users/${u.id}`); toast.success('Utente disattivato.'); await loadRefs(); render(root); }
+    if (!(await confirmDialog({
+      title: 'Eliminare l\'utente?',
+      message: `"${u.display_name || u.username}" e TUTTI i suoi dati (risultati, qualifiche, statistiche) verranno rimossi definitivamente. Operazione irreversibile.`,
+      danger: true, confirmText: 'Elimina definitivamente',
+    }))) return;
+    try { await api.del(`/users/${u.id}`); toast.success('Utente eliminato.'); await loadRefs(); render(root); }
     catch (e) { toast.error(e.message); }
   }));
 }

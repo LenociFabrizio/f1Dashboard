@@ -81,6 +81,43 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
   res.json({ avatar: url });
 });
 
+/**
+ * Cancellazione FISICA di un utente e di tutti i suoi dati collegati.
+ * (Non ci affidiamo al cascade FK, non garantito su connessioni serverless.)
+ * I risultati vengono rimossi: le classifiche/statistiche si ricalcolano da sole.
+ */
+async function hardDeleteUser(id) {
+  await db.raw.batch(
+    [
+      { sql: 'DELETE FROM results WHERE user_id = ?', args: [id] },
+      { sql: 'DELETE FROM qualifying WHERE user_id = ?', args: [id] },
+      { sql: 'DELETE FROM manual_stats WHERE user_id = ?', args: [id] },
+      { sql: 'DELETE FROM achievements WHERE user_id = ?', args: [id] },
+      { sql: 'UPDATE news SET author_id = NULL WHERE author_id = ?', args: [id] },
+      { sql: 'UPDATE races SET mvp_user_id = NULL WHERE mvp_user_id = ?', args: [id] },
+      { sql: 'DELETE FROM users WHERE id = ?', args: [id] },
+    ],
+    'write'
+  );
+}
+
+/** Vero se l'utente indicato è l'ultimo amministratore rimasto. */
+async function isLastAdmin(id) {
+  const target = await db.prepare('SELECT role FROM users WHERE id = ?').get(id);
+  if (!target || target.role !== 'admin') return false;
+  const { c } = await db.prepare("SELECT COUNT(*) c FROM users WHERE role = 'admin'").get();
+  return c <= 1;
+}
+
+/** DELETE /api/users/me — l'utente elimina il proprio account (e i suoi dati) */
+export const deleteMe = asyncHandler(async (req, res) => {
+  if (await isLastAdmin(req.user.id)) {
+    throw new HttpError(400, 'Sei l\'ultimo amministratore: assegna prima un altro admin.');
+  }
+  await hardDeleteUser(req.user.id);
+  res.json({ message: 'Account eliminato' });
+});
+
 // ---------------------- ADMIN ----------------------
 
 /** PUT /api/users/:id  (admin) — modifica qualunque utente */
@@ -132,9 +169,13 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   res.status(201).json(sanitizeUser(user));
 });
 
-/** DELETE /api/users/:id (admin) — disattiva (soft delete) */
+/** DELETE /api/users/:id (admin) — elimina definitivamente l'utente e i suoi dati */
 export const adminDeleteUser = asyncHandler(async (req, res) => {
-  if (Number(req.params.id) === req.user.id) throw new HttpError(400, 'Non puoi disattivare te stesso');
-  await db.prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Utente disattivato' });
+  const id = Number(req.params.id);
+  if (id === req.user.id) throw new HttpError(400, 'Non puoi eliminare te stesso da qui: usa il tuo profilo.');
+  const target = await db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+  if (!target) throw new HttpError(404, 'Utente non trovato');
+  if (await isLastAdmin(id)) throw new HttpError(400, 'Non puoi eliminare l\'ultimo amministratore.');
+  await hardDeleteUser(id);
+  res.json({ message: 'Utente e relativi dati eliminati' });
 });

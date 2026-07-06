@@ -14,6 +14,7 @@ const router = Router();
 // Il proprio profilo (prima di /:id per evitare conflitti)
 router.put('/me', requireAuth, users.updateMe);
 router.post('/me/avatar', requireAuth, upload.single('avatar'), users.uploadAvatar);
+router.delete('/me', requireAuth, users.deleteMe);
 
 router.get('/', users.listUsers);
 router.get('/:id', users.getUser);
