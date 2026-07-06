@@ -57,6 +57,17 @@
               <div class="err">Le password non coincidono.</div>
             </div>
           </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Scuderia</label>
+              <select class="select" name="team_id" id="team-select"><option value="">— Scegli un team —</option></select>
+            </div>
+            <div class="field">
+              <label>Pilota di riserva (BOT)</label>
+              <select class="select" name="reserve_driver" id="reserve-select"><option value="">— Nessuno —</option></select>
+              <div class="hint">Piloti reali F1 2025 della scuderia scelta</div>
+            </div>
+          </div>
           <label class="checkbox" style="margin-bottom:18px"><input type="checkbox" name="terms" required> Accetto le regole della lega</label>
           <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Crea account</button>
         </form>

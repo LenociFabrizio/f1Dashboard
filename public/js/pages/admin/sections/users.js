@@ -5,27 +5,11 @@ import api from '../../../core/api.js';
 import { avatarUrl } from '../../../core/components.js';
 import { esc, toast, confirmDialog } from '../../../core/ui.js';
 import { state, loadRefs, sectionHead, formModal, opts, empty } from '../shared.js';
-
-/**
- * Line-up reali stagione F1 2025 per scuderia (nome team = chiave, come nel seed).
- * Usati per il campo "Pilota di riserva (BOT)".
- */
-const F1_2025_LINEUPS = {
-  'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
-  'Ferrari': ['Charles Leclerc', 'Lewis Hamilton'],
-  'Mercedes': ['George Russell', 'Andrea Kimi Antonelli'],
-  'McLaren': ['Lando Norris', 'Oscar Piastri'],
-  'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
-  'Alpine': ['Pierre Gasly', 'Jack Doohan'],
-  'Williams': ['Alexander Albon', 'Carlos Sainz'],
-  'RB': ['Yuki Tsunoda', 'Isack Hadjar'],
-  'Kick Sauber': ['Nico Hülkenberg', 'Gabriel Bortoleto'],
-  'Haas': ['Esteban Ocon', 'Oliver Bearman'],
-};
+import { driversForTeamName } from '../../../core/f1data.js';
 
 function driversForTeamId(teamId) {
   const team = state.teams.find((t) => t.id === Number(teamId));
-  return (team && F1_2025_LINEUPS[team.name]) || [];
+  return team ? driversForTeamName(team.name) : [];
 }
 
 function commonFields(isNew) {

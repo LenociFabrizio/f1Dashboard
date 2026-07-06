@@ -23,7 +23,7 @@ function authResponse(res, user) {
 
 /** POST /api/auth/register */
 export const register = asyncHandler(async (req, res) => {
-  const { username, display_name, email, password } = req.body;
+  const { username, display_name, email, password, team_id, reserve_driver } = req.body;
   if (!username || !password || !email) {
     throw new HttpError(400, 'Username, email e password sono obbligatori');
   }
@@ -35,10 +35,10 @@ export const register = asyncHandler(async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, email, password_hash, role, provider)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (username, display_name, email, password_hash, role, provider, team_id, reserve_driver)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, display_name || username, email, hash, ROLES.PILOTA, PROVIDERS.LOCAL);
+    .run(username, display_name || username, email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null);
 
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   authResponse(res, user);
