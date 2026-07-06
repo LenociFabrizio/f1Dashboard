@@ -40,6 +40,55 @@ function shuffle(arr) {
 }
 
 /**
+ * Ordine ufficiale del calendario F1 25 (parole chiave che compaiono nel
+ * nome/città/paese del circuito). Serve per generare il calendario nella
+ * sequenza reale quando l'admin NON sceglie l'ordine casuale.
+ */
+const F1_2025_ORDER = [
+  'melbourne', 'albert park', 'australia',   // 1  Australia
+  'shanghai', 'cina', 'china',               // 2  Cina
+  'suzuka', 'giappone', 'japan',             // 3  Giappone
+  'bahrain', 'sakhir',                       // 4  Bahrain
+  'jeddah', 'arabia',                        // 5  Arabia Saudita
+  'miami',                                   // 6  Miami
+  'imola',                                   // 7  Emilia-Romagna
+  'monaco', 'monte carlo',                   // 8  Monaco
+  'barcelona', 'barcellona', 'spagna',       // 9  Spagna
+  'montreal', 'villeneuve', 'canada',        // 10 Canada
+  'red bull ring', 'spielberg', 'austria',   // 11 Austria
+  'silverstone',                             // 12 Gran Bretagna
+  'spa', 'belgio',                           // 13 Belgio
+  'hungaroring', 'budapest', 'ungheria',     // 14 Ungheria
+  'zandvoort', 'paesi bassi', 'olanda',      // 15 Olanda
+  'monza',                                   // 16 Italia
+  'baku', 'azerbaigian',                     // 17 Azerbaigian
+  'marina bay', 'singapore',                 // 18 Singapore
+  'austin', 'cota', 'stati uniti',           // 19 USA
+  'messico', 'mexico',                       // 20 Messico
+  'interlagos', 'brasile', 'brazil',         // 21 Brasile
+  'las vegas',                               // 22 Las Vegas
+  'lusail', 'qatar',                         // 23 Qatar
+  'yas marina', 'abu dhabi',                 // 24 Abu Dhabi
+];
+
+/** Posizione di un circuito nel calendario ufficiale (in fondo se non riconosciuto). */
+function officialRank(circuit) {
+  const hay = `${circuit.name || ''} ${circuit.city || ''} ${circuit.country || ''}`.toLowerCase();
+  const idx = F1_2025_ORDER.findIndex((kw) => hay.includes(kw));
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
+/** Ordina i circuiti secondo il calendario ufficiale F1 25 (fallback: nome). */
+function officialSort(circuits) {
+  return [...circuits].sort((a, b) => {
+    const ra = officialRank(a);
+    const rb = officialRank(b);
+    if (ra !== rb) return ra - rb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+}
+
+/**
  * POST /api/seasons (admin)
  * Oltre alla stagione, genera automaticamente il calendario gare in base a:
  *  - circuit_mode: 'all' | 'random' | 'custom'
@@ -63,17 +112,18 @@ export const createSeason = asyncHandler(async (req, res) => {
   const seasonId = Number(info.lastInsertRowid);
 
   // Selezione tracciati per il calendario
-  const allCircuits = await db.prepare('SELECT id, name, laps_default, length_km FROM circuits ORDER BY name').all();
+  const allCircuits = await db.prepare('SELECT id, name, city, country, laps_default, length_km FROM circuits').all();
   let chosen;
   if (circuit_mode === 'custom') {
+    // Solo i circuiti scelti, ma comunque in ordine ufficiale F1 25.
     const ids = (Array.isArray(circuit_ids) ? circuit_ids : []).map(Number);
-    chosen = allCircuits.filter((c) => ids.includes(c.id));
+    chosen = officialSort(allCircuits.filter((c) => ids.includes(c.id)));
   } else if (circuit_mode === 'random') {
     const shuffled = shuffle(allCircuits);
     const count = random_count ? Math.min(Math.max(1, Number(random_count)), shuffled.length) : shuffled.length;
-    chosen = shuffled.slice(0, count);
+    chosen = shuffled.slice(0, count); // ordine casuale, come richiesto
   } else {
-    chosen = allCircuits; // 'all' (default)
+    chosen = officialSort(allCircuits); // 'all' (default) → ordine ufficiale
   }
 
   // Genera le gare (round progressivo, giri in base alla percentuale)
