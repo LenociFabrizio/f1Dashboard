@@ -59,13 +59,15 @@
           </div>
           <div class="form-row">
             <div class="field">
-              <label>Scuderia</label>
-              <select class="select" name="team_id" id="team-select"><option value="">— Scegli un team —</option></select>
+              <label>Scuderia <span class="req">*</span></label>
+              <select class="select" name="team_id" id="team-select" required><option value="">— Scegli un team —</option></select>
+              <div class="err">Scegli una scuderia.</div>
             </div>
             <div class="field">
-              <label>Pilota di riserva (BOT)</label>
-              <select class="select" name="reserve_driver" id="reserve-select"><option value="">— Nessuno —</option></select>
-              <div class="hint">Piloti reali F1 2025 della scuderia scelta</div>
+              <label>Pilota di riserva (BOT) <span class="req">*</span></label>
+              <select class="select" name="reserve_driver" id="reserve-select" required disabled><option value="">— Scegli un pilota —</option></select>
+              <div class="hint">Piloti reali F1 2025 della scuderia scelta · quelli occupati non sono selezionabili</div>
+              <div class="err">Scegli un pilota di riserva disponibile.</div>
             </div>
           </div>
           <label class="checkbox" style="margin-bottom:18px"><input type="checkbox" name="terms" required> Accetto le regole della lega</label>

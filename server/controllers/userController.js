@@ -11,6 +11,23 @@ import { asyncHandler, HttpError, sanitizeUser } from '../utils/helpers.js';
 import { ROLES } from '../utils/constants.js';
 import { persistUpload } from '../middleware/upload.js';
 
+/** GET /api/users/reserved — elenco dei piloti di riserva (BOT) già assegnati */
+export const listReservedDrivers = asyncHandler(async (_req, res) => {
+  const rows = await db
+    .prepare("SELECT reserve_driver FROM users WHERE reserve_driver IS NOT NULL AND reserve_driver <> ''")
+    .all();
+  res.json(rows.map((r) => r.reserve_driver));
+});
+
+/** Verifica se un pilota di riserva è già assegnato (opzionale: escludendo un utente). */
+async function reserveTaken(name, exceptId = null) {
+  if (!name) return false;
+  const row = exceptId
+    ? await db.prepare('SELECT id FROM users WHERE reserve_driver = ? AND id <> ?').get(name, exceptId)
+    : await db.prepare('SELECT id FROM users WHERE reserve_driver = ?').get(name);
+  return !!row;
+}
+
 /** GET /api/users  — elenco pubblico dei piloti */
 export const listUsers = asyncHandler(async (_req, res) => {
   const users = await db
@@ -129,6 +146,9 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   const updates = {};
   for (const f of allowed) if (req.body[f] !== undefined) updates[f] = req.body[f];
   if (req.body.password) updates.password_hash = await bcrypt.hash(req.body.password, 10);
+  if (updates.reserve_driver && (await reserveTaken(updates.reserve_driver, Number(req.params.id)))) {
+    throw new HttpError(409, 'Pilota di riserva già assegnato a un altro utente');
+  }
 
   if (Object.keys(updates).length === 0) throw new HttpError(400, 'Nessun dato da aggiornare');
   const setClause = Object.keys(updates).map((k) => `${k} = @${k}`).join(', ');
@@ -147,6 +167,9 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   if (!username) throw new HttpError(400, 'Username obbligatorio');
   const exists = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
   if (exists) throw new HttpError(409, 'Username già esistente');
+  if (reserve_driver && (await reserveTaken(reserve_driver))) {
+    throw new HttpError(409, 'Pilota di riserva già assegnato a un altro utente');
+  }
 
   const hash = password ? await bcrypt.hash(password, 10) : null;
   const info = await db

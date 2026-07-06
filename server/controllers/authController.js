@@ -27,10 +27,19 @@ export const register = asyncHandler(async (req, res) => {
   if (!username || !password || !email) {
     throw new HttpError(400, 'Username, email e password sono obbligatori');
   }
+  if (!team_id || !reserve_driver) {
+    throw new HttpError(400, 'Scuderia e pilota di riserva (BOT) sono obbligatori');
+  }
   const exists = await db
     .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
     .get(username, email);
   if (exists) throw new HttpError(409, 'Username o email già registrati');
+
+  // Il pilota di riserva (BOT) è assegnabile a un solo utente
+  const reservedBy = await db
+    .prepare('SELECT id FROM users WHERE reserve_driver = ?')
+    .get(reserve_driver);
+  if (reservedBy) throw new HttpError(409, 'Questo pilota di riserva è già stato scelto da un altro utente');
 
   const hash = await bcrypt.hash(password, 10);
   const info = await db

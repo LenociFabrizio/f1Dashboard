@@ -11,30 +11,48 @@ if (auth.isLogged()) location.href = '/dashboard.html';
 const form = $('#register-form');
 const submitBtn = $('#submit-btn');
 
-/* ---- Scuderia + pilota di riserva (BOT) dipendente dal team ---- */
+/* ---- Scuderia + pilota di riserva (BOT) con controllo disponibilità ---- */
 let teams = [];
+let takenDrivers = new Set(); // BOT già assegnati ad altri utenti
 const teamSelect = $('#team-select');
 const reserveSelect = $('#reserve-select');
+
+/** Ricarica dal server i BOT già occupati (controllo in tempo reale). */
+async function refreshTaken() {
+  try {
+    const list = await api.get('/users/reserved', {}, { auth: false });
+    takenDrivers = new Set(list);
+  } catch { /* in caso di errore la verifica finale la fa il server */ }
+}
 
 function fillReserve() {
   const team = teams.find((t) => t.id === Number(teamSelect.value));
   const drivers = team ? driversForTeamName(team.name) : [];
+  const current = reserveSelect.value;
   reserveSelect.innerHTML =
-    '<option value="">— Nessuno —</option>' +
-    drivers.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    '<option value="">— Scegli un pilota —</option>' +
+    drivers.map((d) => {
+      const occ = takenDrivers.has(d);
+      return `<option value="${esc(d)}" ${occ ? 'disabled' : ''}>${esc(d)}${occ ? ' — occupato' : ''}</option>`;
+    }).join('');
   reserveSelect.disabled = drivers.length === 0;
+  if (current && drivers.includes(current) && !takenDrivers.has(current)) reserveSelect.value = current;
 }
 
-teamSelect.addEventListener('change', fillReserve);
+// Al cambio scuderia ricontrolla la disponibilità in tempo reale
+teamSelect.addEventListener('change', async () => { await refreshTaken(); fillReserve(); });
+// Aggiorna la disponibilità anche quando si apre il menu dei BOT
+reserveSelect.addEventListener('focus', async () => { await refreshTaken(); fillReserve(); });
 
 (async function loadTeams() {
+  await refreshTaken();
   try {
     teams = await api.get('/teams', {}, { auth: false });
     teamSelect.innerHTML =
       '<option value="">— Scegli un team —</option>' +
       teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
     fillReserve();
-  } catch { /* i team sono opzionali in registrazione */ }
+  } catch { /* /teams non raggiungibile */ }
 })();
 
 function markInvalid(name, invalid) {
@@ -50,12 +68,16 @@ function validate(fd) {
   req('email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.get('email') || ''));
   req('password', (fd.get('password') || '').length >= 6);
   req('password2', fd.get('password') === fd.get('password2'));
+  req('team_id', !!fd.get('team_id'));
+  req('reserve_driver', !!fd.get('reserve_driver'));
   return ok;
 }
 
-$$('#register-form input').forEach((inp) =>
-  inp.addEventListener('input', () => inp.closest('.field')?.classList.remove('invalid'))
-);
+$$('#register-form input, #register-form select').forEach((inp) => {
+  const clear = () => inp.closest('.field')?.classList.remove('invalid');
+  inp.addEventListener('input', clear);
+  inp.addEventListener('change', clear);
+});
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -78,6 +100,8 @@ form.addEventListener('submit', async (e) => {
     setTimeout(() => (location.href = '/profile.html'), 600);
   } catch (err) {
     toast.error(err.message || 'Registrazione fallita.', { title: 'Errore' });
+    // Se il BOT è stato preso nel frattempo, aggiorna la disponibilità
+    if (err.status === 409) { await refreshTaken(); fillReserve(); }
     submitBtn.disabled = false;
     submitBtn.textContent = 'Crea account';
   }

@@ -17,6 +17,7 @@ router.post('/me/avatar', requireAuth, upload.single('avatar'), users.uploadAvat
 router.delete('/me', requireAuth, users.deleteMe);
 
 router.get('/', users.listUsers);
+router.get('/reserved', users.listReservedDrivers);
 router.get('/:id', users.getUser);
 
 // Admin
