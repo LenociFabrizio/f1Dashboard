@@ -29,10 +29,30 @@ export const getSeason = asyncHandler(async (req, res) => {
   res.json(season);
 });
 
-/** POST /api/seasons (admin) */
+/** Mescola un array (Fisher-Yates). */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * POST /api/seasons (admin)
+ * Oltre alla stagione, genera automaticamente il calendario gare in base a:
+ *  - circuit_mode: 'all' | 'random' | 'custom'
+ *  - circuit_ids:  (solo custom) elenco id circuiti scelti
+ *  - random_count: (solo random) quanti tracciati; default = tutti
+ *  - laps_percentage: 1..100, i giri di ogni gara = round(giri_reali * %)
+ */
 export const createSeason = asyncHandler(async (req, res) => {
-  const { name, year, game, description, is_active } = req.body;
+  const { name, year, game, description, is_active, circuit_mode, circuit_ids, random_count, laps_percentage } = req.body;
   if (!name || !year) throw new HttpError(400, 'Nome e anno obbligatori');
+
+  const pct = Math.min(100, Math.max(1, Number(laps_percentage) || 100));
+
   if (is_active) await db.prepare('UPDATE seasons SET is_active = 0').run(); // solo una attiva
   const info = await db
     .prepare(
@@ -40,7 +60,38 @@ export const createSeason = asyncHandler(async (req, res) => {
        VALUES (?, ?, ?, ?, ?)`
     )
     .run(name, year, game || 'F1 25', description || '', is_active ? 1 : 0);
-  res.status(201).json(await db.prepare('SELECT * FROM seasons WHERE id = ?').get(info.lastInsertRowid));
+  const seasonId = Number(info.lastInsertRowid);
+
+  // Selezione tracciati per il calendario
+  const allCircuits = await db.prepare('SELECT id, name, laps_default, length_km FROM circuits ORDER BY name').all();
+  let chosen;
+  if (circuit_mode === 'custom') {
+    const ids = (Array.isArray(circuit_ids) ? circuit_ids : []).map(Number);
+    chosen = allCircuits.filter((c) => ids.includes(c.id));
+  } else if (circuit_mode === 'random') {
+    const shuffled = shuffle(allCircuits);
+    const count = random_count ? Math.min(Math.max(1, Number(random_count)), shuffled.length) : shuffled.length;
+    chosen = shuffled.slice(0, count);
+  } else {
+    chosen = allCircuits; // 'all' (default)
+  }
+
+  // Genera le gare (round progressivo, giri in base alla percentuale)
+  if (chosen.length) {
+    const stmts = chosen.map((c, i) => {
+      const laps = c.laps_default ? Math.max(1, Math.round((c.laps_default * pct) / 100)) : null;
+      const distance = c.length_km && laps ? Math.round(c.length_km * laps * 10) / 10 : null;
+      return {
+        sql: `INSERT INTO races (season_id, circuit_id, round, name, laps, distance_km, status)
+              VALUES (?, ?, ?, ?, ?, ?, 'scheduled')`,
+        args: [seasonId, c.id, i + 1, c.name, laps, distance],
+      };
+    });
+    await db.raw.batch(stmts, 'write');
+  }
+
+  const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(seasonId);
+  res.status(201).json({ ...season, races_created: chosen.length });
 });
 
 /** PUT /api/seasons/:id (admin) */
