@@ -14,19 +14,24 @@ function toLocalInput(iso) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function fields(season) {
+function fields() {
+  // Nome, meteo e distanza non sono richiesti: il nome del GP viene
+  // impostato automaticamente dal tracciato selezionato.
   return [
     { name: 'round', label: 'Round', type: 'number', required: true, min: 1 },
-    { name: 'name', label: 'Nome GP', required: true, placeholder: 'Gran Premio d\'Italia' },
     { name: 'circuit_id', label: 'Circuito', type: 'select', required: true, options: opts.circuits() },
     { name: 'race_date', label: 'Data e ora', type: 'datetime-local' },
-    { name: 'weather', label: 'Meteo', value: 'Sereno', placeholder: 'Sereno / Variabile / Pioggia' },
-    { name: 'laps', label: 'Giri', type: 'number', min: 1 },
-    { name: 'distance_km', label: 'Distanza (km)', type: 'number', step: '0.1', min: 0 },
+    { name: 'laps', label: 'Giri (opzionale)', type: 'number', min: 1 },
     { name: 'status', label: 'Stato', type: 'select', options: [
       { value: 'scheduled', label: 'In programma' }, { value: 'completed', label: 'Conclusa' },
     ] },
   ];
+}
+
+/** Nome GP derivato dal tracciato selezionato. */
+function raceNameFromCircuit(circuitId) {
+  const c = state.circuits.find((x) => x.id === Number(circuitId));
+  return c ? c.name : 'Gran Premio';
 }
 
 function row(r) {
@@ -75,9 +80,13 @@ async function render(root) {
     root.querySelector('#new-race').addEventListener('click', async () => {
       const nextRound = races.length ? Math.max(...races.map((r) => r.round)) + 1 : 1;
       const ok = await formModal({
-        title: 'Nuova gara', fields: fields(state.season),
-        values: { round: nextRound, weather: 'Sereno', status: 'scheduled' },
-        onSubmit: (v) => api.post('/races', { ...v, season_id: state.season.id }),
+        title: 'Nuova gara', fields: fields(),
+        values: { round: nextRound, status: 'scheduled' },
+        onSubmit: (v) => api.post('/races', {
+          ...v,
+          season_id: state.season.id,
+          name: raceNameFromCircuit(v.circuit_id), // nome = tracciato scelto
+        }),
       });
       if (ok) { toast.success('Gara creata.'); render(root); }
     });
@@ -86,9 +95,10 @@ async function render(root) {
   root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => {
     const r = races.find((x) => x.id === Number(b.dataset.edit));
     const ok = await formModal({
-      title: `Modifica: ${r.name}`, fields: fields(state.season),
+      title: `Modifica: ${r.name}`, fields: fields(),
       values: { ...r, race_date: toLocalInput(r.race_date) },
-      onSubmit: (v) => api.put(`/races/${r.id}`, v),
+      // Riallinea il nome al tracciato (eventualmente cambiato).
+      onSubmit: (v) => api.put(`/races/${r.id}`, { ...v, name: raceNameFromCircuit(v.circuit_id) }),
     });
     if (ok) { toast.success('Gara aggiornata.'); render(root); }
   }));
