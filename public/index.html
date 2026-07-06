@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lega F1 · Il portale ufficiale del campionato</title>
+  <meta name="description" content="Portale ufficiale del campionato amatoriale F1 25: classifiche, calendario, statistiche e risultati in tempo reale.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div id="app-loader">
+    <div class="loader-mark">LEGA<span>F1</span></div>
+    <div class="loader-bar"><i></i></div>
+  </div>
+
+  <div id="navbar-mount"></div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="container">
+      <div class="kicker"><span class="live-dot"></span> Stagione <span id="hero-season">2025</span> · in corso</div>
+      <h1>Il campionato dove ogni <span class="text-red">millesimo</span> conta.</h1>
+      <p class="lead">Classifiche live, statistiche dettagliate, calendario completo e la storia di ogni Gran Premio della nostra lega F1&nbsp;25. Benvenuto in pista.</p>
+      <div class="hero-cta">
+        <a href="/standings.html" class="btn btn-primary btn-lg">Vedi la classifica</a>
+        <a href="/races.html" class="btn btn-ghost btn-lg">Calendario</a>
+      </div>
+      <div class="hero-strip" id="hero-strip"><!-- riempito da JS --></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom: var(--sp-8)">
+    <!-- NEXT RACE + LAST RESULTS -->
+    <section class="grid" style="grid-template-columns: 1.1fr 1fr; margin-bottom: var(--sp-7)" id="row-race">
+      <div class="card next-race accent-top reveal" id="next-race-card">
+        <div class="card-head"><h3>🏁 Prossimo Gran Premio</h3></div>
+        <div id="next-race-body"><div class="skeleton" style="height:120px"></div></div>
+      </div>
+      <div class="card reveal" id="last-results-card">
+        <div class="card-head"><h3>Ultimo GP · Top 5</h3><a href="/races.html" class="sub">Tutte le gare →</a></div>
+        <div id="last-results-body"><div class="skeleton" style="height:120px"></div></div>
+      </div>
+    </section>
+
+    <!-- STANDINGS TOP 5 -->
+    <section class="grid grid-2" style="margin-bottom: var(--sp-7)">
+      <div class="reveal">
+        <div class="card-head"><h2>Classifica Piloti</h2><a href="/standings.html" class="btn btn-outline btn-sm">Completa</a></div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th>#</th><th>Pilota</th><th class="num">Punti</th></tr></thead>
+          <tbody id="top-drivers"><tr><td colspan="3"><div class="skeleton" style="height:180px"></div></td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="reveal">
+        <div class="card-head"><h2>Costruttori</h2><a href="/standings.html?tab=constructors" class="btn btn-outline btn-sm">Completa</a></div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th>#</th><th>Team</th><th class="num">Punti</th></tr></thead>
+          <tbody id="top-constructors"><tr><td colspan="3"><div class="skeleton" style="height:180px"></div></td></tr></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- CALENDAR STRIP -->
+    <section class="reveal" style="margin-bottom: var(--sp-7)">
+      <div class="card-head"><h2>Calendario</h2><a href="/races.html" class="sub">Vedi tutto →</a></div>
+      <div class="grid grid-auto" id="calendar-strip"></div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="reveal">
+      <div class="card-head"><h2>Ultime notizie</h2></div>
+      <div class="grid grid-3" id="news-grid"></div>
+    </section>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module" src="/js/pages/home.js"></script>
+</body>
+</html>

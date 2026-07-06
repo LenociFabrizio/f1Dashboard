@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Il mio profilo · Lega F1</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div id="app-loader"><div class="loader-mark">LEGA<span>F1</span></div><div class="loader-bar"><i></i></div></div>
+  <div id="navbar-mount"></div>
+
+  <main class="page container" style="max-width:920px">
+    <div class="page-head">
+      <div class="eyebrow">Account</div>
+      <h1>Il mio profilo</h1>
+      <p class="lead">Aggiorna i tuoi dati da pilota, l'avatar e la password.</p>
+    </div>
+
+    <div class="grid" style="grid-template-columns:280px 1fr;gap:32px;align-items:start" id="profile-grid">
+      <!-- AVATAR -->
+      <div class="card" style="text-align:center">
+        <img id="avatar-preview" class="avatar xl" style="margin:0 auto 16px;display:block" alt="Avatar">
+        <div class="text-hi" id="pv-name" style="font-weight:900;font-size:1.15rem"></div>
+        <div class="text-lo" id="pv-team" style="margin-bottom:16px"></div>
+        <label class="btn outline sm block" style="cursor:pointer">
+          Carica avatar
+          <input type="file" id="avatar-input" accept="image/*" hidden>
+        </label>
+        <div class="hint" style="margin-top:8px">JPG/PNG, max 5MB</div>
+      </div>
+
+      <!-- DATI -->
+      <form id="profile-form" class="card">
+        <div class="form-row">
+          <div class="field">
+            <label>Nome visualizzato</label>
+            <input class="input" name="display_name" maxlength="60">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input class="input" type="email" name="email">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Nazionalità (ISO 2 lettere)</label>
+            <input class="input" name="nationality" maxlength="2" placeholder="IT" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label>Numero preferito</label>
+            <input class="input" type="number" name="favorite_number" min="0" max="99">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Team</label>
+            <select class="select" name="team_id" id="team-select"></select>
+          </div>
+          <div class="field">
+            <label>Pilota idolo</label>
+            <input class="input" name="favorite_driver" maxlength="60" placeholder="Es. Ayrton Senna">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Biografia</label>
+          <textarea class="textarea" name="biography" rows="4" maxlength="500" placeholder="Racconta il tuo stile di guida…"></textarea>
+        </div>
+
+        <div class="flex justify-between items-center wrap gap-3" style="margin-top:8px">
+          <button type="button" class="btn ghost sm" id="pwd-btn">Cambia password</button>
+          <button type="submit" class="btn primary" id="save-btn">Salva modifiche</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module" src="/js/pages/profile.js"></script>
+</body>
+</html>

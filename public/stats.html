@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistiche · Lega F1</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="app-loader"><div class="loader-mark">LEGA<span>F1</span></div><div class="loader-bar"><i></i></div></div>
+  <div id="navbar-mount"></div>
+
+  <main class="page container">
+    <div class="page-head">
+      <div class="eyebrow">Campionato <span id="season-label"></span></div>
+      <h1>Statistiche</h1>
+      <p class="lead">Record, primati e andamento del campionato Gran Premio dopo Gran Premio.</p>
+    </div>
+
+    <!-- LEADER / RECORD -->
+    <h2 class="section-title">Primati della stagione</h2>
+    <div class="grid grid-auto stagger" id="leaders-grid" style="margin-bottom:44px"></div>
+
+    <!-- PROGRESSIONE PUNTI -->
+    <h2 class="section-title">Progressione punti</h2>
+    <div class="card" style="margin-bottom:44px">
+      <div class="chart-box"><canvas id="progression-chart"></canvas></div>
+    </div>
+
+    <!-- CONFRONTO PILOTI -->
+    <h2 class="section-title">Confronto piloti</h2>
+    <div class="card">
+      <div class="flex items-center gap-3 wrap" style="margin-bottom:20px">
+        <div class="field" style="margin:0;min-width:200px">
+          <label>Pilota 1</label>
+          <select class="select" id="cmp-a"></select>
+        </div>
+        <div class="field" style="margin:0;min-width:200px">
+          <label>Pilota 2</label>
+          <select class="select" id="cmp-b"></select>
+        </div>
+      </div>
+      <div class="grid grid-2" style="align-items:center">
+        <div class="chart-box"><canvas id="compare-chart"></canvas></div>
+        <div id="compare-table"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module" src="/js/pages/stats.js"></script>
+</body>
+</html>

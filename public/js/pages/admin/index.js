@@ -1,0 +1,70 @@
+/* =============================================================
+   admin/index.js — Bootstrap del pannello admin: guardia, sidebar,
+   router basato su hash, caricamento dati di riferimento.
+   ============================================================= */
+import { guard } from '../../core/auth.js';
+import { mountNavbar } from '../../core/components.js';
+import { $, esc, loader, toast } from '../../core/ui.js';
+import { state, loadRefs } from './shared.js';
+
+import overview from './sections/overview.js';
+import seasons from './sections/seasons.js';
+import races from './sections/races.js';
+import results from './sections/results.js';
+import users from './sections/users.js';
+import teams from './sections/teams.js';
+import circuits from './sections/circuits.js';
+import news from './sections/news.js';
+
+const SECTIONS = {
+  overview: { icon: '📊', label: 'Panoramica', mod: overview },
+  seasons: { icon: '📅', label: 'Stagioni', mod: seasons },
+  races: { icon: '🏁', label: 'Gare / Calendario', mod: races },
+  results: { icon: '🏆', label: 'Risultati & Qualifiche', mod: results },
+  users: { icon: '👤', label: 'Piloti / Utenti', mod: users },
+  teams: { icon: '🏎️', label: 'Team', mod: teams },
+  circuits: { icon: '📍', label: 'Circuiti', mod: circuits },
+  news: { icon: '📰', label: 'Notizie', mod: news },
+};
+
+function buildSidebar(active) {
+  $('#admin-nav').innerHTML = Object.entries(SECTIONS)
+    .map(([key, s]) => `
+      <a href="#${key}" class="${key === active ? 'active' : ''}">
+        <span class="ic">${s.icon}</span> ${esc(s.label)}
+      </a>`)
+    .join('');
+}
+
+async function route() {
+  const key = (location.hash.slice(1) || 'overview').split('?')[0];
+  const section = SECTIONS[key] || SECTIONS.overview;
+  buildSidebar(SECTIONS[key] ? key : 'overview');
+  const content = $('#admin-content');
+  content.innerHTML = '<div style="padding:60px;text-align:center"><span class="spinner"></span></div>';
+  try {
+    await section.mod.render(content, { rerender: route });
+  } catch (e) {
+    console.error(e);
+    content.innerHTML = `<div class="empty" style="padding:60px"><div class="em-ic">⚠️</div>${esc(e.message)}</div>`;
+  }
+}
+
+(async function init() {
+  const me = await guard({ admin: true });
+  if (!me) return;
+  mountNavbar();
+  try {
+    await loadRefs();
+    if (!state.seasons.length) {
+      toast.info('Nessuna stagione: creane una per iniziare.', { duration: 6000 });
+    }
+    window.addEventListener('hashchange', route);
+    await route();
+  } catch (e) {
+    console.error(e);
+    $('#admin-content').innerHTML = `<div class="empty" style="padding:60px"><div class="em-ic">⚠️</div>${esc(e.message)}</div>`;
+  } finally {
+    loader.hide();
+  }
+})();

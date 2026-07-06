@@ -1,0 +1,36 @@
+{
+  "name": "f1-championship-portal",
+  "version": "1.0.0",
+  "description": "Portale ufficiale del campionato amatoriale F1 25 (EA Sports) - classifiche, statistiche, gestione gare.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node server/database/seed.js",
+    "db:reset": "node server/database/seed.js --reset"
+  },
+  "keywords": [
+    "f1",
+    "formula1",
+    "championship",
+    "racing",
+    "ea-sports"
+  ],
+  "author": "F1 League",
+  "license": "MIT",
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "@vercel/blob": "^0.27.3",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

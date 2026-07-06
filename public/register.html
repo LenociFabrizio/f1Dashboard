@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrati · Lega F1</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <aside class="auth-visual">
+      <div class="av-content anim-fade-up">
+        <a href="/index.html" class="brand" style="margin-bottom:24px"><span class="brand-mark">F1</span><span>LEGA<span class="accent">F1</span></span></a>
+        <h1>Entra nel <span class="text-red">campionato.</span></h1>
+        <p class="lead" style="max-width:34ch">Crea il tuo profilo pilota, scegli il numero e il team del cuore, e comincia a scalare la classifica.</p>
+      </div>
+    </aside>
+
+    <section class="auth-panel">
+      <div class="auth-card anim-fade-up">
+        <h2 style="margin-bottom:4px">Crea account</h2>
+        <p class="text-lo" style="margin-bottom:24px">Bastano pochi secondi per iniziare.</p>
+
+        <form id="register-form" novalidate>
+          <div class="form-row">
+            <div class="field">
+              <label>Username <span class="req">*</span></label>
+              <input class="input" name="username" autocomplete="username" placeholder="il_tuo_nick" required>
+              <div class="err">Username obbligatorio.</div>
+            </div>
+            <div class="field">
+              <label>Nome visualizzato</label>
+              <input class="input" name="display_name" placeholder="Come vuoi apparire">
+            </div>
+          </div>
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input class="input" type="email" name="email" autocomplete="email" placeholder="tu@esempio.it" required>
+            <div class="err">Email non valida.</div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Password <span class="req">*</span></label>
+              <input class="input" type="password" name="password" autocomplete="new-password" placeholder="min. 6 caratteri" required>
+              <div class="err">Almeno 6 caratteri.</div>
+            </div>
+            <div class="field">
+              <label>Conferma password <span class="req">*</span></label>
+              <input class="input" type="password" name="password2" autocomplete="new-password" placeholder="ripeti password" required>
+              <div class="err">Le password non coincidono.</div>
+            </div>
+          </div>
+          <label class="checkbox" style="margin-bottom:18px"><input type="checkbox" name="terms" required> Accetto le regole della lega</label>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Crea account</button>
+        </form>
+
+        <p class="text-lo text-center" style="margin-top:22px;font-size:0.9rem">
+          Hai già un account? <a href="/login.html" class="text-red" style="font-weight:700">Accedi</a>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/js/pages/register.js"></script>
+</body>
+</html>

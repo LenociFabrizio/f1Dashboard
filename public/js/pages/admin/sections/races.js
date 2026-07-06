@@ -1,0 +1,104 @@
+/* =============================================================
+   admin/sections/races.js — CRUD calendario gare
+   ============================================================= */
+import api from '../../../core/api.js';
+import { $, esc, toast, confirmDialog, fmtDate, flagEmoji } from '../../../core/ui.js';
+import { state, loadRefs, sectionHead, formModal, opts, empty } from '../shared.js';
+
+/** Converte una data ISO in valore per <input type="datetime-local">. */
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fields(season) {
+  return [
+    { name: 'round', label: 'Round', type: 'number', required: true, min: 1 },
+    { name: 'name', label: 'Nome GP', required: true, placeholder: 'Gran Premio d\'Italia' },
+    { name: 'circuit_id', label: 'Circuito', type: 'select', required: true, options: opts.circuits() },
+    { name: 'race_date', label: 'Data e ora', type: 'datetime-local' },
+    { name: 'weather', label: 'Meteo', value: 'Sereno', placeholder: 'Sereno / Variabile / Pioggia' },
+    { name: 'laps', label: 'Giri', type: 'number', min: 1 },
+    { name: 'distance_km', label: 'Distanza (km)', type: 'number', step: '0.1', min: 0 },
+    { name: 'status', label: 'Stato', type: 'select', options: [
+      { value: 'scheduled', label: 'In programma' }, { value: 'completed', label: 'Conclusa' },
+    ] },
+  ];
+}
+
+function row(r) {
+  return `
+    <tr>
+      <td class="num text-lo">${r.round}</td>
+      <td>${flagEmoji(r.country_code)} <span class="text-hi" style="font-weight:700">${esc(r.name)}</span></td>
+      <td class="text-lo">${esc(r.circuit_name)}</td>
+      <td class="text-lo">${fmtDate(r.race_date)}</td>
+      <td>${r.status === 'completed' ? '<span class="badge green">Conclusa</span>' : '<span class="badge gray">Programma</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <a class="btn ghost sm" href="#results?race=${r.id}">Risultati</a>
+        <button class="btn ghost sm" data-edit="${r.id}">Modifica</button>
+        <button class="btn ghost sm" data-del="${r.id}" style="color:var(--danger)">Elimina</button>
+      </td>
+    </tr>`;
+}
+
+async function render(root) {
+  if (!state.season) { root.innerHTML = empty('📅', 'Crea prima una stagione.'); return; }
+  const seasonSelect = `
+    <select class="select" id="season-switch" style="min-width:200px">
+      ${opts.seasons().map((o) => `<option value="${o.value}" ${o.value === state.season.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+    </select>`;
+
+  const races = await api.get('/races', { season_id: state.season.id });
+  root.innerHTML = sectionHead('Gare / Calendario', `${races.length} gare in ${state.season.name}`,
+    `${seasonSelect}<button class="btn primary sm" id="new-race">+ Nuova gara</button>`) +
+    (races.length ? `
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Round</th><th>Gran Premio</th><th>Circuito</th><th>Data</th><th>Stato</th><th></th></tr></thead>
+          <tbody>${races.map(row).join('')}</tbody>
+        </table>
+      </div>` : empty('🏁', 'Nessuna gara. Aggiungi la prima del calendario.'));
+
+  $('#season-switch', root).addEventListener('change', (e) => {
+    state.season = state.seasons.find((s) => s.id === Number(e.target.value));
+    render(root);
+  });
+
+  if (!state.circuits.length) {
+    root.querySelector('#new-race').addEventListener('click', () =>
+      toast.warning('Aggiungi prima almeno un circuito.'));
+  } else {
+    root.querySelector('#new-race').addEventListener('click', async () => {
+      const nextRound = races.length ? Math.max(...races.map((r) => r.round)) + 1 : 1;
+      const ok = await formModal({
+        title: 'Nuova gara', fields: fields(state.season),
+        values: { round: nextRound, weather: 'Sereno', status: 'scheduled' },
+        onSubmit: (v) => api.post('/races', { ...v, season_id: state.season.id }),
+      });
+      if (ok) { toast.success('Gara creata.'); render(root); }
+    });
+  }
+
+  root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => {
+    const r = races.find((x) => x.id === Number(b.dataset.edit));
+    const ok = await formModal({
+      title: `Modifica: ${r.name}`, fields: fields(state.season),
+      values: { ...r, race_date: toLocalInput(r.race_date) },
+      onSubmit: (v) => api.put(`/races/${r.id}`, v),
+    });
+    if (ok) { toast.success('Gara aggiornata.'); render(root); }
+  }));
+
+  root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    const r = races.find((x) => x.id === Number(b.dataset.del));
+    if (!(await confirmDialog({ title: 'Eliminare la gara?', message: `"${r.name}" e i suoi risultati verranno rimossi.`, danger: true, confirmText: 'Elimina' }))) return;
+    try { await api.del(`/races/${r.id}`); toast.success('Gara eliminata.'); render(root); }
+    catch (e) { toast.error(e.message); }
+  }));
+}
+
+export default { render };

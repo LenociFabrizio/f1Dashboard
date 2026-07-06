@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classifiche · Lega F1</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div id="app-loader"><div class="loader-mark">LEGA<span>F1</span></div><div class="loader-bar"><i></i></div></div>
+  <div id="navbar-mount"></div>
+
+  <main class="page container">
+    <div class="page-head">
+      <div class="eyebrow">Campionato <span id="season-label"></span></div>
+      <h1>Classifiche</h1>
+      <p class="lead">Punti, vittorie, podi e distacchi aggiornati dopo ogni Gran Premio.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="drivers">Piloti</button>
+      <button class="tab" data-tab="constructors">Costruttori</button>
+    </div>
+
+    <!-- PILOTI -->
+    <section id="tab-drivers">
+      <div class="table-wrap">
+        <table class="data" id="drivers-table">
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Pilota</th>
+              <th>Team</th>
+              <th class="num sortable" data-key="points">Punti <span class="arrow">▼</span></th>
+              <th class="num sortable" data-key="wins">Vitt.</th>
+              <th class="num sortable" data-key="podiums">Podi</th>
+              <th class="num sortable" data-key="poles">Pole</th>
+              <th class="num sortable" data-key="fastest_laps">GV</th>
+              <th class="num sortable" data-key="dnf">DNF</th>
+              <th class="num sortable" data-key="avg_position">Media</th>
+              <th class="num">Gap</th>
+            </tr>
+          </thead>
+          <tbody id="drivers-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- COSTRUTTORI -->
+    <section id="tab-constructors" class="hidden">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Pos</th><th>Team</th>
+              <th class="num">Punti</th><th class="num">Vitt.</th><th class="num">Podi</th>
+              <th class="num">Pole</th><th class="num">GV</th><th class="num">Media/gara</th>
+            </tr>
+          </thead>
+          <tbody id="constructors-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module" src="/js/pages/standings.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+/* =============================================================
+   ui.js — Utility di interfaccia: toast, modali, loader, DOM
+   helpers, formattatori (date, numeri, bandiere), escape HTML.
+   ============================================================= */
+
+/* ---------------- DOM helpers ---------------- */
+export const $ = (sel, root = document) => root.querySelector(sel);
+export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+export function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k === 'text') node.textContent = v;
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'dataset') Object.assign(node.dataset, v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) {
+    if (c == null || c === false) continue;
+    node.append(c.nodeType ? c : document.createTextNode(c));
+  }
+  return node;
+}
+
+/** Escape per prevenire XSS negli inserimenti innerHTML. */
+export function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+
+/* ---------------- Loader di pagina ---------------- */
+export const loader = {
+  hide() {
+    const l = $('#app-loader');
+    if (!l) return;
+    l.classList.add('hide');
+    setTimeout(() => l.remove(), 600);
+  },
+};
+
+/* ---------------- Toast ---------------- */
+const TOAST_ICONS = { success: '✓', error: '✕', warning: '!', info: 'i' };
+function toastStack() {
+  let s = $('.toast-stack');
+  if (!s) { s = el('div', { class: 'toast-stack' }); document.body.append(s); }
+  return s;
+}
+export function toast(message, type = 'info', { title, duration = 4200 } = {}) {
+  const stack = toastStack();
+  const node = el('div', { class: `toast ${type}` }, [
+    el('div', { class: 't-ic', text: TOAST_ICONS[type] || 'i' }),
+    el('div', { class: 't-body' }, [
+      title ? el('div', { class: 't-title', text: title }) : null,
+      el('div', { class: 't-msg', text: message }),
+    ]),
+    el('button', { class: 't-close', html: '&times;', onClick: () => remove() }),
+  ]);
+  function remove() {
+    node.classList.add('leaving');
+    setTimeout(() => node.remove(), 300);
+  }
+  stack.append(node);
+  if (duration) setTimeout(remove, duration);
+  return remove;
+}
+toast.success = (m, o) => toast(m, 'success', o);
+toast.error = (m, o) => toast(m, 'error', o);
+toast.warning = (m, o) => toast(m, 'warning', o);
+toast.info = (m, o) => toast(m, 'info', o);
+
+/* ---------------- Modal ---------------- */
+/**
+ * Apre una modale. content può essere una stringa HTML o un nodo.
+ * @returns {{close: fn, root: HTMLElement}}
+ */
+export function modal({ title = '', content = '', footer = null, size = '', onClose } = {}) {
+  const overlay = el('div', { class: 'modal-overlay' });
+  const body = typeof content === 'string' ? el('div', { class: 'modal-body', html: content }) : el('div', { class: 'modal-body' }, [content]);
+  const modalEl = el('div', { class: `modal ${size}` }, [
+    el('div', { class: 'modal-head' }, [
+      el('h3', { text: title }),
+      el('button', { class: 'modal-close', html: '&times;', onClick: () => close() }),
+    ]),
+    body,
+  ]);
+  if (footer) {
+    const foot = el('div', { class: 'modal-foot' });
+    if (typeof footer === 'string') foot.innerHTML = footer; else foot.append(...[].concat(footer));
+    modalEl.append(foot);
+  }
+  overlay.append(modalEl);
+  overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close(); });
+  document.body.append(overlay);
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  document.addEventListener('keydown', onKey);
+
+  function close() {
+    overlay.classList.remove('open');
+    document.removeEventListener('keydown', onKey);
+    document.body.style.overflow = '';
+    setTimeout(() => overlay.remove(), 300);
+    onClose?.();
+  }
+  return { close, root: modalEl, body };
+}
+
+/** Dialog di conferma. Ritorna Promise<boolean>. */
+export function confirmDialog({ title = 'Confermi?', message = '', confirmText = 'Conferma', danger = false } = {}) {
+  return new Promise((resolve) => {
+    let done = false;
+    const btnOk = el('button', { class: `btn ${danger ? 'btn-danger' : 'btn-primary'}`, text: confirmText });
+    const btnNo = el('button', { class: 'btn btn-outline', text: 'Annulla' });
+    const m = modal({
+      title,
+      content: `<p style="color:var(--text-mid)">${esc(message)}</p>`,
+      footer: [btnNo, btnOk],
+      onClose: () => { if (!done) resolve(false); },
+    });
+    btnNo.addEventListener('click', () => { done = true; m.close(); resolve(false); });
+    btnOk.addEventListener('click', () => { done = true; m.close(); resolve(true); });
+  });
+}
+
+/* ---------------- Formattatori ---------------- */
+const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+export function fmtDate(iso, { withTime = false } = {}) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const s = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  if (!withTime) return s;
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${s}, ${hh}:${mm}`;
+}
+
+export function fmtNum(n, dec = 0) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+/** Bandiera emoji da codice ISO a due lettere. */
+export function flagEmoji(code) {
+  if (!code || code.length !== 2) return '🏁';
+  const cc = code.toUpperCase();
+  return String.fromCodePoint(...[...cc].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}
+
+/** Ordinale di posizione (1 → 1°). */
+export const ordinal = (n) => (n == null ? '—' : `${n}°`);
+
+/** Iniziali per fallback avatar. */
+export function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+}
+
+/* ---------------- Query string ---------------- */
+export const qs = {
+  get: (key, def = null) => new URLSearchParams(location.search).get(key) ?? def,
+  set: (obj) => {
+    const p = new URLSearchParams(location.search);
+    for (const [k, v] of Object.entries(obj)) {
+      if (v == null || v === '') p.delete(k); else p.set(k, v);
+    }
+    history.replaceState(null, '', `${location.pathname}?${p}`);
+  },
+};
+
+/* ---------------- Reveal on scroll ---------------- */
+export function initReveal() {
+  const items = $$('.reveal');
+  if (!items.length || !('IntersectionObserver' in window)) {
+    items.forEach((i) => i.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+  items.forEach((i) => io.observe(i));
+}
+
+/* ---------------- Debounce ---------------- */
+export function debounce(fn, ms = 300) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+/* ---------------- Countdown ---------------- */
+/** Restituisce {d,h,m,s,past} verso una data ISO. */
+export function countdownParts(iso) {
+  const target = new Date(iso).getTime();
+  const diff = target - Date.now();
+  if (isNaN(target)) return { d: 0, h: 0, m: 0, s: 0, past: true };
+  if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0, past: true };
+  const s = Math.floor(diff / 1000);
+  return {
+    d: Math.floor(s / 86400),
+    h: Math.floor((s % 86400) / 3600),
+    m: Math.floor((s % 3600) / 60),
+    s: s % 60,
+    past: false,
+  };
+}

@@ -1,0 +1,121 @@
+/* =============================================================
+   components.js — Componenti condivisi: navbar, footer, menu
+   utente. Da montare in ogni pagina.
+   ============================================================= */
+import auth from './auth.js';
+import { $, $$, el, esc } from './ui.js';
+
+/** URL avatar con fallback al default. */
+export function avatarUrl(user) {
+  const a = (user && (user.avatar || user.avatar_url)) || '';
+  return a && a.trim() ? a : '/images/avatars/default.svg';
+}
+
+/* Voci di navigazione principali */
+const NAV = [
+  { href: '/index.html', label: 'Home', match: ['/', '/index.html'] },
+  { href: '/standings.html', label: 'Classifiche' },
+  { href: '/races.html', label: 'Calendario' },
+  { href: '/stats.html', label: 'Statistiche' },
+  { href: '/dashboard.html', label: 'Dashboard', auth: true },
+];
+
+function isActive(item) {
+  const path = location.pathname;
+  if (item.match) return item.match.includes(path);
+  return path === item.href;
+}
+
+/**
+ * Monta la navbar in #navbar-mount (o in cima al body).
+ */
+export function mountNavbar() {
+  const user = auth.user;
+  const logged = auth.isLogged();
+
+  const links = NAV.filter((n) => !n.auth || logged)
+    .map((n) => `<a href="${n.href}" class="${isActive(n) ? 'active' : ''}">${n.label}</a>`)
+    .join('');
+
+  const authArea = logged
+    ? `
+      <div class="nav-user" id="nav-user">
+        <img src="${avatarUrl(user)}" alt="" onerror="this.src='/images/avatars/default.svg'">
+        <span class="nu-name">${esc(user?.display_name || user?.username || 'Pilota')}</span>
+      </div>
+      <div class="nav-dropdown" id="nav-dropdown">
+        <a href="/profile.html">👤 Il mio profilo</a>
+        <a href="/dashboard.html">📊 Dashboard</a>
+        <a href="/driver.html?id=${user?.id}">🏎️ La mia pagina</a>
+        ${auth.isAdmin() ? '<hr><a href="/admin.html">⚙️ Area Admin</a>' : ''}
+        <hr>
+        <button id="logout-btn">🚪 Esci</button>
+      </div>`
+    : `
+      <a href="/login.html" class="btn btn-outline btn-sm">Accedi</a>
+      <a href="/register.html" class="btn btn-primary btn-sm">Registrati</a>`;
+
+  const nav = el('nav', { class: 'navbar' });
+  nav.innerHTML = `
+    <div class="container">
+      <a href="/index.html" class="brand">
+        <span class="brand-mark">F1</span>
+        <span>LEGA<span class="accent">F1</span></span>
+      </a>
+      <div class="nav-links" id="nav-links">${links}</div>
+      <div class="nav-actions" style="position:relative">${authArea}</div>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+    </div>`;
+
+  const mount = $('#navbar-mount');
+  if (mount) mount.replaceWith(nav); else document.body.prepend(nav);
+
+  // Interazioni
+  const toggle = $('#nav-toggle');
+  const navLinks = $('#nav-links');
+  toggle?.addEventListener('click', () => navLinks.classList.toggle('open'));
+
+  const navUser = $('#nav-user');
+  const dropdown = $('#nav-dropdown');
+  navUser?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', () => dropdown?.classList.remove('open'));
+
+  $('#logout-btn')?.addEventListener('click', () => auth.logout());
+
+  // Ombra allo scroll
+  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+}
+
+/**
+ * Monta il footer in #footer-mount (o in fondo al body).
+ */
+export function mountFooter() {
+  const year = 2025;
+  const foot = el('footer', { class: 'footer' });
+  foot.innerHTML = `
+    <div class="container">
+      <div>
+        <div class="foot-brand">LEGA<span class="text-red">F1</span></div>
+        <small>Il portale ufficiale del nostro campionato F1&nbsp;25.</small>
+      </div>
+      <div class="foot-links">
+        <a href="/standings.html">Classifiche</a>
+        <a href="/races.html">Calendario</a>
+        <a href="/stats.html">Statistiche</a>
+      </div>
+      <small>© ${year} Lega F1 · Progetto amatoriale non affiliato a Formula 1® o EA Sports.</small>
+    </div>`;
+  const mount = $('#footer-mount');
+  if (mount) mount.replaceWith(foot); else document.body.append(foot);
+}
+
+/** Monta navbar + footer + reveal. Chiamata unica per pagina pubblica. */
+export function mountChrome() {
+  mountNavbar();
+  mountFooter();
+}
