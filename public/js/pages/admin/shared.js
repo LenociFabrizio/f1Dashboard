@@ -87,7 +87,7 @@ function fieldHtml(f, value) {
  * Apre una modale-form. Ritorna una Promise che si risolve col risultato di
  * onSubmit (o null se annullata). onSubmit(values) può lanciare per bloccare.
  */
-export function formModal({ title, fields, values = {}, submitText = 'Salva', size = '', onSubmit }) {
+export function formModal({ title, fields, values = {}, submitText = 'Salva', size = '', onSubmit, onRender }) {
   return new Promise((resolve) => {
     const rows = fields.map((f) => fieldHtml(f, values[f.name])).join('');
     const content = `<div class="form-grid">${rows}</div>`;
@@ -97,6 +97,9 @@ export function formModal({ title, fields, values = {}, submitText = 'Salva', si
       title, content, size, footer: [btn],
       onClose: () => { if (!settled) resolve(null); },
     });
+
+    // Hook opzionale per logica dinamica sul form (es. campi dipendenti).
+    if (typeof onRender === 'function') onRender(m.body, values);
 
     btn.addEventListener('click', async () => {
       const form = m.body;

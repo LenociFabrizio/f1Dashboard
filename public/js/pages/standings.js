@@ -3,7 +3,7 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, $$, esc, loader, flagEmoji, qs } from '../core/ui.js';
+import { $, $$, esc, loader, qs } from '../core/ui.js';
 
 mountChrome();
 
@@ -24,7 +24,7 @@ function driverRow(d, idx) {
         <a href="/driver.html?id=${d.user_id}" class="driver-cell">
           <img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt="">
           <div>
-            <div class="dc-name">${flagEmoji(d.nationality)} ${esc(d.display_name)}</div>
+            <div class="dc-name">${esc(d.display_name)}</div>
             <div class="dc-sub">#${d.favorite_number ?? '—'}</div>
           </div>
         </a>

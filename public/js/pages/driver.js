@@ -96,7 +96,7 @@ function render(user, stats) {
         <img src="${avatarUrl(user)}" onerror="this.src='/images/avatars/default.svg'" class="avatar xl" style="border:3px solid ${teamColor}">
         <div style="flex:1;min-width:220px">
           ${user.favorite_number ? `<div style="font-size:3rem;font-weight:900;color:${teamColor};line-height:1">#${user.favorite_number}</div>` : ''}
-          <h1 style="margin:2px 0">${flagEmoji(user.nationality)} ${esc(user.display_name)}</h1>
+          <h1 style="margin:2px 0">${esc(user.display_name)}</h1>
           <div class="flex items-center gap-3 wrap text-lo">
             <span class="team-tag"><span class="dot" style="background:${teamColor}"></span>${esc(user.team_name || 'Nessun team')}</span>
             <span>@${esc(user.username)}</span>

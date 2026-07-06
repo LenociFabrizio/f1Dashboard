@@ -43,7 +43,7 @@ export const getUser = asyncHandler(async (req, res) => {
 // Campi che l'utente può modificare del proprio profilo
 const EDITABLE_FIELDS = [
   'display_name', 'email', 'nationality', 'favorite_number',
-  'favorite_driver', 'biography', 'avatar', 'team_id',
+  'favorite_driver', 'reserve_driver', 'biography', 'avatar', 'team_id',
 ];
 
 /** PUT /api/users/me  — aggiorna il proprio profilo */
@@ -105,7 +105,7 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
 
 /** POST /api/users  (admin) — crea utente/pilota manualmente */
 export const adminCreateUser = asyncHandler(async (req, res) => {
-  const { username, display_name, email, password, role, team_id, favorite_number, nationality } =
+  const { username, display_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =
     req.body;
   if (!username) throw new HttpError(400, 'Username obbligatorio');
   const exists = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
@@ -114,8 +114,8 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   const hash = password ? await bcrypt.hash(password, 10) : null;
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, email, password_hash, role, team_id, favorite_number, nationality)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (username, display_name, email, password_hash, role, team_id, favorite_number, nationality, reserve_driver)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       username,
@@ -125,7 +125,8 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
       role === ROLES.ADMIN ? ROLES.ADMIN : ROLES.PILOTA,
       team_id || null,
       favorite_number || null,
-      nationality || 'IT'
+      nationality || 'IT',
+      reserve_driver || null
     );
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(sanitizeUser(user));

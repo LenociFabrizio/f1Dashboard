@@ -35,7 +35,7 @@ function resultRow(r, idx) {
         <a href="/driver.html?id=${r.user_id}" class="driver-cell">
           <img src="${avatarUrl(r)}" onerror="this.src='/images/avatars/default.svg'" alt="">
           <div>
-            <div class="dc-name">${flagEmoji(r.nationality)} ${esc(r.display_name)}</div>
+            <div class="dc-name">${esc(r.display_name)}</div>
             ${penalty || `<div class="dc-sub">@${esc(r.username)}</div>`}
           </div>
         </a>

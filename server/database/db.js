@@ -92,6 +92,18 @@ export async function initSchema() {
   const schemaPath = path.resolve(__dirname, 'schema.sql');
   const schema = fs.readFileSync(schemaPath, 'utf-8');
   await db.exec(schema);
+  await runMigrations();
+}
+
+/**
+ * Migrazioni idempotenti per DB già esistenti (aggiunge colonne mancanti).
+ */
+async function runMigrations() {
+  const cols = await db.all('PRAGMA table_info(users)');
+  const has = (name) => cols.some((c) => c.name === name);
+  if (!has('reserve_driver')) {
+    await db.run('ALTER TABLE users ADD COLUMN reserve_driver TEXT');
+  }
 }
 
 export default db;

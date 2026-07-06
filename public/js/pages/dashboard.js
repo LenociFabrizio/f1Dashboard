@@ -21,7 +21,7 @@ function miniStandingRow(d, meId) {
       <td>
         <a href="/driver.html?id=${d.user_id}" class="driver-cell">
           <img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt="">
-          <div class="dc-name">${flagEmoji(d.nationality)} ${esc(d.display_name)}${me ? ' <span class="badge red">Tu</span>' : ''}</div>
+          <div class="dc-name">${esc(d.display_name)}${me ? ' <span class="badge red">Tu</span>' : ''}</div>
         </a>
       </td>
       <td><span class="team-tag"><span class="dot" style="background:${d.team_color || '#e10600'}"></span>${esc(d.team_name || '—')}</span></td>

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   favorite_number   INTEGER,                 -- numero preferito (1-99)
   team_id           INTEGER,                 -- team attuale nel campionato
   favorite_driver   TEXT,                    -- pilota reale preferito
+  reserve_driver    TEXT,                    -- pilota di riserva (BOT) reale F1 2025 del team
   biography         TEXT    DEFAULT '',
   role              TEXT    NOT NULL DEFAULT 'pilota',  -- 'admin' | 'pilota'
   -- Predisposizione OAuth

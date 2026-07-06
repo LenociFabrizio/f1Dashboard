@@ -3,8 +3,30 @@
    ============================================================= */
 import api from '../../../core/api.js';
 import { avatarUrl } from '../../../core/components.js';
-import { esc, toast, confirmDialog, flagEmoji } from '../../../core/ui.js';
+import { esc, toast, confirmDialog } from '../../../core/ui.js';
 import { state, loadRefs, sectionHead, formModal, opts, empty } from '../shared.js';
+
+/**
+ * Line-up reali stagione F1 2025 per scuderia (nome team = chiave, come nel seed).
+ * Usati per il campo "Pilota di riserva (BOT)".
+ */
+const F1_2025_LINEUPS = {
+  'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
+  'Ferrari': ['Charles Leclerc', 'Lewis Hamilton'],
+  'Mercedes': ['George Russell', 'Andrea Kimi Antonelli'],
+  'McLaren': ['Lando Norris', 'Oscar Piastri'],
+  'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
+  'Alpine': ['Pierre Gasly', 'Jack Doohan'],
+  'Williams': ['Alexander Albon', 'Carlos Sainz'],
+  'RB': ['Yuki Tsunoda', 'Isack Hadjar'],
+  'Kick Sauber': ['Nico Hülkenberg', 'Gabriel Bortoleto'],
+  'Haas': ['Esteban Ocon', 'Oliver Bearman'],
+};
+
+function driversForTeamId(teamId) {
+  const team = state.teams.find((t) => t.id === Number(teamId));
+  return (team && F1_2025_LINEUPS[team.name]) || [];
+}
 
 function commonFields(isNew) {
   return [
@@ -14,9 +36,25 @@ function commonFields(isNew) {
     { name: 'password', label: isNew ? 'Password' : 'Nuova password (opzionale)', type: 'password', hint: isNew ? 'Min 6 caratteri' : 'Lascia vuoto per non cambiarla' },
     { name: 'role', label: 'Ruolo', type: 'select', options: [{ value: 'pilota', label: 'Pilota' }, { value: 'admin', label: 'Admin' }] },
     { name: 'team_id', label: 'Team', type: 'select', options: opts.teams() },
-    { name: 'favorite_number', label: 'Numero', type: 'number', min: 0, max: 99 },
-    { name: 'nationality', label: 'Nazionalità (ISO 2)', placeholder: 'IT', max: 2 },
+    // Le opzioni vengono popolate dinamicamente in base al team (vedi onRender).
+    { name: 'reserve_driver', label: 'Pilota di riserva (BOT)', type: 'select', options: [{ value: '', label: '— Nessuno —' }], hint: 'Piloti reali F1 2025 della scuderia selezionata', full: true },
   ];
+}
+
+/** Popola il menu "Pilota di riserva" in base al team selezionato nel form. */
+function wireReserveDriver(form, currentValue) {
+  const teamSel = form.querySelector('[name="team_id"]');
+  const resSel = form.querySelector('[name="reserve_driver"]');
+  if (!teamSel || !resSel) return;
+  const fill = () => {
+    const drivers = driversForTeamId(teamSel.value);
+    resSel.innerHTML =
+      '<option value="">— Nessuno —</option>' +
+      drivers.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    if (currentValue && drivers.includes(currentValue)) resSel.value = currentValue;
+  };
+  fill();
+  teamSel.addEventListener('change', fill);
 }
 
 function row(u) {
@@ -26,13 +64,12 @@ function row(u) {
         <div class="driver-cell">
           <img src="${avatarUrl(u)}" onerror="this.src='/images/avatars/default.svg'" alt="">
           <div>
-            <div class="dc-name">${flagEmoji(u.nationality)} ${esc(u.display_name || u.username)}</div>
-            <div class="dc-sub">@${esc(u.username)}</div>
+            <div class="dc-name">${esc(u.display_name || u.username)}</div>
+            <div class="dc-sub">@${esc(u.username)}${u.reserve_driver ? ` · 🤖 ${esc(u.reserve_driver)}` : ''}</div>
           </div>
         </div>
       </td>
       <td><span class="team-tag"><span class="dot" style="background:${u.team_color || '#555'}"></span>${esc(u.team_name || '—')}</span></td>
-      <td class="num">${u.favorite_number ?? '—'}</td>
       <td><span class="role-pill ${u.role === 'admin' ? 'admin' : 'pilota'}">${u.role === 'admin' ? 'Admin' : 'Pilota'}</span></td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn ghost sm" data-edit="${u.id}">Modifica</button>
@@ -48,14 +85,15 @@ async function render(root) {
     (list.length ? `
       <div class="table-wrap">
         <table class="data">
-          <thead><tr><th>Pilota</th><th>Team</th><th class="num">#</th><th>Ruolo</th><th></th></tr></thead>
+          <thead><tr><th>Pilota</th><th>Team</th><th>Ruolo</th><th></th></tr></thead>
           <tbody>${list.map(row).join('')}</tbody>
         </table>
       </div>` : empty('👤', 'Nessun utente.'));
 
   root.querySelector('#new-user').addEventListener('click', async () => {
     const ok = await formModal({
-      title: 'Nuovo pilota', fields: commonFields(true), values: { role: 'pilota', nationality: 'IT' },
+      title: 'Nuovo pilota', fields: commonFields(true), values: { role: 'pilota' },
+      onRender: (form) => wireReserveDriver(form, ''),
       onSubmit: (v) => api.post('/users', v),
     });
     if (ok) { toast.success('Utente creato.'); await loadRefs(); render(root); }
@@ -67,6 +105,7 @@ async function render(root) {
       title: `Modifica: ${u.display_name || u.username}`,
       fields: commonFields(false),
       values: { ...u, password: '' },
+      onRender: (form) => wireReserveDriver(form, u.reserve_driver || ''),
       onSubmit: (v) => {
         const body = { ...v };
         if (!body.password) delete body.password;
