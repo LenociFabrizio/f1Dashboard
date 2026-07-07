@@ -41,13 +41,17 @@
       <form id="profile-form" class="card">
         <div class="form-row">
           <div class="field">
-            <label>Nome visualizzato</label>
-            <input class="input" name="display_name" maxlength="60">
+            <label>Nome</label>
+            <input class="input" name="first_name" maxlength="40" autocomplete="given-name">
           </div>
           <div class="field">
-            <label>Email</label>
-            <input class="input" type="email" name="email">
+            <label>Cognome</label>
+            <input class="input" name="last_name" maxlength="40" autocomplete="family-name">
           </div>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input class="input" type="email" name="email">
         </div>
 
         <div class="field">

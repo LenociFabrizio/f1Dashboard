@@ -103,6 +103,12 @@ async function runMigrations() {
   if (!userCols.some((c) => c.name === 'reserve_driver')) {
     await db.run('ALTER TABLE users ADD COLUMN reserve_driver TEXT');
   }
+  if (!userCols.some((c) => c.name === 'first_name')) {
+    await db.run("ALTER TABLE users ADD COLUMN first_name TEXT DEFAULT ''");
+  }
+  if (!userCols.some((c) => c.name === 'last_name')) {
+    await db.run("ALTER TABLE users ADD COLUMN last_name TEXT DEFAULT ''");
+  }
 
   const resultCols = await db.all('PRAGMA table_info(results)');
   if (!resultCols.some((c) => c.name === 'bot_driver')) {

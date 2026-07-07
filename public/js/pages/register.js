@@ -64,6 +64,8 @@ function markInvalid(name, invalid) {
 function validate(fd) {
   let ok = true;
   const req = (name, cond) => { markInvalid(name, !cond); if (!cond) ok = false; };
+  req('first_name', !!fd.get('first_name')?.trim());
+  req('last_name', !!fd.get('last_name')?.trim());
   req('username', !!fd.get('username')?.trim());
   req('email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.get('email') || ''));
   req('password', (fd.get('password') || '').length >= 6);
@@ -90,7 +92,8 @@ form.addEventListener('submit', async (e) => {
   try {
     const user = await auth.register({
       username: fd.get('username').trim(),
-      display_name: fd.get('display_name')?.trim() || undefined,
+      first_name: fd.get('first_name').trim(),
+      last_name: fd.get('last_name').trim(),
       email: fd.get('email').trim(),
       password: fd.get('password'),
       team_id: fd.get('team_id') ? Number(fd.get('team_id')) : undefined,

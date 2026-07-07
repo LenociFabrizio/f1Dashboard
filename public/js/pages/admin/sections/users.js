@@ -15,7 +15,8 @@ function driversForTeamId(teamId) {
 function commonFields(isNew) {
   return [
     ...(isNew ? [{ name: 'username', label: 'Username', required: true, placeholder: 'username' }] : []),
-    { name: 'display_name', label: 'Nome visualizzato', placeholder: 'Nome pilota' },
+    { name: 'first_name', label: 'Nome', placeholder: 'Mario' },
+    { name: 'last_name', label: 'Cognome', placeholder: 'Rossi' },
     { name: 'email', label: 'Email', type: 'email' },
     { name: 'password', label: isNew ? 'Password' : 'Nuova password (opzionale)', type: 'password', hint: isNew ? 'Min 6 caratteri' : 'Lascia vuoto per non cambiarla' },
     { name: 'role', label: 'Ruolo', type: 'select', options: [{ value: 'pilota', label: 'Pilota' }, { value: 'admin', label: 'Admin' }] },

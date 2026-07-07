@@ -12,7 +12,7 @@
 import bcrypt from 'bcryptjs';
 import db from '../database/db.js';
 import { signToken } from '../utils/jwt.js';
-import { asyncHandler, HttpError, sanitizeUser } from '../utils/helpers.js';
+import { asyncHandler, HttpError, sanitizeUser, fullName } from '../utils/helpers.js';
 import { ROLES, PROVIDERS } from '../utils/constants.js';
 
 /** Crea la risposta standard con token + utente. */
@@ -23,13 +23,17 @@ function authResponse(res, user) {
 
 /** POST /api/auth/register */
 export const register = asyncHandler(async (req, res) => {
-  const { username, display_name, email, password, team_id, reserve_driver } = req.body;
+  const { username, first_name, last_name, email, password, team_id, reserve_driver } = req.body;
   if (!username || !password || !email) {
     throw new HttpError(400, 'Username, email e password sono obbligatori');
+  }
+  if (!first_name || !last_name) {
+    throw new HttpError(400, 'Nome e cognome sono obbligatori');
   }
   if (!team_id || !reserve_driver) {
     throw new HttpError(400, 'Scuderia e pilota di riserva (BOT) sono obbligatori');
   }
+  const display_name = fullName(first_name, last_name);
   const exists = await db
     .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
     .get(username, email);
@@ -44,10 +48,10 @@ export const register = asyncHandler(async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, email, password_hash, role, provider, team_id, reserve_driver)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, provider, team_id, reserve_driver)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, display_name || username, email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null);
+    .run(username, display_name || username, first_name.trim(), last_name.trim(), email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null);
 
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   authResponse(res, user);

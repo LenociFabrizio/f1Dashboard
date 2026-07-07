@@ -7,7 +7,7 @@
  */
 import bcrypt from 'bcryptjs';
 import db from '../database/db.js';
-import { asyncHandler, HttpError, sanitizeUser } from '../utils/helpers.js';
+import { asyncHandler, HttpError, sanitizeUser, fullName } from '../utils/helpers.js';
 import { ROLES } from '../utils/constants.js';
 import { persistUpload } from '../middleware/upload.js';
 
@@ -32,7 +32,7 @@ async function reserveTaken(name, exceptId = null) {
 export const listUsers = asyncHandler(async (_req, res) => {
   const users = await db
     .prepare(
-      `SELECT u.id, u.username, u.display_name, u.avatar, u.nationality, u.favorite_number,
+      `SELECT u.id, u.username, u.display_name, u.first_name, u.last_name, u.avatar, u.nationality, u.favorite_number,
               u.role, u.biography, u.favorite_driver, u.reserve_driver, u.team_id, u.created_at,
               t.name AS team_name, t.color AS team_color
          FROM users u
@@ -58,10 +58,21 @@ export const getUser = asyncHandler(async (req, res) => {
 });
 
 // Campi che l'utente può modificare del proprio profilo
+// (display_name è derivato da first_name + last_name, non modificabile direttamente)
 const EDITABLE_FIELDS = [
-  'display_name', 'email', 'nationality', 'favorite_number',
+  'first_name', 'last_name', 'email', 'nationality', 'favorite_number',
   'favorite_driver', 'reserve_driver', 'biography', 'avatar', 'team_id',
 ];
+
+/** Se cambia nome o cognome, ricalcola display_name usando i valori aggiornati + attuali. */
+function applyDisplayName(updates, current = {}) {
+  if ('first_name' in updates || 'last_name' in updates) {
+    const first = 'first_name' in updates ? updates.first_name : current.first_name;
+    const last = 'last_name' in updates ? updates.last_name : current.last_name;
+    const dn = fullName(first, last);
+    if (dn) updates.display_name = dn;
+  }
+}
 
 /** PUT /api/users/me  — aggiorna il proprio profilo */
 export const updateMe = asyncHandler(async (req, res) => {
@@ -74,6 +85,8 @@ export const updateMe = asyncHandler(async (req, res) => {
   if (req.body.password) {
     updates.password_hash = await bcrypt.hash(req.body.password, 10);
   }
+
+  applyDisplayName(updates, req.user);
 
   if (Object.keys(updates).length === 0) throw new HttpError(400, 'Nessun dato da aggiornare');
 
@@ -152,6 +165,7 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   if (updates.reserve_driver && (await reserveTaken(updates.reserve_driver, Number(req.params.id)))) {
     throw new HttpError(409, 'Pilota di riserva già assegnato a un altro utente');
   }
+  applyDisplayName(updates, target);
 
   if (Object.keys(updates).length === 0) throw new HttpError(400, 'Nessun dato da aggiornare');
   const setClause = Object.keys(updates).map((k) => `${k} = @${k}`).join(', ');
@@ -165,9 +179,10 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
 
 /** POST /api/users  (admin) — crea utente/pilota manualmente */
 export const adminCreateUser = asyncHandler(async (req, res) => {
-  const { username, display_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =
+  const { username, first_name, last_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =
     req.body;
   if (!username) throw new HttpError(400, 'Username obbligatorio');
+  const display_name = fullName(first_name, last_name) || username;
   const exists = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
   if (exists) throw new HttpError(409, 'Username già esistente');
   if (reserve_driver && (await reserveTaken(reserve_driver))) {
@@ -177,12 +192,14 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   const hash = password ? await bcrypt.hash(password, 10) : null;
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, email, password_hash, role, team_id, favorite_number, nationality, reserve_driver)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, reserve_driver)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       username,
-      display_name || username,
+      display_name,
+      (first_name || '').trim(),
+      (last_name || '').trim(),
       email || null,
       hash,
       role === ROLES.ADMIN ? ROLES.ADMIN : ROLES.PILOTA,

@@ -14,7 +14,9 @@
 CREATE TABLE IF NOT EXISTS users (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
   username          TEXT    NOT NULL UNIQUE,
-  display_name      TEXT    NOT NULL,
+  display_name      TEXT    NOT NULL,          -- derivato: "Nome Cognome"
+  first_name        TEXT    DEFAULT '',        -- nome
+  last_name         TEXT    DEFAULT '',        -- cognome
   email             TEXT    UNIQUE,
   password_hash     TEXT,                    -- NULL se login solo via OAuth
   avatar            TEXT    DEFAULT '/images/avatars/default.svg',

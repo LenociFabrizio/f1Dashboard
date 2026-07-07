@@ -116,8 +116,8 @@ async function main() {
   const adminPwd = bcrypt.hashSync('admin123', 10);
 
   const insertUser = db.prepare(
-    `INSERT INTO users (username, display_name, email, password_hash, role, team_id, favorite_number, nationality, favorite_driver, biography, avatar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, favorite_driver, biography, avatar)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   // [username, display, email, role, team, number, nat, favDriver, bio]
@@ -139,8 +139,11 @@ async function main() {
   const userIds = {};
   for (const d of drivers) {
     const [username, display, email, role, team, num, nat, fav, bio] = d;
+    const sp = display.indexOf(' ');
+    const firstName = sp === -1 ? display : display.slice(0, sp);
+    const lastName = sp === -1 ? '' : display.slice(sp + 1);
     const info = await insertUser.run(
-      username, display, email,
+      username, display, firstName, lastName, email,
       role === 'admin' ? adminPwd : pwd,
       role, teamIds[team], num, nat, fav, bio,
       `/images/avatars/default.svg`

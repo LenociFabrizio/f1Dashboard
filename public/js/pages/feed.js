@@ -5,6 +5,9 @@ import api, { token } from '../core/api.js';
 import auth from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
 import { $, esc, loader, toast, fmtDate, confirmDialog, debounce } from '../core/ui.js';
+import { prepareMedia } from '../core/media.js';
+
+const fmtMB = (bytes) => (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 
 mountChrome();
 
@@ -135,9 +138,21 @@ function mountComposer() {
     const isImage = (file.type || '').startsWith('image');
     if (!isVideo && !isImage) { toast.error('Seleziona una foto o un video.'); mediaInput.value = ''; return; }
     const status = $('#media-status');
+    const publishBtn = $('#publish-btn');
     try {
-      status.textContent = 'Caricamento…';
-      pendingMedia = await uploadMedia(file);
+      publishBtn.disabled = true;
+      // 1) Compressione (foto sempre; video solo se pesante)
+      const prepared = await prepareMedia(file, {
+        onStatus: (s) => { status.textContent = s; },
+        onProgress: (p) => { status.textContent = `Compressione video… ${p}%`; },
+      });
+      if (prepared !== file) {
+        status.textContent = `Ottimizzato: ${fmtMB(file.size)} → ${fmtMB(prepared.size)} · caricamento…`;
+      } else {
+        status.textContent = 'Caricamento…';
+      }
+      // 2) Upload (diretto su Blob o fallback locale)
+      pendingMedia = await uploadMedia(prepared);
       status.textContent = '✓ Media pronto';
       showMediaPreview(pendingMedia);
     } catch (err) {
@@ -146,6 +161,7 @@ function mountComposer() {
       status.textContent = '';
       toast.error(err.message || 'Upload non riuscito.');
     } finally {
+      publishBtn.disabled = false;
       mediaInput.value = '';
     }
   });

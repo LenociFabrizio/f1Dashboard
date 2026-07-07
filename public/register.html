@@ -31,14 +31,20 @@
         <form id="register-form" novalidate>
           <div class="form-row">
             <div class="field">
-              <label>Username <span class="req">*</span></label>
-              <input class="input" name="username" autocomplete="username" placeholder="il_tuo_nick" required>
-              <div class="err">Username obbligatorio.</div>
+              <label>Nome <span class="req">*</span></label>
+              <input class="input" name="first_name" autocomplete="given-name" placeholder="Mario" required>
+              <div class="err">Nome obbligatorio.</div>
             </div>
             <div class="field">
-              <label>Nome visualizzato</label>
-              <input class="input" name="display_name" placeholder="Come vuoi apparire">
+              <label>Cognome <span class="req">*</span></label>
+              <input class="input" name="last_name" autocomplete="family-name" placeholder="Rossi" required>
+              <div class="err">Cognome obbligatorio.</div>
             </div>
+          </div>
+          <div class="field">
+            <label>Username <span class="req">*</span></label>
+            <input class="input" name="username" autocomplete="username" placeholder="il_tuo_nick" required>
+            <div class="err">Username obbligatorio.</div>
           </div>
           <div class="field">
             <label>Email <span class="req">*</span></label>

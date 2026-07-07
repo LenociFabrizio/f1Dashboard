@@ -11,7 +11,8 @@ const saveBtn = $('#save-btn');
 let me;
 
 function fillForm(u) {
-  form.display_name.value = u.display_name || '';
+  form.first_name.value = u.first_name || '';
+  form.last_name.value = u.last_name || '';
   form.email.value = u.email || '';
   $('#avatar-preview').src = avatarUrl(u);
   $('#pv-name').textContent = u.display_name || u.username;
@@ -92,7 +93,8 @@ form.addEventListener('submit', async (e) => {
   saveBtn.disabled = true;
   saveBtn.innerHTML = '<span class="spinner sm"></span> Salvataggio…';
   const payload = {
-    display_name: form.display_name.value.trim(),
+    first_name: form.first_name.value.trim(),
+    last_name: form.last_name.value.trim(),
     email: form.email.value.trim(),
     team_id: form.team_id.value ? Number(form.team_id.value) : null,
   };

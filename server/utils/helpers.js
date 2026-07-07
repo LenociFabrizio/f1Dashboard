@@ -37,6 +37,11 @@ export function sanitizeUser(user) {
   return safe;
 }
 
+/** Compone il nome visualizzato "Nome Cognome" da parti separate. */
+export function fullName(first, last) {
+  return [first, last].map((s) => (s || '').trim()).filter(Boolean).join(' ');
+}
+
 /** Arrotonda a n decimali restituendo un numero. */
 export function round(value, decimals = 2) {
   if (value === null || value === undefined || isNaN(value)) return 0;
