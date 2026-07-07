@@ -24,7 +24,7 @@ export async function getDriverStandings(seasonId) {
          FROM results r
          JOIN races  ra ON ra.id = r.race_id
          JOIN users  u  ON u.id  = r.user_id
-         LEFT JOIN teams t ON t.id = r.team_id
+         LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
         WHERE ra.season_id = ? AND ra.status = 'completed'`
     )
     .all(seasonId);
@@ -96,12 +96,15 @@ export async function getDriverStandings(seasonId) {
  * @param {number} seasonId
  */
 export async function getConstructorStandings(seasonId) {
+  // Il team del risultato può essere NULL (risultati inseriti prima del fix
+  // su team_id): in tal caso si usa la scuderia attuale del pilota (COALESCE).
   const rows = await db
     .prepare(
       `SELECT r.*, t.id AS tid, t.name AS team_name, t.color AS team_color, t.logo
          FROM results r
          JOIN races ra ON ra.id = r.race_id
-         JOIN teams t  ON t.id  = r.team_id
+         JOIN users u  ON u.id  = r.user_id
+         JOIN teams t  ON t.id  = COALESCE(r.team_id, u.team_id)
         WHERE ra.season_id = ? AND ra.status = 'completed'`
     )
     .all(seasonId);
@@ -164,7 +167,7 @@ export async function getPointsProgression(seasonId) {
          FROM results r
          JOIN races ra ON ra.id = r.race_id
          JOIN users u  ON u.id  = r.user_id
-         LEFT JOIN teams t ON t.id = r.team_id
+         LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
         WHERE ra.season_id = ? AND ra.status = 'completed'`
     )
     .all(seasonId);

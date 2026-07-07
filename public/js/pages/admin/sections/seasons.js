@@ -11,6 +11,8 @@ const EDIT_FIELDS = [
   { name: 'year', label: 'Anno', type: 'number', required: true, min: 2020, max: 2099 },
   { name: 'game', label: 'Gioco', value: 'F1 25' },
   { name: 'description', label: 'Descrizione', type: 'textarea', full: true },
+  { name: 'points_pole', label: 'Punti pole position', type: 'number', min: 0, max: 25, placeholder: '0' },
+  { name: 'points_fastest_lap', label: 'Punti giro veloce', type: 'number', min: 0, max: 25, placeholder: '1' },
   { name: 'is_active', label: 'Attiva', type: 'checkbox', checkLabel: 'Imposta come stagione attiva', full: true },
 ];
 
@@ -45,6 +47,21 @@ function openNewSeason(root) {
       <div class="field"><label>Gioco</label><input class="input" id="s-game" value="F1 25"></div>
       <div class="field full"><label>Descrizione</label><textarea class="textarea" id="s-desc" rows="2"></textarea></div>
       <div class="field full"><label class="checkbox"><input type="checkbox" id="s-active" checked> Imposta come stagione attiva</label></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:6px 0 16px"></div>
+    <div class="section-title" style="font-size:1rem">Regole punti</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Punti pole position</label>
+        <input class="input" type="number" id="s-pole" min="0" max="25" value="0">
+        <div class="hint">Punti assegnati a chi parte in pole (0 = nessuno).</div>
+      </div>
+      <div class="field">
+        <label>Punti giro veloce</label>
+        <input class="input" type="number" id="s-fl" min="0" max="25" value="1">
+        <div class="hint">Bonus per il giro veloce, solo se in top 10 (0 = nessuno).</div>
+      </div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin:6px 0 16px"></div>
@@ -101,6 +118,8 @@ function openNewSeason(root) {
       game: q('#s-game').value.trim() || 'F1 25',
       description: q('#s-desc').value.trim(),
       is_active: q('#s-active').checked ? 1 : 0,
+      points_pole: Math.max(0, Number(q('#s-pole').value) || 0),
+      points_fastest_lap: Math.max(0, Number(q('#s-fl').value) || 0),
       circuit_mode: mode,
       laps_percentage: Number(q('#s-pct').value),
     };

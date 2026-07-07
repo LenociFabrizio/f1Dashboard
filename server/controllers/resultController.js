@@ -26,6 +26,11 @@ export const saveResults = asyncHandler(async (req, res) => {
   const race = await db.prepare('SELECT * FROM races WHERE id = ?').get(raceId);
   if (!race) throw new HttpError(404, 'Gara non trovata');
 
+  // Configurazione punti della stagione (pole / giro veloce)
+  const season = await db.prepare('SELECT points_pole, points_fastest_lap FROM seasons WHERE id = ?').get(race.season_id);
+  const pointsPole = season ? Number(season.points_pole) || 0 : 0;
+  const pointsFastestLap = season ? Number(season.points_fastest_lap ?? 1) : 1;
+
   const rows = req.body.results || [];
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new HttpError(400, 'Nessun risultato fornito');
@@ -42,6 +47,13 @@ export const saveResults = asyncHandler(async (req, res) => {
 
   const stmts = [{ sql: 'DELETE FROM results WHERE race_id = ?', args: [raceId] }];
 
+  // Fallback team: se una riga non porta team_id, si usa la scuderia attuale
+  // del pilota. Evita risultati con team_id NULL (che sparirebbero dalla
+  // classifica costruttori).
+  const teamByUser = new Map(
+    (await db.prepare('SELECT id, team_id FROM users').all()).map((u) => [u.id, u.team_id])
+  );
+
   for (const r of rows) {
     if (!r.user_id) continue;
     const dnf = r.dnf ? 1 : 0;
@@ -49,18 +61,19 @@ export const saveResults = asyncHandler(async (req, res) => {
     const pole = r.pole ? 1 : 0;
     const position = dnf ? null : r.position ? Number(r.position) : null;
 
-    // Punti: usa quelli forniti se presenti, altrimenti calcola
+    // Punti: usa quelli forniti se presenti, altrimenti calcola (con la
+    // configurazione pole/giro veloce della stagione)
     const points =
       r.points !== undefined && r.points !== null && r.points !== ''
         ? Number(r.points)
-        : calculatePoints(position, !!fastest, !!dnf);
+        : calculatePoints(position, !!fastest, !!dnf, { pole: !!pole, pointsPole, pointsFastestLap });
 
     stmts.push({
       sql: INSERT_SQL,
       args: {
         race_id: raceId,
         user_id: Number(r.user_id),
-        team_id: r.team_id ? Number(r.team_id) : null,
+        team_id: r.team_id ? Number(r.team_id) : (teamByUser.get(Number(r.user_id)) ?? null),
         grid_position: r.grid_position ? Number(r.grid_position) : null,
         position,
         points,

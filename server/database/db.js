@@ -108,6 +108,15 @@ async function runMigrations() {
   if (!resultCols.some((c) => c.name === 'bot_driver')) {
     await db.run("ALTER TABLE results ADD COLUMN bot_driver TEXT DEFAULT ''");
   }
+
+  const seasonCols = await db.all('PRAGMA table_info(seasons)');
+  const hasSeason = (name) => seasonCols.some((c) => c.name === name);
+  if (!hasSeason('points_pole')) {
+    await db.run('ALTER TABLE seasons ADD COLUMN points_pole INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!hasSeason('points_fastest_lap')) {
+    await db.run('ALTER TABLE seasons ADD COLUMN points_fastest_lap INTEGER NOT NULL DEFAULT 1');
+  }
 }
 
 export default db;

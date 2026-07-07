@@ -31,15 +31,28 @@ export const PROVIDERS = {
 };
 
 /**
- * Calcola i punti base dati posizione + giro veloce.
- * @param {number|null} position posizione finale (null/DNF => 0)
+ * Calcola i punti dati posizione, giro veloce e pole.
+ * @param {number|null} position posizione finale (null/DNF => 0 punti gara)
  * @param {boolean} fastestLap
  * @param {boolean} dnf
+ * @param {object} [opts] configurazione punti della stagione
+ * @param {boolean} [opts.pole=false]         il pilota è partito in pole
+ * @param {number}  [opts.pointsFastestLap=1] punti per il giro veloce (0 = disattivato)
+ * @param {number}  [opts.pointsPole=0]       punti per la pole position (0 = disattivato)
  */
-export function calculatePoints(position, fastestLap = false, dnf = false) {
-  if (dnf || !position) return 0;
-  let pts = POINTS_SYSTEM[position] || 0;
-  // Il punto del giro veloce vale solo se il pilota è in top 10
-  if (fastestLap && position <= 10) pts += FASTEST_LAP_POINT;
+export function calculatePoints(position, fastestLap = false, dnf = false, opts = {}) {
+  const {
+    pole = false,
+    pointsFastestLap = FASTEST_LAP_POINT,
+    pointsPole = 0,
+  } = opts;
+
+  let pts = 0;
+  // Punti gara (solo se ha concluso e ha una posizione a punti)
+  if (!dnf && position) pts += POINTS_SYSTEM[position] || 0;
+  // Bonus giro veloce: solo se in top 10 (regola F1) e se abilitato
+  if (fastestLap && position && position <= 10) pts += Number(pointsFastestLap) || 0;
+  // Bonus pole: assegnato per la qualifica, indipendente dal risultato in gara
+  if (pole) pts += Number(pointsPole) || 0;
   return pts;
 }

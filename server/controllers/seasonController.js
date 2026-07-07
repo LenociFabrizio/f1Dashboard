@@ -6,6 +6,7 @@
  */
 import db from '../database/db.js';
 import { asyncHandler, HttpError } from '../utils/helpers.js';
+import { calculatePoints } from '../utils/constants.js';
 
 // ----------------------- STAGIONI -----------------------
 
@@ -97,18 +98,21 @@ function officialSort(circuits) {
  *  - laps_percentage: 1..100, i giri di ogni gara = round(giri_reali * %)
  */
 export const createSeason = asyncHandler(async (req, res) => {
-  const { name, year, game, description, is_active, circuit_mode, circuit_ids, random_count, laps_percentage } = req.body;
+  const { name, year, game, description, is_active, circuit_mode, circuit_ids, random_count, laps_percentage,
+          points_pole, points_fastest_lap } = req.body;
   if (!name || !year) throw new HttpError(400, 'Nome e anno obbligatori');
 
   const pct = Math.min(100, Math.max(1, Number(laps_percentage) || 100));
+  const ptsPole = Math.max(0, Number(points_pole) || 0);
+  const ptsFl = Math.max(0, Number(points_fastest_lap ?? 1) || 0);
 
   if (is_active) await db.prepare('UPDATE seasons SET is_active = 0').run(); // solo una attiva
   const info = await db
     .prepare(
-      `INSERT INTO seasons (name, year, game, description, is_active)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO seasons (name, year, game, description, is_active, points_pole, points_fastest_lap)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(name, year, game || 'F1 25', description || '', is_active ? 1 : 0);
+    .run(name, year, game || 'F1 25', description || '', is_active ? 1 : 0, ptsPole, ptsFl);
   const seasonId = Number(info.lastInsertRowid);
 
   // Selezione tracciati per il calendario
@@ -146,17 +150,61 @@ export const createSeason = asyncHandler(async (req, res) => {
 
 /** PUT /api/seasons/:id (admin) */
 export const updateSeason = asyncHandler(async (req, res) => {
-  const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(req.params.id);
+  const id = req.params.id;
+  const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id);
   if (!season) throw new HttpError(404, 'Stagione non trovata');
   if (req.body.is_active) await db.prepare('UPDATE seasons SET is_active = 0').run();
-  const fields = ['name', 'year', 'game', 'description', 'is_active'];
+  const fields = ['name', 'year', 'game', 'description', 'is_active', 'points_pole', 'points_fastest_lap'];
   const updates = {};
   for (const f of fields) if (req.body[f] !== undefined) updates[f] = req.body[f];
   if (Object.keys(updates).length === 0) throw new HttpError(400, 'Nessun dato da aggiornare');
   const setClause = Object.keys(updates).map((k) => `${k} = @${k}`).join(', ');
-  await db.prepare(`UPDATE seasons SET ${setClause} WHERE id = @id`).run({ ...updates, id: req.params.id });
-  res.json(await db.prepare('SELECT * FROM seasons WHERE id = ?').get(req.params.id));
+  await db.prepare(`UPDATE seasons SET ${setClause} WHERE id = @id`).run({ ...updates, id });
+
+  // Se cambia la regola punti (pole / giro veloce), ricalcola i punti di
+  // tutti i risultati già salvati della stagione, così la classifica resta
+  // coerente con la nuova configurazione.
+  const poleChanged = updates.points_pole !== undefined && Number(updates.points_pole) !== Number(season.points_pole);
+  const flChanged = updates.points_fastest_lap !== undefined && Number(updates.points_fastest_lap) !== Number(season.points_fastest_lap);
+  if (poleChanged || flChanged) {
+    await recomputeSeasonPoints(id);
+  }
+
+  res.json(await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id));
 });
+
+/**
+ * Ricalcola i punti di tutti i risultati di una stagione in base alla
+ * configurazione punti corrente (pole / giro veloce).
+ */
+async function recomputeSeasonPoints(seasonId) {
+  const s = await db.prepare('SELECT points_pole, points_fastest_lap FROM seasons WHERE id = ?').get(seasonId);
+  const pointsPole = Number(s?.points_pole) || 0;
+  const pointsFastestLap = Number(s?.points_fastest_lap ?? 1);
+
+  const rows = await db
+    .prepare(
+      `SELECT r.id, r.position, r.fastest_lap, r.pole, r.dnf
+         FROM results r
+         JOIN races ra ON ra.id = r.race_id
+        WHERE ra.season_id = ?`
+    )
+    .all(seasonId);
+  if (!rows.length) return;
+
+  const stmts = rows.map((r) => ({
+    sql: 'UPDATE results SET points = ? WHERE id = ?',
+    args: [
+      calculatePoints(r.position, !!r.fastest_lap, !!r.dnf, {
+        pole: !!r.pole,
+        pointsPole,
+        pointsFastestLap,
+      }),
+      r.id,
+    ],
+  }));
+  await db.raw.batch(stmts, 'write');
+}
 
 /**
  * POST /api/seasons/:id/archive (admin)

@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS seasons (
   game          TEXT    DEFAULT 'F1 25',
   description   TEXT    DEFAULT '',
   is_active     INTEGER NOT NULL DEFAULT 0,    -- solo una stagione attiva
+  points_pole        INTEGER NOT NULL DEFAULT 0,  -- punti per la pole (0 = nessuno)
+  points_fastest_lap INTEGER NOT NULL DEFAULT 1,  -- punti per il giro veloce (0 = nessuno)
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
