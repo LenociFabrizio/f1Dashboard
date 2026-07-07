@@ -17,8 +17,31 @@ const selectedTags = new Map(); // user_id -> {id, display_name, username}
 let pendingMedia = null;     // { url, type } dopo l'upload
 
 /* ---------------- Upload media ---------------- */
-async function uploadMedia(file, onStart) {
-  onStart?.();
+/** Upload multipart con avanzamento reale (XHR) verso il fallback locale. */
+function xhrUpload(path, formData, { onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api' + path);
+    const tk = token.get();
+    if (tk) xhr.setRequestHeader('Authorization', 'Bearer ' + tk);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve(null); }
+      } else {
+        let msg = `Errore ${xhr.status}`;
+        try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* testo non-JSON */ }
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Errore di rete durante il caricamento'));
+    xhr.send(formData);
+  });
+}
+
+async function uploadMedia(file, { onProgress } = {}) {
   const cfg = await api.get('/posts/upload-config', {}, { auth: false });
   const safe = (file.name || 'media').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 60);
   const kind = (file.type || '').startsWith('video') ? 'video' : 'image';
@@ -32,13 +55,43 @@ async function uploadMedia(file, onStart) {
       clientPayload: token.get() || '',
       contentType: file.type || undefined,
       multipart: file.size > 8 * 1024 * 1024,
+      onUploadProgress: (e) => onProgress?.(Math.round(e.percentage ?? (e.loaded / e.total) * 100)),
     });
     return { url: blob.url, type: kind };
   }
-  // Fallback locale (sviluppo): multipart via server
+  // Fallback locale (sviluppo): multipart via server con avanzamento XHR
   const fd = new FormData();
   fd.append('media', file);
-  return api.upload('/posts/media-local', fd);
+  return xhrUpload('/posts/media-local', fd, { onProgress });
+}
+
+/* ---------------- Barra di avanzamento ---------------- */
+function setProgress(label, pct, hint) {
+  const bar = $('#upload-bar');
+  if (!bar) return;
+  bar.hidden = false;
+  $('#up-label').textContent = label;
+  const fill = $('#up-fill');
+  const pctEl = $('#up-pct');
+  if (pct == null) {
+    bar.classList.add('indeterminate');
+    fill.style.width = '40%';
+    pctEl.textContent = '';
+  } else {
+    bar.classList.remove('indeterminate');
+    fill.style.width = `${pct}%`;
+    pctEl.textContent = `${pct}%`;
+  }
+  $('#up-hint').textContent = hint || '';
+}
+function hideProgress() {
+  const bar = $('#upload-bar');
+  if (!bar) return;
+  bar.hidden = true;
+  bar.classList.remove('indeterminate');
+  $('#up-fill').style.width = '0%';
+  $('#up-pct').textContent = '';
+  $('#up-hint').textContent = '';
 }
 
 /* ---------------- Tag picker ---------------- */
@@ -119,6 +172,14 @@ function mountComposer() {
             <span id="media-status" class="text-lo" style="font-size:0.82rem"></span>
             <button class="btn primary sm" id="publish-btn" style="margin-left:auto">Pubblica</button>
           </div>
+
+          <div class="composer-hint">💡 <strong>Consiglio:</strong> per i video, taglia la clip il più possibile (bastano pochi secondi del momento clou): più è corta, più il caricamento in bacheca sarà rapido e leggero.</div>
+
+          <div id="upload-bar" class="upload-progress" hidden>
+            <div class="up-head"><span id="up-label">Caricamento…</span><span id="up-pct"></span></div>
+            <div class="up-track"><i id="up-fill"></i></div>
+            <div class="up-hint" id="up-hint"></div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -141,23 +202,27 @@ function mountComposer() {
     const publishBtn = $('#publish-btn');
     try {
       publishBtn.disabled = true;
+      status.textContent = '';
       // 1) Compressione (foto sempre; video solo se pesante)
+      setProgress('Preparazione…', null);
       const prepared = await prepareMedia(file, {
-        onStatus: (s) => { status.textContent = s; },
-        onProgress: (p) => { status.textContent = `Compressione video… ${p}%`; },
+        onStatus: (s) => setProgress(s, null, 'Non chiudere questa pagina finché non è pronto.'),
+        onProgress: (p) => setProgress('Compressione video…', p, 'Non chiudere questa pagina finché non è pronto.'),
       });
-      if (prepared !== file) {
-        status.textContent = `Ottimizzato: ${fmtMB(file.size)} → ${fmtMB(prepared.size)} · caricamento…`;
-      } else {
-        status.textContent = 'Caricamento…';
-      }
-      // 2) Upload (diretto su Blob o fallback locale)
-      pendingMedia = await uploadMedia(prepared);
-      status.textContent = '✓ Media pronto';
+      const savedHint = prepared !== file ? `Ottimizzato: ${fmtMB(file.size)} → ${fmtMB(prepared.size)}` : '';
+      // 2) Upload (diretto su Blob o fallback locale) con avanzamento reale
+      setProgress('Caricamento…', 0, savedHint || 'Attendi il completamento prima di pubblicare.');
+      pendingMedia = await uploadMedia(prepared, {
+        onProgress: (p) => setProgress('Caricamento…', p, savedHint || 'Attendi il completamento prima di pubblicare.'),
+      });
+      setProgress('Completato', 100, savedHint);
+      setTimeout(hideProgress, 700);
+      status.textContent = '✓ Media pronto da pubblicare';
       showMediaPreview(pendingMedia);
     } catch (err) {
       console.error(err);
       pendingMedia = null;
+      hideProgress();
       status.textContent = '';
       toast.error(err.message || 'Upload non riuscito.');
     } finally {

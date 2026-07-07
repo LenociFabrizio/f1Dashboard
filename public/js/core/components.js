@@ -4,6 +4,7 @@
    ============================================================= */
 import auth from './auth.js';
 import { $, $$, el, esc } from './ui.js';
+import { mountCookieBanner } from './cookies.js';
 
 /** URL avatar con fallback al default. */
 export function avatarUrl(user) {
@@ -63,9 +64,11 @@ export function mountNavbar() {
         <span class="brand-mark">F1</span>
         <span>LEGA<span class="accent">F1</span></span>
       </a>
-      <div class="nav-links" id="nav-links">${links}</div>
-      <div class="nav-actions" style="position:relative">${authArea}</div>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="nav-panel" id="nav-panel">
+        <div class="nav-links" id="nav-links">${links}</div>
+        <div class="nav-actions" id="nav-actions" style="position:relative">${authArea}</div>
+      </div>
     </div>`;
 
   const mount = $('#navbar-mount');
@@ -73,8 +76,15 @@ export function mountNavbar() {
 
   // Interazioni
   const toggle = $('#nav-toggle');
-  const navLinks = $('#nav-links');
-  toggle?.addEventListener('click', () => navLinks.classList.toggle('open'));
+  const panel = $('#nav-panel');
+  toggle?.addEventListener('click', () => {
+    const open = panel.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  // Su mobile: chiudi il menu quando si tocca un link
+  panel?.querySelectorAll('a').forEach((a) =>
+    a.addEventListener('click', () => { panel.classList.remove('open'); toggle?.setAttribute('aria-expanded', 'false'); })
+  );
 
   const navUser = $('#nav-user');
   const dropdown = $('#nav-dropdown');
@@ -90,6 +100,9 @@ export function mountNavbar() {
   const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Banner cookie (mostrato una volta, su tutte le pagine con navbar)
+  mountCookieBanner();
 }
 
 /**
@@ -108,6 +121,7 @@ export function mountFooter() {
         <a href="/standings.html">Classifiche</a>
         <a href="/races.html">Calendario</a>
         <a href="/stats.html">Statistiche</a>
+        <a href="/privacy.html">Privacy &amp; Cookie</a>
       </div>
       <small>© ${year} Lega F1 · Progetto amatoriale non affiliato a Formula 1® o EA Sports.</small>
     </div>`;

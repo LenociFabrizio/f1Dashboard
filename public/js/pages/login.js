@@ -4,9 +4,12 @@
 import api from '../core/api.js';
 import auth from '../core/auth.js';
 import { $, toast, modal, el, qs } from '../core/ui.js';
+import { mountCookieBanner } from '../core/cookies.js';
 
 // Se già loggato → dashboard
 if (auth.isLogged()) location.href = '/dashboard.html';
+
+mountCookieBanner();
 
 const nextUrl = () => {
   const n = qs.get('next');

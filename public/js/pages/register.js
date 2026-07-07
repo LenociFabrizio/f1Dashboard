@@ -6,8 +6,11 @@ import auth from '../core/auth.js';
 import { $, $$, esc, toast } from '../core/ui.js';
 import { driversForTeamName } from '../core/f1data.js';
 import { compressImage } from '../core/media.js';
+import { mountCookieBanner } from '../core/cookies.js';
 
 if (auth.isLogged()) location.href = '/dashboard.html';
+
+mountCookieBanner();
 
 const form = $('#register-form');
 const submitBtn = $('#submit-btn');

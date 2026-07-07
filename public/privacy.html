@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy &amp; Cookie Policy · Lega F1</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div id="app-loader"><div class="loader-mark">LEGA<span>F1</span></div><div class="loader-bar"><i></i></div></div>
+  <div id="navbar-mount"></div>
+
+  <main class="page container" style="max-width:820px">
+    <div class="page-head">
+      <div class="eyebrow">Informativa</div>
+      <h1>Privacy &amp; Cookie Policy</h1>
+      <p class="lead">Come trattiamo i tuoi dati e cosa salviamo sul tuo dispositivo su questo portale amatoriale.</p>
+    </div>
+
+    <div class="card legal">
+      <p class="updated">Ultimo aggiornamento: luglio 2026</p>
+
+      <h2>1. Chi siamo</h2>
+      <p>Questo è il portale amatoriale di un campionato tra amici basato sul videogioco F1&nbsp;25 (EA Sports).
+        Non è affiliato a Formula 1® né a EA Sports. Il trattamento dei dati è curato dal gestore della lega.
+        Per qualsiasi richiesta relativa ai tuoi dati puoi contattare l'amministratore del sito
+        (<em>inserire qui l'email di contatto del gestore</em>).</p>
+
+      <h2>2. Quali dati raccogliamo</h2>
+      <ul>
+        <li><strong>Dati dell'account:</strong> username, nome, cognome, email, password (salvata solo in forma cifrata/hash), scuderia, numero, nazionalità, avatar e biografia.</li>
+        <li><strong>Dati di gioco:</strong> risultati delle gare, qualifiche, statistiche e pilota di riserva.</li>
+        <li><strong>Contenuti che pubblichi:</strong> post della bacheca, foto/video caricati, testi e tag verso altri utenti.</li>
+      </ul>
+
+      <h2>3. Perché li trattiamo</h2>
+      <ul>
+        <li>Gestire la registrazione e l'autenticazione al portale.</li>
+        <li>Mostrare classifiche, statistiche, calendario e la bacheca della community.</li>
+        <li>Consentire le funzioni sociali (post e tag tra partecipanti).</li>
+      </ul>
+      <p>La base giuridica è l'esecuzione del servizio che richiedi (l'accesso al portale) e il tuo consenso per i contenuti che scegli di pubblicare.</p>
+
+      <h2>4. Cookie e archiviazione locale</h2>
+      <p>Il sito <strong>non usa cookie di profilazione, pubblicitari o di analisi</strong>. Utilizziamo esclusivamente
+        archiviazione tecnica <strong>necessaria</strong>, salvata nel <code>localStorage</code> del tuo browser:</p>
+      <ul>
+        <li><code>f1_token</code> — token di sessione (JWT) che ti mantiene autenticato dopo il login.</li>
+        <li><code>f1_user</code> — copia locale del tuo profilo per mostrare nome e avatar senza ricaricare.</li>
+        <li><code>f1_cookie_consent</code> — memorizza che hai visualizzato questa informativa, così il banner non riappare.</li>
+      </ul>
+      <p>Trattandosi di elementi strettamente necessari al funzionamento e alla sicurezza dell'accesso, non è richiesto
+        un consenso preventivo; il banner ha scopo informativo. Puoi cancellare questi dati in qualsiasi momento
+        svuotando i dati del sito dal tuo browser (uscendo, però, dovrai effettuare di nuovo il login).</p>
+
+      <h2>5. Servizi di terze parti</h2>
+      <p>Per funzionare il sito si appoggia a fornitori che potrebbero trattare dati tecnici (es. l'indirizzo IP) come titolari autonomi:</p>
+      <ul>
+        <li><strong>Vercel</strong> — hosting del sito e delle funzioni.</li>
+        <li><strong>Turso / libSQL</strong> — database in cui sono salvati gli account e i dati di gioco.</li>
+        <li><strong>Vercel Blob</strong> — archiviazione di avatar e media caricati nella bacheca.</li>
+        <li><strong>Google Fonts</strong> — caricamento dei caratteri tipografici (può registrare l'IP della richiesta).</li>
+      </ul>
+
+      <h2>6. Conservazione dei dati</h2>
+      <p>Conserviamo i tuoi dati finché il tuo account resta attivo. Quando elimini l'account, i tuoi dati personali,
+        i risultati, le qualifiche, le statistiche e i post vengono rimossi in modo definitivo.</p>
+
+      <h2>7. I tuoi diritti</h2>
+      <p>Puoi accedere ai tuoi dati, correggerli o eliminarli:</p>
+      <ul>
+        <li>Modifica i tuoi dati e l'avatar dalla pagina <a href="/profile.html">Profilo</a>.</li>
+        <li>Elimini definitivamente l'account (e tutti i dati collegati) dalla sezione "Zona pericolosa" del profilo.</li>
+        <li>Per ulteriori richieste (accesso, rettifica, opposizione) contatta l'amministratore della lega.</li>
+      </ul>
+
+      <h2>8. Minori</h2>
+      <p>Il portale è pensato per un gruppo di amici. Se sei minorenne, usa il sito solo con il consenso di chi esercita la responsabilità genitoriale.</p>
+
+      <h2>9. Modifiche</h2>
+      <p>Questa informativa può essere aggiornata nel tempo. Le modifiche rilevanti saranno indicate aggiornando la data in cima alla pagina.</p>
+    </div>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module">
+    import { mountChrome } from '/js/core/components.js';
+    import { loader } from '/js/core/ui.js';
+    mountChrome();
+    loader.hide();
+  </script>
+</body>
+</html>

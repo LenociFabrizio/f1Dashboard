@@ -75,6 +75,10 @@
   border-radius: 2px;
 }
 
+/* Contenitore che raggruppa link + area account (inline su desktop,
+   pannello a scomparsa su mobile). */
+.nav-panel { display: flex; align-items: center; flex: 1; gap: var(--sp-1); }
+
 .nav-actions { display: flex; align-items: center; gap: var(--sp-3); margin-left: var(--sp-4); }
 
 .nav-user {
@@ -217,26 +221,50 @@
 }
 
 @media (max-width: 720px) {
-  .nav-links {
+  .nav-toggle { display: block; margin-left: auto; }
+
+  /* Il pannello (link + account) diventa un menu a scomparsa dall'alto */
+  .nav-panel {
     position: fixed;
     top: var(--nav-h); left: 0; right: 0;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
+    flex: none;
     background: var(--bg-050);
     border-bottom: 1px solid var(--border);
     padding: var(--sp-3);
     transform: translateY(-120%);
     transition: transform var(--t-med);
     box-shadow: var(--sh-lg);
-    margin-left: 0;
+    max-height: calc(100dvh - var(--nav-h));
+    overflow-y: auto;
   }
-  .nav-links.open { transform: translateY(0); }
+  .nav-panel.open { transform: translateY(0); }
+  .nav-links { flex-direction: column; align-items: stretch; gap: 0; margin-left: 0; }
   .nav-links a { padding: 12px 14px; }
   .nav-links a.active::after { display: none; }
-  .nav-toggle { display: block; margin-left: auto; }
-  .nav-actions { margin-left: var(--sp-2); }
-  .nav-user .nu-name { display: none; }
+
+  /* Sezione account integrata nel menu (niente più avatar nella top bar) */
+  .nav-actions {
+    flex-direction: column; align-items: stretch; gap: var(--sp-2);
+    margin: var(--sp-2) 0 0; padding-top: var(--sp-3);
+    border-top: 1px solid var(--border);
+  }
+  .nav-actions .btn { width: 100%; }
+  .nav-user {
+    width: 100%; justify-content: flex-start; gap: var(--sp-3);
+    padding: 10px 12px; background: var(--bg-100);
+  }
+  .nav-user img { width: 34px; height: 34px; }
+  .nav-user .nu-name { display: block; font-size: 0.95rem; }
+  /* Il menu utente è mostrato in linea, non come popover */
+  .nav-dropdown {
+    position: static; opacity: 1; visibility: visible; transform: none;
+    min-width: 0; box-shadow: none; border: 0; background: transparent;
+    padding: 4px 0 0; margin-top: 2px;
+  }
+
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .grid-auto { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
