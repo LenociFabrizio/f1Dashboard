@@ -5,11 +5,30 @@ import api from '../core/api.js';
 import auth from '../core/auth.js';
 import { $, $$, esc, toast } from '../core/ui.js';
 import { driversForTeamName } from '../core/f1data.js';
+import { compressImage } from '../core/media.js';
 
 if (auth.isLogged()) location.href = '/dashboard.html';
 
 const form = $('#register-form');
 const submitBtn = $('#submit-btn');
+
+/* ---- Avatar (opzionale): selezione + anteprima + compressione ---- */
+let avatarFile = null; // File compresso pronto per l'upload post-registrazione
+const avatarInput = $('#avatar-input');
+const avatarPreview = $('#avatar-preview');
+let previewUrl = null;
+
+avatarInput.addEventListener('change', async () => {
+  const file = avatarInput.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image')) { toast.error('Seleziona un\'immagine.'); avatarInput.value = ''; return; }
+  try {
+    avatarFile = await compressImage(file, { maxDim: 512, quality: 0.85 });
+  } catch { avatarFile = file; }
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(avatarFile);
+  avatarPreview.src = previewUrl;
+});
 
 /* ---- Scuderia + pilota di riserva (BOT) con controllo disponibilità ---- */
 let teams = [];
@@ -99,6 +118,19 @@ form.addEventListener('submit', async (e) => {
       team_id: fd.get('team_id') ? Number(fd.get('team_id')) : undefined,
       reserve_driver: fd.get('reserve_driver') || undefined,
     });
+    // Avatar (opzionale): ora l'utente è autenticato, carichiamo il file
+    if (avatarFile) {
+      submitBtn.innerHTML = '<span class="spinner sm"></span> Caricamento avatar…';
+      try {
+        const fd = new FormData();
+        fd.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
+        const { avatar } = await api.upload('/users/me/avatar', fd);
+        auth.user = { ...auth.user, avatar };
+      } catch (e) {
+        // La registrazione è comunque riuscita: non blocchiamo l'utente
+        toast.warning('Account creato, ma l\'avatar non è stato caricato. Riprova dal profilo.');
+      }
+    }
     toast.success(`Benvenuto in pista, ${user.display_name || user.username}!`, { title: 'Account creato' });
     setTimeout(() => (location.href = '/profile.html'), 600);
   } catch (err) {

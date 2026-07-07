@@ -26,7 +26,16 @@
     <section class="auth-panel">
       <div class="auth-card anim-fade-up">
         <h2 style="margin-bottom:4px">Crea account</h2>
-        <p class="text-lo" style="margin-bottom:24px">Bastano pochi secondi per iniziare.</p>
+        <p class="text-lo" style="margin-bottom:20px">Bastano pochi secondi per iniziare.</p>
+
+        <div class="reg-avatar">
+          <img id="avatar-preview" class="avatar xl" src="/images/avatars/default.svg" alt="Avatar">
+          <label class="btn btn-outline btn-sm" style="cursor:pointer">
+            Carica avatar
+            <input type="file" id="avatar-input" accept="image/*" hidden>
+          </label>
+          <div class="hint">Opzionale · verrà ridimensionato automaticamente</div>
+        </div>
 
         <form id="register-form" novalidate>
           <div class="form-row">
