@@ -143,6 +143,9 @@
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-auto { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
+/* Profilo: colonna avatar + form (collassa su mobile, vedi responsive) */
+.profile-grid { grid-template-columns: 280px 1fr; gap: var(--sp-6); align-items: start; }
+
 /* ---------------- Footer ---------------- */
 .footer {
   border-top: 1px solid var(--border);
@@ -235,6 +238,44 @@
   .nav-actions { margin-left: var(--sp-2); }
   .nav-user .nu-name { display: none; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-auto { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
   .container { padding-inline: var(--sp-4); }
   .footer .container { flex-direction: column; text-align: center; }
+}
+
+/* ---------------- Telefono (schermi piccoli) ---------------- */
+@media (max-width: 560px) {
+  .container { padding-inline: var(--sp-3); }
+
+  /* Tabelle: scroll orizzontale fluido + celle più compatte così il testo
+     resta leggibile e non viene tagliato. */
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+  table.data { font-size: 0.85rem; }
+  table.data thead th { padding: 10px 11px; font-size: 0.66rem; }
+  table.data tbody td { padding: 10px 11px; }
+  table.data.compact th, table.data.compact td { padding: 6px 7px; font-size: 0.8rem; }
+  .driver-cell { gap: 8px; }
+  .driver-cell img { width: 28px; height: 28px; }
+  .driver-cell .dc-name { font-size: 0.88rem; }
+
+  /* Valori grandi che rischiavano di uscire dalle card */
+  .stat-card .stat-value { font-size: 1.6rem; }
+  .leader-card .lc-value { font-size: 1.35rem; }
+  .section-title { font-size: 1.05rem; }
+
+  /* Spaziature meno generose per guadagnare larghezza utile */
+  .page-head { margin-bottom: var(--sp-5); }
+  .admin-main { padding: var(--sp-4); }
+
+  /* Tab scrollabili in orizzontale invece di andare a capo in modo confuso */
+  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabs .tab { white-space: nowrap; }
+
+  /* Testo lungo (email, username) non deve sfondare i contenitori */
+  .text-hi, .dc-name, .dc-sub { overflow-wrap: anywhere; word-break: break-word; }
+
+  /* Colonne secondarie nascoste su telefono: la classifica resta leggibile
+     (Pos, Pilota/Team, Punti) senza scroll orizzontale. */
+  .hide-sm { display: none !important; }
 }

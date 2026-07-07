@@ -31,13 +31,13 @@ function driverRow(d, idx) {
       </td>
       <td><span class="team-tag"><span class="dot" style="background:${d.team_color || '#e10600'}"></span>${esc(d.team_name || '—')}</span></td>
       <td class="num pts">${d.points}</td>
-      <td class="num">${d.wins}</td>
-      <td class="num">${d.podiums}</td>
-      <td class="num">${d.poles}</td>
-      <td class="num">${d.fastest_laps}</td>
-      <td class="num">${d.dnf}</td>
-      <td class="num">${d.avg_position ?? '—'}</td>
-      <td class="num text-lo">${d.gap_to_leader > 0 ? '−' + d.gap_to_leader : '—'}</td>
+      <td class="num hide-sm">${d.wins}</td>
+      <td class="num hide-sm">${d.podiums}</td>
+      <td class="num hide-sm">${d.poles}</td>
+      <td class="num hide-sm">${d.fastest_laps}</td>
+      <td class="num hide-sm">${d.dnf}</td>
+      <td class="num hide-sm">${d.avg_position ?? '—'}</td>
+      <td class="num text-lo hide-sm">${d.gap_to_leader > 0 ? '−' + d.gap_to_leader : '—'}</td>
     </tr>`;
 }
 
@@ -69,11 +69,11 @@ function renderConstructors() {
         <td><span class="pos ${c.position <= 3 ? 'p' + c.position : ''}">${c.position}</span></td>
         <td><span class="team-tag"><span class="dot" style="background:${c.team_color || '#e10600'};height:22px"></span><strong class="text-hi">${esc(c.team_name)}</strong></span></td>
         <td class="num pts">${c.points}</td>
-        <td class="num">${c.wins}</td>
-        <td class="num">${c.podiums}</td>
-        <td class="num">${c.poles}</td>
-        <td class="num">${c.fastest_laps}</td>
-        <td class="num">${c.avg_points}</td>
+        <td class="num hide-sm">${c.wins}</td>
+        <td class="num hide-sm">${c.podiums}</td>
+        <td class="num hide-sm">${c.poles}</td>
+        <td class="num hide-sm">${c.fastest_laps}</td>
+        <td class="num hide-sm">${c.avg_points}</td>
       </tr>`).join('')
     : '<tr><td colspan="8"><div class="empty"><div class="em-ic">🏎️</div>Nessun dato costruttori.</div></td></tr>';
 }

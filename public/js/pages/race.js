@@ -42,10 +42,10 @@ function resultRow(r, idx) {
           </div>
         </a>
       </td>
-      <td><span class="team-tag"><span class="dot" style="background:${r.team_color || '#e10600'}"></span>${esc(r.team_name || '—')}</span></td>
-      <td class="num text-lo">${r.grid_position ?? '—'}</td>
+      <td class="hide-sm"><span class="team-tag"><span class="dot" style="background:${r.team_color || '#e10600'}"></span>${esc(r.team_name || '—')}</span></td>
+      <td class="num text-lo hide-sm">${r.grid_position ?? '—'}</td>
       <td>${gap}</td>
-      <td class="num">${r.overtakes || 0}</td>
+      <td class="num hide-sm">${r.overtakes || 0}</td>
       <td style="white-space:nowrap">${badges.join(' ') || '<span class="text-dim">—</span>'}</td>
       <td class="num pts">${r.points || 0}</td>
     </tr>`;
@@ -88,9 +88,9 @@ function render(race) {
         <table class="data">
           <thead>
             <tr>
-              <th>Pos</th><th>Pilota</th><th>Team</th>
-              <th class="num">Grid</th><th>Tempo / Gap</th>
-              <th class="num">Sorp.</th><th>Note</th><th class="num">Punti</th>
+              <th>Pos</th><th>Pilota</th><th class="hide-sm">Team</th>
+              <th class="num hide-sm">Grid</th><th>Tempo / Gap</th>
+              <th class="num hide-sm">Sorp.</th><th>Note</th><th class="num">Punti</th>
             </tr>
           </thead>
           <tbody>${race.results.map(resultRow).join('')}</tbody>
