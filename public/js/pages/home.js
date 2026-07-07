@@ -102,16 +102,28 @@ function renderCalendar(cal) {
     </a>`).join('');
 }
 
-function renderNews(news) {
-  const box = $('#news-grid');
-  if (!news?.length) { box.innerHTML = '<div class="empty">Nessuna notizia.</div>'; return; }
-  box.innerHTML = news.map((n) => `
-    <article class="card hover">
-      <div class="badge red" style="margin-bottom:10px">News</div>
-      <h4 style="margin-bottom:8px">${esc(n.title)}</h4>
-      <p style="font-size:0.9rem;color:var(--text-lo)">${esc((n.body || '').slice(0, 130))}${(n.body || '').length > 130 ? '…' : ''}</p>
-      <small class="text-lo" style="display:block;margin-top:12px">${fmtDate(n.published_at)} · ${esc(n.author_name || 'Redazione')}</small>
-    </article>`).join('');
+function renderPosts(posts) {
+  const box = $('#posts-grid');
+  if (!posts?.length) {
+    box.innerHTML = '<div class="empty">Ancora nessun post. <a href="/feed.html" class="text-red">Apri la bacheca</a> e pubblica il primo!</div>';
+    return;
+  }
+  box.innerHTML = posts.map((p) => {
+    const media = p.media_url
+      ? (p.media_type === 'video'
+          ? `<div class="post-thumb">🎬 Video</div>`
+          : `<div class="post-thumb" style="background-image:url('${esc(p.media_url)}')"></div>`)
+      : '';
+    const tags = p.tags?.length ? `<div class="text-lo" style="font-size:0.8rem;margin-top:6px">🏷️ ${p.tags.map((t) => '@' + esc(t.username)).join(' ')}</div>` : '';
+    const text = (p.body || '').trim();
+    return `
+      <a href="/feed.html" class="card hover" style="text-decoration:none">
+        ${media}
+        ${text ? `<p style="font-size:0.92rem;color:var(--text-mid);margin:${media ? '10px 0 0' : '0'}">${esc(text.slice(0, 140))}${text.length > 140 ? '…' : ''}</p>` : ''}
+        ${tags}
+        <small class="text-lo" style="display:block;margin-top:12px">${fmtDate(p.created_at)} · ${esc(p.author_name || '')}</small>
+      </a>`;
+  }).join('');
 }
 
 function renderStrip(data) {
@@ -141,7 +153,7 @@ function renderStrip(data) {
     $('#top-drivers').innerHTML = (data.drivers || []).map(driverRow).join('') || '<tr><td colspan="3" class="empty">Nessun dato</td></tr>';
     $('#top-constructors').innerHTML = (data.constructors || []).map(constructorRow).join('') || '<tr><td colspan="3" class="empty">Nessun dato</td></tr>';
     renderCalendar(data.calendar);
-    renderNews(data.news);
+    renderPosts(data.posts);
     initReveal();
   } catch (e) {
     console.error(e);

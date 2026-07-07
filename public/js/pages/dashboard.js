@@ -104,14 +104,22 @@ function render(data, me) {
         <a href="/standings.html" class="btn ghost sm" style="margin-top:12px">Classifica completa →</a>
       </div>
       <div>
-        <h2 class="section-title">Ultime notizie</h2>
-        <div class="flex" style="flex-direction:column;gap:12px">
-          ${(data.news || []).slice(0, 5).map((n) => `
-            <div class="card" style="padding:16px">
-              <div class="text-lo" style="font-size:0.78rem">${fmtDate(n.published_at)}</div>
-              <div class="text-hi" style="font-weight:800;margin:4px 0">${esc(n.title)}</div>
-              <p class="text-lo" style="margin:0;font-size:0.9rem">${esc((n.body || '').slice(0, 120))}${(n.body || '').length > 120 ? '…' : ''}</p>
-            </div>`).join('') || '<div class="empty">Nessuna notizia.</div>'}
+        <div class="flex items-center justify-between">
+          <h2 class="section-title" style="margin:0">Dalla bacheca</h2>
+          <a href="/feed.html" class="btn ghost sm">Apri →</a>
+        </div>
+        <div class="flex" style="flex-direction:column;gap:12px;margin-top:12px">
+          ${(data.posts || []).slice(0, 5).map((p) => {
+            const text = (p.body || '').trim();
+            const media = p.media_url ? `<div class="text-lo" style="font-size:0.8rem;margin-top:4px">${p.media_type === 'video' ? '🎬 Video' : '📷 Foto'}</div>` : '';
+            const tags = p.tags?.length ? ` · 🏷️ ${p.tags.map((t) => '@' + esc(t.username)).join(' ')}` : '';
+            return `
+            <a href="/feed.html" class="card" style="padding:16px;text-decoration:none;display:block">
+              <div class="text-lo" style="font-size:0.78rem">${esc(p.author_name || '')} · ${fmtDate(p.created_at)}${tags}</div>
+              ${text ? `<p class="text-mid" style="margin:6px 0 0;font-size:0.9rem">${esc(text.slice(0, 120))}${text.length > 120 ? '…' : ''}</p>` : ''}
+              ${media}
+            </a>`;
+          }).join('') || '<div class="empty">Ancora nessun post. <a href="/feed.html" class="text-red">Pubblica il primo!</a></div>'}
         </div>
       </div>
     </div>

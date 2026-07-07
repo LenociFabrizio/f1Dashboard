@@ -17,17 +17,29 @@ async function loadSeason() {
 }
 
 function driverRow(d, idx) {
+  const num = d.favorite_number ? ` · #${d.favorite_number}` : '';
+  const reserve = d.reserve_driver
+    ? `<div class="dc-sub bot-reserve" title="Pilota di riserva (bot) assegnato">🤖 Riserva: ${esc(d.reserve_driver)}</div>`
+    : '';
+  let botPlayed = '';
+  if (d.bot_rounds?.length) {
+    const rounds = d.bot_rounds.map((b) => `R${b.round}`).join(', ');
+    const detail = d.bot_rounds.map((b) => `R${b.round} ${b.race || ''} — ${b.bot}`).join('\n');
+    botPlayed = `<div class="bot-played" title="Il bot di riserva ha corso al posto dell'utente (i punti vanno comunque all'utente):\n${esc(detail)}">🤖 ha corso in: ${esc(rounds)}</div>`;
+  }
   return `
     <tr>
       <td><span class="pos ${idx < 3 && sortKey === 'points' ? 'p' + (idx + 1) : ''}">${sortKey === 'points' ? idx + 1 : d.position}</span></td>
       <td>
-        <a href="/driver.html?id=${d.user_id}" class="driver-cell">
-          <img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt="">
+        <div class="driver-cell driver-cell-multi">
+          <a href="/driver.html?id=${d.user_id}"><img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt=""></a>
           <div>
-            <div class="dc-name">${esc(d.display_name)}</div>
-            <div class="dc-sub">#${d.favorite_number ?? '—'}</div>
+            <a href="/driver.html?id=${d.user_id}" class="dc-name">${esc(d.display_name)}</a>
+            <div class="dc-sub">@${esc(d.username)}${num}</div>
+            ${reserve}
+            ${botPlayed}
           </div>
-        </a>
+        </div>
       </td>
       <td><span class="team-tag"><span class="dot" style="background:${d.team_color || '#e10600'}"></span>${esc(d.team_name || '—')}</span></td>
       <td class="num pts">${d.points}</td>

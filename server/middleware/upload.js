@@ -30,6 +30,22 @@ export const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
 });
 
+// Upload media della bacheca (foto o video). Usato solo dal fallback locale
+// (in produzione i media vanno diretti su Vercel Blob dal browser).
+const ALLOWED_MEDIA = [
+  ...ALLOWED,
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg',
+];
+function mediaFilter(_req, file, cb) {
+  if (ALLOWED_MEDIA.includes(file.mimetype)) return cb(null, true);
+  cb(new Error('Formato media non supportato (usa foto o video)'));
+}
+export const uploadMedia = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: mediaFilter,
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300 MB (solo locale)
+});
+
 /** Genera un nome file sicuro e (quasi) univoco. */
 function safeName(originalname) {
   const ext = path.extname(originalname).toLowerCase();

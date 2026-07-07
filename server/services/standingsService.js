@@ -20,6 +20,7 @@ export async function getDriverStandings(seasonId) {
   const rows = await db
     .prepare(
       `SELECT r.*, u.username, u.display_name, u.avatar, u.nationality, u.favorite_number,
+              u.reserve_driver, ra.round AS race_round, ra.name AS race_name,
               t.name AS team_name, t.color AS team_color
          FROM results r
          JOIN races  ra ON ra.id = r.race_id
@@ -40,6 +41,7 @@ export async function getDriverStandings(seasonId) {
         avatar: row.avatar,
         nationality: row.nationality,
         favorite_number: row.favorite_number,
+        reserve_driver: row.reserve_driver || null,
         team_name: row.team_name,
         team_color: row.team_color,
         points: 0,
@@ -50,6 +52,7 @@ export async function getDriverStandings(seasonId) {
         dnf: 0,
         races: 0,
         overtakes: 0,
+        bot_rounds: [], // gare in cui ha corso il bot di riserva al posto dell'utente
         positions_sum: 0, // per media piazzamento (solo gare terminate)
         positions_count: 0,
       });
@@ -58,6 +61,9 @@ export async function getDriverStandings(seasonId) {
     s.points += row.points;
     s.races += 1;
     s.overtakes += row.overtakes;
+    if (row.bot_driver && String(row.bot_driver).trim()) {
+      s.bot_rounds.push({ round: row.race_round, race: row.race_name, bot: String(row.bot_driver).trim() });
+    }
     if (row.pole) s.poles += 1;
     if (row.fastest_lap) s.fastest_laps += 1;
     if (row.dnf) {
@@ -72,6 +78,7 @@ export async function getDriverStandings(seasonId) {
 
   let standings = Array.from(map.values()).map((s) => ({
     ...s,
+    bot_rounds: s.bot_rounds.sort((a, b) => a.round - b.round),
     avg_position: s.positions_count ? round(s.positions_sum / s.positions_count, 2) : null,
     points: round(s.points, 1),
   }));

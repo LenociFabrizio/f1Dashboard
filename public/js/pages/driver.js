@@ -103,6 +103,7 @@ function render(user, stats) {
             <span class="role-pill ${user.role === 'admin' ? 'admin' : ''}">${user.role === 'admin' ? 'Admin' : 'Pilota'}</span>
           </div>
           ${user.favorite_driver ? `<div class="text-lo" style="margin-top:8px">Idolo: <strong class="text-mid">${esc(user.favorite_driver)}</strong></div>` : ''}
+          ${user.reserve_driver ? `<div class="text-lo" style="margin-top:4px">🤖 Riserva (bot): <strong class="text-mid">${esc(user.reserve_driver)}</strong></div>` : ''}
         </div>
         ${hasRaces ? `<div style="text-align:center"><div class="text-lo" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Ultime 5</div><div class="flex gap-2">${last5Dots(stats.last5)}</div></div>` : ''}
       </div>

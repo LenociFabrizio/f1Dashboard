@@ -164,6 +164,30 @@ CREATE TABLE IF NOT EXISTS news (
 );
 
 -- ------------------------------------------------------------
+--  BACHECA / POST SOCIAL
+--  Ogni utente può pubblicare un post con testo e (opzionale) un
+--  media (foto o video). Può taggare altri utenti (post_tags).
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS posts (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  author_id     INTEGER NOT NULL,
+  body          TEXT    DEFAULT '',          -- didascalia/commento
+  media_url     TEXT,                          -- URL foto o video (Vercel Blob / uploads)
+  media_type    TEXT,                          -- 'image' | 'video' | NULL
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Utenti taggati in un post (molti-a-molti)
+CREATE TABLE IF NOT EXISTS post_tags (
+  post_id       INTEGER NOT NULL,
+  user_id       INTEGER NOT NULL,
+  PRIMARY KEY (post_id, user_id),
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ------------------------------------------------------------
 --  STATISTICHE MANUALI (per stagione/pilota)
 --  Valori non ricavabili automaticamente e inseriti dall'admin.
 -- ------------------------------------------------------------
@@ -201,3 +225,5 @@ CREATE INDEX IF NOT EXISTS idx_results_user    ON results(user_id);
 CREATE INDEX IF NOT EXISTS idx_races_season     ON races(season_id);
 CREATE INDEX IF NOT EXISTS idx_qualifying_race ON qualifying(race_id);
 CREATE INDEX IF NOT EXISTS idx_users_role      ON users(role);
+CREATE INDEX IF NOT EXISTS idx_posts_created   ON posts(created_at);
+CREATE INDEX IF NOT EXISTS idx_post_tags_post  ON post_tags(post_id);

@@ -32,7 +32,7 @@ async function main() {
   if (RESET) {
     console.log('⚠️  Reset database in corso...');
     const tables = [
-      'achievements', 'manual_stats', 'news', 'results', 'qualifying',
+      'post_tags', 'posts', 'achievements', 'manual_stats', 'news', 'results', 'qualifying',
       'races', 'circuits', 'seasons', 'users', 'teams',
     ];
     for (const t of tables) await db.exec(`DELETE FROM ${t};`);
@@ -146,6 +146,16 @@ async function main() {
       `/images/avatars/default.svg`
     );
     userIds[username] = info.lastInsertRowid;
+  }
+
+  // Alcuni piloti hanno un pilota di riserva (bot) assegnato
+  const reserves = {
+    leclerc16: 'Antonio Fuoco',
+    perez11: 'Liam Lawson',
+    norris4: 'Pato O\'Ward',
+  };
+  for (const [username, reserve] of Object.entries(reserves)) {
+    await db.prepare('UPDATE users SET reserve_driver = ? WHERE id = ?').run(reserve, userIds[username]);
   }
 
   // Pool di piloti (include admin: può correre)
@@ -271,21 +281,44 @@ async function main() {
   }
 
   // --------------------------------------------------------
-  // NEWS
+  // BOT DI RISERVA che ha corso al posto dell'utente (demo)
   // --------------------------------------------------------
-  const insertNews = db.prepare(
-    `INSERT INTO news (season_id, title, body, author_id, published_at) VALUES (?, ?, ?, ?, ?)`
-  );
-  const newsItems = [
-    ['Al via la Stagione 2025!', 'Il campionato della lega riparte con 16 Gran Premi. Iscrizioni aperte, che vinca il migliore!'],
-    ['Che spettacolo in Bahrain', 'La gara inaugurale ha regalato emozioni fino all\'ultimo giro con sorpassi mozzafiato.'],
-    ['Nuovo regolamento penalità', 'Da questa stagione le penalità per track limits saranno di 5 secondi. Occhio ai cordoli!'],
-    ['Lotta serrata per il titolo', 'Dopo sei gare la classifica è cortissima: mai vista una battaglia così equilibrata.'],
+  const botRuns = [
+    ['leclerc16', 3, 'Antonio Fuoco'],
+    ['perez11', 5, 'Liam Lawson'],
   ];
-  for (let i = 0; i < newsItems.length; i++) {
-    const n = newsItems[i];
-    const d = new Date(2025, 2, 1 + i * 10).toISOString();
-    await insertNews.run(seasonId, n[0], n[1], userIds['admin'], d);
+  for (const [username, round, bot] of botRuns) {
+    await db
+      .prepare(
+        `UPDATE results SET bot_driver = ?
+          WHERE user_id = ? AND race_id IN (SELECT id FROM races WHERE season_id = ? AND round = ?)`
+      )
+      .run(bot, userIds[username], seasonId, round);
+  }
+
+  // --------------------------------------------------------
+  // BACHECA (post social di esempio, con tag)
+  // --------------------------------------------------------
+  const insertPost = db.prepare(
+    `INSERT INTO posts (author_id, body, media_url, media_type, created_at) VALUES (?, ?, ?, ?, ?)`
+  );
+  const insertPostTag = db.prepare('INSERT OR IGNORE INTO post_tags (post_id, user_id) VALUES (?, ?)');
+  // [autore, testo, media_url, media_type, [tag usernames]]
+  const posts = [
+    ['maxpower', 'Che rimonta oggi! Partito 5° e chiuso davanti a tutti 🏆 GG a tutti!', null, null, ['leclerc16', 'norris4']],
+    ['leclerc16', 'Pole numero 3 stagionale. In gara però dobbiamo essere più cattivi in staccata 😤', null, null, ['maxpower']],
+    ['norris4', 'Bel duello nel finale, ci siamo divertiti! Alla prossima 🍿', null, null, ['piastri81']],
+    ['admin', 'Ricordo a tutti: dalla prossima gara le penalità track limits salgono a 5 secondi. Occhio ai cordoli!', null, null, []],
+    ['lewis44', 'Setup perfetto nel bagnato, weekend da incorniciare. Grazie al team! 💪', null, null, ['russell63']],
+  ];
+  for (let i = 0; i < posts.length; i++) {
+    const [author, body, media, mediaType, tags] = posts[i];
+    // Post cronologicamente crescenti (i più recenti per ultimi)
+    const d = new Date(2025, 3, 1 + i * 2, 12 + i).toISOString();
+    const info = await insertPost.run(userIds[author], body, media, mediaType, d);
+    for (const tg of tags) {
+      if (userIds[tg]) await insertPostTag.run(info.lastInsertRowid, userIds[tg]);
+    }
   }
 
   console.log('✅ Seed completato!');

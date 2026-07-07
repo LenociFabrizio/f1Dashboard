@@ -14,7 +14,7 @@ import results from './sections/results.js';
 import users from './sections/users.js';
 import teams from './sections/teams.js';
 import circuits from './sections/circuits.js';
-import news from './sections/news.js';
+import posts from './sections/posts.js';
 
 const SECTIONS = {
   overview: { icon: '📊', label: 'Panoramica', mod: overview },
@@ -24,7 +24,7 @@ const SECTIONS = {
   users: { icon: '👤', label: 'Piloti / Utenti', mod: users },
   teams: { icon: '🏎️', label: 'Team', mod: teams },
   circuits: { icon: '📍', label: 'Circuiti', mod: circuits },
-  news: { icon: '📰', label: 'Notizie', mod: news },
+  posts: { icon: '📢', label: 'Bacheca', mod: posts },
 };
 
 function buildSidebar(active) {

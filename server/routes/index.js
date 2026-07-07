@@ -13,6 +13,7 @@ import raceRoutes from './races.js';
 import standingsRoutes from './standings.js';
 import statsRoutes from './stats.js';
 import newsRoutes from './news.js';
+import postRoutes from './posts.js';
 import dashboardRoutes from './dashboard.js';
 
 const router = Router();
@@ -27,6 +28,7 @@ router.use('/races', raceRoutes);
 router.use('/standings', standingsRoutes);
 router.use('/stats', statsRoutes);
 router.use('/news', newsRoutes);
+router.use('/posts', postRoutes);
 router.use('/dashboard', dashboardRoutes);
 
 export default router;

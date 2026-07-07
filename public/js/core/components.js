@@ -17,6 +17,7 @@ const NAV = [
   { href: '/standings.html', label: 'Classifiche' },
   { href: '/races.html', label: 'Calendario' },
   { href: '/stats.html', label: 'Statistiche' },
+  { href: '/feed.html', label: 'Bacheca' },
   { href: '/dashboard.html', label: 'Dashboard', auth: true },
 ];
 

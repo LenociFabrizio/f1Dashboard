@@ -541,3 +541,75 @@ tr.row-me td:first-child { box-shadow: inset 3px 0 0 var(--f1-red); }
 table.data.compact th, table.data.compact td { padding: 7px 9px; font-size: 0.85rem; }
 table.data.compact .input { margin: 0; }
 .field-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-lo); font-weight: var(--fw-semibold); }
+
+/* =============================================================
+   Bacheca social: composer, feed, post, tag
+   ============================================================= */
+.feed { display: flex; flex-direction: column; gap: var(--sp-5); }
+
+/* Composer */
+.composer { margin-bottom: var(--sp-5); }
+.composer textarea.input { resize: vertical; min-height: 64px; }
+.composer-actions { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); flex-wrap: wrap; }
+
+/* Anteprima media nel composer */
+.media-preview { position: relative; margin-top: var(--sp-3); border-radius: var(--r-md); overflow: hidden; background: var(--bg-050); }
+.media-preview img, .media-preview video { display: block; width: 100%; max-height: 420px; object-fit: contain; background: #000; }
+.media-remove {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(0,0,0,0.7); color: #fff; font-size: 1.3rem; line-height: 1;
+  border: 1px solid rgba(255,255,255,0.25); cursor: pointer;
+}
+.media-remove:hover { background: var(--danger); }
+
+/* Tag picker */
+.tag-field { position: relative; margin-top: var(--sp-3); }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chips:not(:empty) { margin-bottom: 8px; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 10px; border-radius: var(--r-pill);
+  background: rgba(225, 6, 0, 0.14); border: 1px solid rgba(225, 6, 0, 0.35);
+  color: var(--text-hi); font-size: 0.82rem; font-weight: var(--fw-semibold);
+}
+.tag-chip button { color: var(--text-lo); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.tag-chip button:hover { color: var(--danger); }
+.tag-results {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  background: var(--bg-100); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); box-shadow: var(--sh-lg); padding: 6px;
+  display: none; max-height: 260px; overflow-y: auto;
+}
+.tag-results.open { display: block; }
+.tag-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: var(--r-sm); color: var(--text-mid); font-size: 0.9rem; cursor: pointer;
+}
+.tag-opt:hover { background: var(--bg-200); color: var(--text-hi); }
+.tag-opt img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+
+/* Post card */
+.post-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.post-body { color: var(--text-hi); line-height: 1.6; margin: 0 0 12px; white-space: pre-wrap; word-break: break-word; }
+.post-media { border-radius: var(--r-md); overflow: hidden; background: #000; margin-bottom: 12px; }
+.post-media img, .post-media video { display: block; width: 100%; max-height: 560px; object-fit: contain; }
+.post-tags { font-size: 0.85rem; color: var(--text-lo); }
+.post-tags a { color: var(--f1-red); font-weight: var(--fw-semibold); }
+.post-tags a:hover { text-decoration: underline; }
+.post-del { flex: 0 0 auto; }
+
+/* Miniatura post in home */
+.post-thumb {
+  height: 130px; border-radius: var(--r-md); background: var(--bg-050) center/cover no-repeat;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-lo); font-weight: var(--fw-bold); font-size: 0.95rem;
+}
+
+/* Classifica piloti: cella multi-riga (nome, nickname, riserva, bot) */
+.driver-cell-multi { align-items: flex-start; }
+.driver-cell-multi .dc-name { display: inline-block; text-decoration: none; }
+.driver-cell-multi .dc-name:hover { text-decoration: underline; }
+.bot-reserve, .bot-played { font-size: 0.75rem; margin-top: 2px; }
+.bot-played { color: var(--f1-red); font-weight: var(--fw-semibold); cursor: help; }
+.bot-reserve { color: var(--text-lo); cursor: help; }

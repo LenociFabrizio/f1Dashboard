@@ -22,6 +22,36 @@ const RACE_SELECT = `
   SELECT ra.*, c.name AS circuit_name, c.country, c.country_code, c.image AS circuit_image
     FROM races ra JOIN circuits c ON c.id = ra.circuit_id`;
 
+/** Ultimi post della bacheca con autore e utenti taggati. */
+async function recentPosts(limit = 5) {
+  const posts = await db
+    .prepare(
+      `SELECT p.id, p.author_id, p.body, p.media_url, p.media_type, p.created_at,
+              u.display_name AS author_name, u.username AS author_username,
+              u.avatar AS author_avatar, t.color AS author_team_color
+         FROM posts p
+         JOIN users u ON u.id = p.author_id
+         LEFT JOIN teams t ON t.id = u.team_id
+        ORDER BY p.created_at DESC, p.id DESC LIMIT ?`
+    )
+    .all(limit);
+  if (!posts.length) return posts;
+  const ids = posts.map((p) => p.id);
+  const tags = await db
+    .prepare(
+      `SELECT pt.post_id, u.display_name, u.username
+         FROM post_tags pt JOIN users u ON u.id = pt.user_id
+        WHERE pt.post_id IN (${ids.map(() => '?').join(',')})`
+    )
+    .all(...ids);
+  const byPost = new Map();
+  for (const t of tags) {
+    if (!byPost.has(t.post_id)) byPost.set(t.post_id, []);
+    byPost.get(t.post_id).push({ display_name: t.display_name, username: t.username });
+  }
+  return posts.map((p) => ({ ...p, tags: byPost.get(p.id) || [] }));
+}
+
 /** GET /api/dashboard/home — dati per la homepage pubblica */
 export const homeData = asyncHandler(async (_req, res) => {
   const season = await activeSeason();
@@ -38,14 +68,7 @@ export const homeData = asyncHandler(async (_req, res) => {
   const calendar = await db
     .prepare(`${RACE_SELECT} WHERE ra.season_id=? ORDER BY ra.round`)
     .all(season.id);
-  const news = await db
-    .prepare(
-      `SELECT n.*, u.display_name AS author_name FROM news n
-       LEFT JOIN users u ON u.id=n.author_id
-       WHERE n.season_id=? OR n.season_id IS NULL
-       ORDER BY n.published_at DESC LIMIT 4`
-    )
-    .all(season.id);
+  const posts = await recentPosts(4);
 
   let lastResults = [];
   if (lastRace) {
@@ -59,7 +82,7 @@ export const homeData = asyncHandler(async (_req, res) => {
       .all(lastRace.id);
   }
 
-  res.json({ season, drivers, constructors, nextRace, lastRace, lastResults, calendar, news });
+  res.json({ season, drivers, constructors, nextRace, lastRace, lastResults, calendar, posts });
 });
 
 /** GET /api/dashboard/me — dashboard personale (richiede auth) */
@@ -77,13 +100,7 @@ export const myDashboard = asyncHandler(async (req, res) => {
   const lastRace = await db
     .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='completed' ORDER BY ra.round DESC LIMIT 1`)
     .get(season.id);
-  const news = await db
-    .prepare(
-      `SELECT n.*, u.display_name AS author_name FROM news n
-       LEFT JOIN users u ON u.id=n.author_id
-       ORDER BY n.published_at DESC LIMIT 5`
-    )
-    .all();
+  const posts = await recentPosts(5);
 
   res.json({
     season,
@@ -93,7 +110,7 @@ export const myDashboard = asyncHandler(async (req, res) => {
     constructorStandings: (await getConstructorStandings(season.id)).slice(0, 5),
     nextRace,
     lastRace,
-    news,
+    posts,
   });
 });
 
