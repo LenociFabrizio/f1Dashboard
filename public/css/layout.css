@@ -150,6 +150,9 @@
 /* Profilo: colonna avatar + form (collassa su mobile, vedi responsive) */
 .profile-grid { grid-template-columns: 280px 1fr; gap: var(--sp-6); align-items: start; }
 
+/* Home: prossimo GP + ultimo risultato (collassa su mobile) */
+.home-row { grid-template-columns: 1.1fr 1fr; }
+
 /* ---------------- Footer ---------------- */
 .footer {
   border-top: 1px solid var(--border);
@@ -226,7 +229,11 @@
   /* Il pannello (link + account) è un drawer laterale che entra da sinistra */
   .nav-panel {
     position: fixed;
-    top: var(--nav-h); left: 0; bottom: 0; right: auto;
+    /* Nota: .navbar ha backdrop-filter → è il blocco contenitore per i figli
+       position:fixed. Usiamo height (unità viewport) invece di bottom:0, che
+       si risolverebbe contro la navbar (66px) collassando il drawer. */
+    top: var(--nav-h); left: 0; right: auto;
+    height: calc(100dvh - var(--nav-h));
     width: min(82vw, 320px);
     flex-direction: column;
     align-items: stretch;
@@ -277,6 +284,7 @@
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .grid-auto { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
+  .home-row { grid-template-columns: 1fr; }
   .container { padding-inline: var(--sp-4); }
 
   /* Footer: impilato, centrato, con link che vanno a capo ordinatamente */
@@ -306,6 +314,11 @@
   .stat-card .stat-value { font-size: 1.6rem; }
   .leader-card .lc-value { font-size: 1.35rem; }
   .section-title { font-size: 1.05rem; }
+
+  /* Home: hero più compatto e leggibile su telefono */
+  .hero .hero-cta .btn { flex: 1 1 100%; }
+  .hero-strip { gap: var(--sp-4) var(--sp-5); margin-top: var(--sp-5); }
+  .hero-strip .hs b { font-size: 1.6rem; }
 
   /* Spaziature meno generose per guadagnare larghezza utile */
   .page-head { margin-bottom: var(--sp-5); }
