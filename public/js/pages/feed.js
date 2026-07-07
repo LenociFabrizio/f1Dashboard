@@ -25,7 +25,7 @@ function xhrUpload(path, formData, { onProgress } = {}) {
     const tk = token.get();
     if (tk) xhr.setRequestHeader('Authorization', 'Bearer ' + tk);
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) onProgress?.({ percentage: Math.round((e.loaded / e.total) * 100), loaded: e.loaded, total: e.total });
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -41,21 +41,35 @@ function xhrUpload(path, formData, { onProgress } = {}) {
   });
 }
 
+let uploadCfg = null; // cache di /posts/upload-config
+let blobClientPromise = null; // preload del client Vercel Blob
+
+function preloadUploader() {
+  if (!uploadCfg) {
+    api.get('/posts/upload-config', {}, { auth: false })
+      .then((c) => { uploadCfg = c; if (c?.direct) blobClientPromise = import('https://esm.sh/@vercel/blob@0.27.3/client'); })
+      .catch(() => {});
+  }
+}
+
 async function uploadMedia(file, { onProgress } = {}) {
-  const cfg = await api.get('/posts/upload-config', {}, { auth: false });
+  const cfg = uploadCfg || (uploadCfg = await api.get('/posts/upload-config', {}, { auth: false }));
   const safe = (file.name || 'media').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 60);
   const kind = (file.type || '').startsWith('video') ? 'video' : 'image';
 
   if (cfg.direct) {
     // Upload diretto browser → Vercel Blob (nessun limite serverless)
-    const { upload } = await import('https://esm.sh/@vercel/blob@0.27.3/client');
+    const { upload } = await (blobClientPromise || (blobClientPromise = import('https://esm.sh/@vercel/blob@0.27.3/client')));
     const blob = await upload(`posts/${safe}`, file, {
       access: 'public',
       handleUploadUrl: '/api/posts/upload',
       clientPayload: token.get() || '',
       contentType: file.type || undefined,
       multipart: file.size > 8 * 1024 * 1024,
-      onUploadProgress: (e) => onProgress?.(Math.round(e.percentage ?? (e.loaded / e.total) * 100)),
+      onUploadProgress: (e) => onProgress?.({
+        percentage: Math.round(e.percentage ?? (e.total ? (e.loaded / e.total) * 100 : 0)),
+        loaded: e.loaded, total: e.total,
+      }),
     });
     return { url: blob.url, type: kind };
   }
@@ -210,10 +224,14 @@ function mountComposer() {
         onProgress: (p) => setProgress('Compressione video…', p, 'Non chiudere questa pagina finché non è pronto.'),
       });
       const savedHint = prepared !== file ? `Ottimizzato: ${fmtMB(file.size)} → ${fmtMB(prepared.size)}` : '';
-      // 2) Upload (diretto su Blob o fallback locale) con avanzamento reale
-      setProgress('Caricamento…', 0, savedHint || 'Attendi il completamento prima di pubblicare.');
+      // 2) Upload (diretto su Blob o fallback locale) con avanzamento reale.
+      // Fase iniziale indeterminata: preparazione connessione/token (non è "bloccato").
+      setProgress('Preparazione caricamento…', null, savedHint || 'Attendi il completamento prima di pubblicare.');
       pendingMedia = await uploadMedia(prepared, {
-        onProgress: (p) => setProgress('Caricamento…', p, savedHint || 'Attendi il completamento prima di pubblicare.'),
+        onProgress: ({ percentage, loaded, total }) => {
+          const mb = (loaded != null && total) ? `${fmtMB(loaded)} / ${fmtMB(total)}` : savedHint;
+          setProgress('Caricamento…', percentage, mb || 'Attendi il completamento prima di pubblicare.');
+        },
       });
       setProgress('Completato', 100, savedHint);
       setTimeout(hideProgress, 700);
@@ -232,6 +250,9 @@ function mountComposer() {
   });
 
   $('#publish-btn').addEventListener('click', publish);
+
+  // Precarica configurazione upload + client Blob per ridurre l'attesa iniziale
+  preloadUploader();
 }
 
 function showMediaPreview(media) {

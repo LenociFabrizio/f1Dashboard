@@ -74,17 +74,20 @@ export function mountNavbar() {
   const mount = $('#navbar-mount');
   if (mount) mount.replaceWith(nav); else document.body.prepend(nav);
 
-  // Interazioni
+  // Interazioni: drawer laterale (mobile)
   const toggle = $('#nav-toggle');
   const panel = $('#nav-panel');
-  toggle?.addEventListener('click', () => {
-    const open = panel.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
+  let backdrop = $('.nav-backdrop');
+  if (!backdrop) { backdrop = el('div', { class: 'nav-backdrop' }); document.body.appendChild(backdrop); }
+  const setMenu = (open) => {
+    panel.classList.toggle('open', open);
+    backdrop.classList.toggle('show', open);
+    toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  toggle?.addEventListener('click', () => setMenu(!panel.classList.contains('open')));
+  backdrop.addEventListener('click', () => setMenu(false));
   // Su mobile: chiudi il menu quando si tocca un link
-  panel?.querySelectorAll('a').forEach((a) =>
-    a.addEventListener('click', () => { panel.classList.remove('open'); toggle?.setAttribute('aria-expanded', 'false'); })
-  );
+  panel?.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
 
   const navUser = $('#nav-user');
   const dropdown = $('#nav-dropdown');

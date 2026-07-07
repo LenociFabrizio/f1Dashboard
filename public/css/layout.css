@@ -223,24 +223,33 @@
 @media (max-width: 720px) {
   .nav-toggle { display: block; margin-left: auto; }
 
-  /* Il pannello (link + account) diventa un menu a scomparsa dall'alto */
+  /* Il pannello (link + account) è un drawer laterale che entra da sinistra */
   .nav-panel {
     position: fixed;
-    top: var(--nav-h); left: 0; right: 0;
+    top: var(--nav-h); left: 0; bottom: 0; right: auto;
+    width: min(82vw, 320px);
     flex-direction: column;
     align-items: stretch;
     gap: 0;
     flex: none;
+    z-index: 95;
     background: var(--bg-050);
-    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border-strong);
     padding: var(--sp-3);
-    transform: translateY(-120%);
+    transform: translateX(-100%);
     transition: transform var(--t-med);
     box-shadow: var(--sh-lg);
-    max-height: calc(100dvh - var(--nav-h));
     overflow-y: auto;
   }
-  .nav-panel.open { transform: translateY(0); }
+  .nav-panel.open { transform: translateX(0); }
+
+  /* Sfondo scuro dietro il drawer */
+  .nav-backdrop {
+    position: fixed; inset: var(--nav-h) 0 0 0; z-index: 92;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0; visibility: hidden; transition: opacity var(--t-med);
+  }
+  .nav-backdrop.show { opacity: 1; visibility: visible; }
   .nav-links { flex-direction: column; align-items: stretch; gap: 0; margin-left: 0; }
   .nav-links a { padding: 12px 14px; }
   .nav-links a.active::after { display: none; }
@@ -269,7 +278,13 @@
   .grid-auto { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
   .container { padding-inline: var(--sp-4); }
-  .footer .container { flex-direction: column; text-align: center; }
+
+  /* Footer: impilato, centrato, con link che vanno a capo ordinatamente */
+  .footer { padding-block: var(--sp-5); margin-top: var(--sp-6); }
+  .footer .container { flex-direction: column; text-align: center; gap: var(--sp-4); }
+  .footer .foot-brand { font-size: 1.05rem; }
+  .footer .foot-links { justify-content: center; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); }
+  .footer small { font-size: 0.8rem; line-height: 1.55; }
 }
 
 /* ---------------- Telefono (schermi piccoli) ---------------- */
@@ -300,8 +315,13 @@
   .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tabs .tab { white-space: nowrap; }
 
-  /* Testo lungo (email, username) non deve sfondare i contenitori */
-  .text-hi, .dc-name, .dc-sub { overflow-wrap: anywhere; word-break: break-word; }
+  /* Testo lungo: si spezza solo tra parole (o parole troppo lunghe), MAI
+     lettera per lettera. `overflow-wrap: anywhere` collassava la colonna del
+     nome a 1 carattere → nomi verticali. `break-word` preserva la larghezza. */
+  .text-hi, .dc-name, .dc-sub { overflow-wrap: break-word; word-break: normal; }
+  /* Nella classifiche i nomi restano su una riga; la tabella scrolla se serve */
+  table.data .dc-name { white-space: nowrap; }
+  table.data .dc-sub { white-space: nowrap; }
 
   /* Colonne secondarie nascoste su telefono: la classifica resta leggibile
      (Pos, Pilota/Team, Punti) senza scroll orizzontale. */
