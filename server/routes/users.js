@@ -16,6 +16,11 @@ router.put('/me', requireAuth, users.updateMe);
 router.post('/me/avatar', requireAuth, upload.single('avatar'), users.uploadAvatar);
 router.delete('/me', requireAuth, users.deleteMe);
 
+// Handle di gioco F1 25 (per l'import automatico della telemetria)
+router.get('/me/handles', requireAuth, users.listMyHandles);
+router.post('/me/handles', requireAuth, users.addMyHandle);
+router.delete('/me/handles/:hid', requireAuth, users.deleteMyHandle);
+
 router.get('/', users.listUsers);
 router.get('/reserved', users.listReservedDrivers);
 router.get('/:id', users.getUser);

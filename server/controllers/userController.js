@@ -151,6 +151,48 @@ export const deleteMe = asyncHandler(async (req, res) => {
   res.json({ message: 'Account eliminato' });
 });
 
+// ---------------------- HANDLE DI GIOCO (telemetria) ----------------------
+// L'utente dichiara i propri nickname di gioco F1 25 (per piattaforma): così
+// l'import automatico delle gare lo riconosce senza mappatura manuale.
+// Vedi captureService.resolveIdentities e la tabella game_identities.
+
+/** GET /api/users/me/handles — elenco dei propri handle di gioco */
+export const listMyHandles = asyncHandler(async (req, res) => {
+  const rows = await db
+    .prepare('SELECT id, platform, handle, source, created_at FROM game_identities WHERE user_id = ? ORDER BY created_at')
+    .all(req.user.id);
+  res.json(rows);
+});
+
+/** POST /api/users/me/handles — aggiunge un handle (source 'profile') */
+export const addMyHandle = asyncHandler(async (req, res) => {
+  const handle = String(req.body.handle || '').trim();
+  const platform = String(req.body.platform || '').trim();
+  if (!handle) throw new HttpError(400, 'Handle obbligatorio');
+
+  // L'unicità è su (platform, handle): se già assegnato ad altri, blocca.
+  const existing = await db.prepare('SELECT user_id FROM game_identities WHERE platform = ? AND handle = ?').get(platform, handle);
+  if (existing && existing.user_id !== req.user.id) {
+    throw new HttpError(409, 'Questo handle è già associato a un altro pilota');
+  }
+  await db
+    .prepare(`INSERT INTO game_identities (user_id, platform, handle, source)
+              VALUES (?, ?, ?, 'profile')
+              ON CONFLICT (platform, handle) DO UPDATE SET user_id = excluded.user_id, source = 'profile'`)
+    .run(req.user.id, platform, handle);
+  const rows = await db.prepare('SELECT id, platform, handle, source, created_at FROM game_identities WHERE user_id = ? ORDER BY created_at').all(req.user.id);
+  res.status(201).json(rows);
+});
+
+/** DELETE /api/users/me/handles/:hid — rimuove un proprio handle */
+export const deleteMyHandle = asyncHandler(async (req, res) => {
+  const info = await db
+    .prepare('DELETE FROM game_identities WHERE id = ? AND user_id = ?')
+    .run(Number(req.params.hid), req.user.id);
+  if (!info.changes) throw new HttpError(404, 'Handle non trovato');
+  res.json({ message: 'Handle rimosso' });
+});
+
 // ---------------------- ADMIN ----------------------
 
 /** PUT /api/users/:id  (admin) — modifica qualunque utente */

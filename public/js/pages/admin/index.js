@@ -11,6 +11,7 @@ import overview from './sections/overview.js';
 import seasons from './sections/seasons.js';
 import races from './sections/races.js';
 import results from './sections/results.js';
+import imports from './sections/imports.js';
 import users from './sections/users.js';
 import teams from './sections/teams.js';
 import circuits from './sections/circuits.js';
@@ -21,6 +22,7 @@ const SECTIONS = {
   seasons: { icon: '📅', label: 'Stagioni', mod: seasons },
   races: { icon: '🏁', label: 'Gare / Calendario', mod: races },
   results: { icon: '🏆', label: 'Risultati & Qualifiche', mod: results },
+  imports: { icon: '📡', label: 'Import automatico', mod: imports },
   users: { icon: '👤', label: 'Piloti / Utenti', mod: users },
   teams: { icon: '🏎️', label: 'Team', mod: teams },
   circuits: { icon: '📍', label: 'Circuiti', mod: circuits },

@@ -66,6 +66,36 @@
       </form>
     </div>
 
+    <!-- Handle di gioco F1 25 -->
+    <div class="card" style="margin-top:28px">
+      <div class="eyebrow">Telemetria F1 25</div>
+      <div class="text-hi" style="font-weight:800;margin-top:6px">I tuoi handle di gioco</div>
+      <p class="text-lo" style="margin:4px 0 14px;font-size:0.9rem">
+        Indica il nickname con cui giochi a F1 25 (e la piattaforma). Serve a riconoscerti
+        automaticamente quando l'admin importa i risultati di una gara dalla telemetria.
+        Puoi aggiungerne più di uno se giochi su piattaforme diverse.
+      </p>
+      <div id="handles-list" style="margin-bottom:14px"></div>
+      <div class="form-row" style="align-items:flex-end">
+        <div class="field">
+          <label>Nickname di gioco</label>
+          <input class="input" id="handle-input" maxlength="32" placeholder="es. MaxP_TM">
+        </div>
+        <div class="field">
+          <label>Piattaforma</label>
+          <select class="select" id="handle-platform">
+            <option value="">— Qualsiasi —</option>
+            <option value="steam">Steam</option>
+            <option value="playstation">PlayStation</option>
+            <option value="xbox">Xbox</option>
+            <option value="origin">EA / Origin</option>
+          </select>
+        </div>
+        <button type="button" class="btn primary" id="add-handle-btn">Aggiungi</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Suggerimento: in F1 25 tieni attiva l'opzione "Show online names" per far leggere il tuo nickname reale.</div>
+    </div>
+
     <!-- Danger zone -->
     <div class="card" style="margin-top:28px;border-color:rgba(225,6,0,0.35)">
       <div class="eyebrow" style="color:var(--danger)">Zona pericolosa</div>

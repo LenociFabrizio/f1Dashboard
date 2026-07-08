@@ -68,6 +68,54 @@ $('#pwd-btn').addEventListener('click', () => {
   });
 });
 
+/* ---- Handle di gioco F1 25 ---- */
+const PLATFORM_LABEL = { steam: 'Steam', playstation: 'PlayStation', xbox: 'Xbox', origin: 'EA / Origin', '': 'Qualsiasi' };
+
+function renderHandles(list) {
+  const box = $('#handles-list');
+  if (!box) return;
+  if (!list.length) {
+    box.innerHTML = '<div class="hint">Nessun handle ancora. Aggiungine uno qui sotto.</div>';
+    return;
+  }
+  box.innerHTML = list
+    .map(
+      (h) => `
+      <div class="flex items-center justify-between gap-3" style="padding:8px 12px;border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px">
+        <div><span class="text-hi" style="font-weight:700">${esc(h.handle)}</span>
+          <span class="text-lo" style="font-size:.85rem"> · ${esc(PLATFORM_LABEL[h.platform] || h.platform || 'Qualsiasi')}${h.source === 'alias' ? ' · rilevato in gara' : ''}</span></div>
+        <button class="btn ghost sm" data-del-handle="${h.id}" title="Rimuovi">✕</button>
+      </div>`
+    )
+    .join('');
+  box.querySelectorAll('[data-del-handle]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      try {
+        await api.del(`/users/me/handles/${b.dataset.delHandle}`);
+        await loadHandles();
+        toast.success('Handle rimosso.');
+      } catch (err) { toast.error(err.message); }
+    })
+  );
+}
+
+async function loadHandles() {
+  try {
+    renderHandles(await api.get('/users/me/handles'));
+  } catch { /* opzionale */ }
+}
+
+$('#add-handle-btn')?.addEventListener('click', async () => {
+  const handle = $('#handle-input').value.trim();
+  const platform = $('#handle-platform').value;
+  if (!handle) { toast.warning('Inserisci un nickname.'); return; }
+  try {
+    renderHandles(await api.post('/users/me/handles', { handle, platform }));
+    $('#handle-input').value = '';
+    toast.success('Handle aggiunto.');
+  } catch (err) { toast.error(err.message || 'Aggiunta fallita.'); }
+});
+
 /* ---- Elimina account ---- */
 $('#delete-account-btn').addEventListener('click', async () => {
   const ok = await confirmDialog({
@@ -123,6 +171,7 @@ form.addEventListener('submit', async (e) => {
     me = await api.get(`/users/${user.id}`, {}, { auth: false });
     fillForm(me);
     await loadTeams(me.team_id);
+    await loadHandles();
   } catch (e) {
     console.error(e);
     toast.error(e.message);
