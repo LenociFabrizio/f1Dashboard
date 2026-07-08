@@ -73,20 +73,35 @@ function renderList(root) {
 }
 
 /* ---------------- Dettaglio + mappatura + commit ---------------- */
-function userOptions(selectedId) {
-  return (
-    `<option value="">— non mappato —</option>` +
-    state.users
-      .map((u) => `<option value="${u.id}" ${String(u.id) === String(selectedId ?? '') ? 'selected' : ''}>${esc(u.display_name || u.username)}</option>`)
-      .join('')
-  );
+/**
+ * Opzioni utente per una tendina, escludendo gli utenti già assegnati ad
+ * altre righe (`taken`) — così un pilota non è selezionabile due volte.
+ * L'utente attualmente selezionato in QUESTA riga resta sempre disponibile.
+ */
+function userOptionSet(currentValue, taken) {
+  let html = `<option value="">— non mappato —</option>`;
+  for (const u of state.users) {
+    if (taken.has(u.id) && String(u.id) !== String(currentValue ?? '')) continue;
+    html += `<option value="${u.id}" ${String(u.id) === String(currentValue ?? '') ? 'selected' : ''}>${esc(u.display_name || u.username)}</option>`;
+  }
+  return html;
+}
+
+/** Ricostruisce tutte le tendine escludendo i piloti già scelti altrove. */
+function refreshUserSelects(root) {
+  const selects = $$('#parts-body .p-user', root);
+  const taken = new Set(selects.map((s) => s.value).filter(Boolean).map(Number));
+  selects.forEach((s) => {
+    const cur = s.value;
+    s.innerHTML = userOptionSet(cur, taken);
+    s.value = cur;
+  });
 }
 
 function participantRow(p) {
   const warn = p.nameReliable === false;
-  const auto = p.matchedBy && p.userId;
-  const tag = auto
-    ? `<span class="badge" style="background:#22c55e22;color:#22c55e">auto</span>`
+  const tag = p.userId && p.matchedBy
+    ? `<span class="badge" style="background:#22c55e22;color:#22c55e">${p.matchedBy === 'reserve' ? '🤖 auto (bot)' : 'auto'}</span>`
     : p.aiControlled
     ? `<span class="badge" style="background:#71717a22;color:#a1a1aa">BOT</span>`
     : `<span class="badge" style="background:#eab30822;color:#eab308">da mappare</span>`;
@@ -98,7 +113,7 @@ function participantRow(p) {
         <div class="dc-sub text-dim">${esc(p.platform || '—')}${p.raceNumber != null ? ` · #${p.raceNumber}` : ''}</div>
       </td>
       <td>${tag}</td>
-      <td><select class="select sm p-user" style="min-width:200px">${userOptions(p.userId)}</select></td>
+      <td><select class="select sm p-user" style="min-width:200px">${userOptionSet(p.userId, new Set())}</select></td>
     </tr>`;
 }
 
@@ -165,6 +180,11 @@ async function openDetail(root, id) {
 
   $('#back-list', root).addEventListener('click', () => load(root));
   $('#do-commit', root).addEventListener('click', () => commit(root, id));
+
+  // Escludi da subito i piloti già assegnati (auto o manuale) dalle altre
+  // tendine, e riaggiorna a ogni cambio di selezione.
+  refreshUserSelects(root);
+  $$('#parts-body .p-user', root).forEach((s) => s.addEventListener('change', () => refreshUserSelects(root)));
 }
 
 /** Raccoglie i mapping carIndex → user_id dalle select. */

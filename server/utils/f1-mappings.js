@@ -189,14 +189,16 @@ export function msToRaceTime(ms) {
 }
 
 /**
- * Distacco dal vincitore in "+s.mmm" (o "+m:ss.mmm" se ≥ 60s).
+ * Distacco dal vincitore in "s.mmm" (o "m:ss.mmm" se ≥ 60s).
+ * NB: il segno "+" NON è incluso: lo antepone la UI in fase di
+ * visualizzazione (come per i gap inseriti a mano), così si evita il "++".
  * @param {number} deltaMs distacco in ms (già calcolato: tempo pilota - vincitore)
  */
 export function msToGap(deltaMs) {
   const n = Number(deltaMs);
   if (!Number.isFinite(n) || n <= 0) return null;
-  if (n < 60000) return `+${(n / 1000).toFixed(3)}`;
+  if (n < 60000) return `${(n / 1000).toFixed(3)}`;
   const minutes = Math.floor(n / 60000);
   const seconds = ((n % 60000) / 1000).toFixed(3);
-  return `+${minutes}:${String(seconds).padStart(6, '0')}`;
+  return `${minutes}:${String(seconds).padStart(6, '0')}`;
 }
