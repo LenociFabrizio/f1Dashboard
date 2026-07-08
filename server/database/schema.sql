@@ -190,6 +190,48 @@ CREATE TABLE IF NOT EXISTS post_tags (
 );
 
 -- ------------------------------------------------------------
+--  IDENTITÀ DI GIOCO (alias telemetria)
+--  Associa un nickname/handle F1 25 (dalla lobby UDP) a un utente
+--  del sito. Popolata da:
+--    - profilo pilota (handle pre-dichiarato)  → source = 'profile'
+--    - conferma manuale dell'admin in import   → source = 'alias'
+--  Consente la mappatura automatica dei piloti nelle gare importate.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS game_identities (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL,
+  platform      TEXT    DEFAULT '',        -- 'steam' | 'psn' | 'xbox' | 'origin' | ''
+  handle        TEXT    NOT NULL,          -- nickname di gioco (Participants.m_name)
+  source        TEXT    NOT NULL DEFAULT 'alias', -- 'profile' | 'alias'
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (platform, handle)
+);
+
+-- ------------------------------------------------------------
+--  SESSIONI CATTURATE (staging telemetria)
+--  Il collector invia qui il JSON aggregato di fine gara. Restano
+--  in "staging": l'admin le rivede e le importa nelle tabelle
+--  canoniche (results/qualifying) tramite il flusso esistente.
+--  Nessun dato canonico viene scritto dal collector direttamente.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS captured_sessions (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_uid       TEXT    NOT NULL,          -- header UDP m_sessionUID
+  session_type      TEXT    DEFAULT '',        -- 'race' | 'qualifying' | 'sprint' | ...
+  track_id          INTEGER,                    -- header UDP m_trackId (riferimento)
+  packet_format     INTEGER,                    -- es. 2025 (per versionare il parser)
+  status            TEXT    NOT NULL DEFAULT 'pending', -- 'pending' | 'imported' | 'discarded'
+  payload_json      TEXT    NOT NULL,           -- JSON aggregato completo della sessione
+  race_id           INTEGER,                    -- gara in cui è stata importata
+  collector_version TEXT    DEFAULT '',
+  created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+  imported_at       TEXT,
+  FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE SET NULL,
+  UNIQUE (session_uid)
+);
+
+-- ------------------------------------------------------------
 --  STATISTICHE MANUALI (per stagione/pilota)
 --  Valori non ricavabili automaticamente e inseriti dall'admin.
 -- ------------------------------------------------------------
@@ -229,3 +271,5 @@ CREATE INDEX IF NOT EXISTS idx_qualifying_race ON qualifying(race_id);
 CREATE INDEX IF NOT EXISTS idx_users_role      ON users(role);
 CREATE INDEX IF NOT EXISTS idx_posts_created   ON posts(created_at);
 CREATE INDEX IF NOT EXISTS idx_post_tags_post  ON post_tags(post_id);
+CREATE INDEX IF NOT EXISTS idx_game_identities_user ON game_identities(user_id);
+CREATE INDEX IF NOT EXISTS idx_captured_status      ON captured_sessions(status);

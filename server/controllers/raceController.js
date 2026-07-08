@@ -137,14 +137,15 @@ export const uploadScreenshot = asyncHandler(async (req, res) => {
   res.json({ screenshot: url });
 });
 
-/** PUT /api/races/:id/qualifying (admin) — salva l'intera griglia di qualifica */
-export const setQualifying = asyncHandler(async (req, res) => {
-  const raceId = req.params.id;
-  const race = await db.prepare('SELECT id FROM races WHERE id = ?').get(raceId);
-  if (!race) throw new HttpError(404, 'Gara non trovata');
-  const entries = req.body.qualifying || [];
-
-  // Sostituisce l'intera griglia in un'unica transazione (batch atomico).
+/**
+ * Sostituisce l'intera griglia di qualifica di una gara in una transazione
+ * batch atomica. Riusata dal flusso manuale (setQualifying) e dall'import
+ * telemetria (captureService).
+ * @param {number} raceId
+ * @param {Array<{user_id:number, position:number, best_time?:string, gap?:string}>} entries
+ * @returns {Promise<number>} numero di righe salvate
+ */
+export async function persistQualifying(raceId, entries = []) {
   const stmts = [{ sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [raceId] }];
   let saved = 0;
   for (const q of entries) {
@@ -157,5 +158,14 @@ export const setQualifying = asyncHandler(async (req, res) => {
     saved += 1;
   }
   await db.raw.batch(stmts, 'write');
+  return saved;
+}
+
+/** PUT /api/races/:id/qualifying (admin) — salva l'intera griglia di qualifica */
+export const setQualifying = asyncHandler(async (req, res) => {
+  const raceId = req.params.id;
+  const race = await db.prepare('SELECT id FROM races WHERE id = ?').get(raceId);
+  if (!race) throw new HttpError(404, 'Gara non trovata');
+  const saved = await persistQualifying(raceId, req.body.qualifying || []);
   res.json({ message: 'Qualifiche salvate', count: saved });
 });

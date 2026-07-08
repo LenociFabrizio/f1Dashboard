@@ -15,6 +15,8 @@ import statsRoutes from './stats.js';
 import newsRoutes from './news.js';
 import postRoutes from './posts.js';
 import dashboardRoutes from './dashboard.js';
+import ingestRoutes from './ingest.js';
+import captureRoutes from './captures.js';
 
 const router = Router();
 
@@ -30,5 +32,7 @@ router.use('/stats', statsRoutes);
 router.use('/news', newsRoutes);
 router.use('/posts', postRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/ingest', ingestRoutes);
+router.use('/admin/captures', captureRoutes);
 
 export default router;

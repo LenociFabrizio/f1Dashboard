@@ -21,7 +21,11 @@ export function createApp() {
   // Same-origin su Vercel; l'auth usa Bearer token (non cookie), quindi
   // riflettere l'origine della richiesta è sicuro e semplifica il deploy.
   app.use(cors({ origin: true, credentials: true }));
-  app.use(express.json({ limit: '2mb' }));
+  // Limite alzato a 5mb: il JSON aggregato di una sessione telemetria
+  // (partecipanti + qualifica + classifica finale + cronologia giri) resta
+  // ben sotto questa soglia; la telemetria grezza ad alta frequenza NON
+  // viene inviata al sito (la aggrega il collector).
+  app.use(express.json({ limit: '5mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 

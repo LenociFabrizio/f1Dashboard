@@ -27,6 +27,11 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
 
+  // Token condiviso usato dal collector telemetria per autenticare l'ingest
+  // (POST /api/ingest/sessions). NON è un utente JWT: è una API key dedicata.
+  // Vuoto in locale (l'ingest resta libero in dev); OBBLIGATORIO in produzione.
+  collectorToken: process.env.COLLECTOR_TOKEN || '',
+
   db: {
     // libSQL/Turso. In locale un file embedded; in prod l'URL Turso (libsql://...).
     url: process.env.DATABASE_URL || 'file:server/database/f1.db',

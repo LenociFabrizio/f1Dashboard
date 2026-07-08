@@ -7,6 +7,9 @@
  *   - segna la gara come 'completed'
  *   - le classifiche e le statistiche si ricalcolano on-demand
  *     (vedi standingsService/statsService), quindi restano coerenti.
+ *
+ * La scrittura vera e propria è in `persistResults()`, riusata sia dal
+ * flusso manuale (saveResults) sia dall'import telemetria (captureService).
  * ------------------------------------------------------------
  */
 import db from '../database/db.js';
@@ -14,29 +17,30 @@ import { asyncHandler, HttpError } from '../utils/helpers.js';
 import { calculatePoints } from '../utils/constants.js';
 
 /**
- * PUT /api/races/:id/results (admin)
- * Body: { results: [ { user_id, team_id, grid_position, position, finish_time,
- *                      gap, fastest_lap, pole, dnf, dnf_reason, penalty_seconds,
- *                      penalty_note, overtakes, notes, points? } ], mark_completed }
+ * Persiste (sostituendoli interamente) i risultati di una gara in un'unica
+ * transazione batch atomica. Calcola i punti quando non forniti.
  *
- * Se `points` non è fornito per una riga, viene calcolato automaticamente.
+ * @param {number} raceId
+ * @param {Array<object>} rows righe risultato (vedi saveResults per i campi)
+ * @param {object} [opts]
+ * @param {boolean} [opts.markCompleted=true]  marca la gara come conclusa
+ * @param {string}  [opts.comment]             se definito, aggiorna il commento gara
+ * @param {number|null} [opts.mvpUserId]       se definito, aggiorna l'MVP
+ * @returns {Promise<Array>} righe salvate (con dati pilota/team)
  */
-export const saveResults = asyncHandler(async (req, res) => {
-  const raceId = Number(req.params.id);
+export async function persistResults(raceId, rows, opts = {}) {
   const race = await db.prepare('SELECT * FROM races WHERE id = ?').get(raceId);
   if (!race) throw new HttpError(404, 'Gara non trovata');
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new HttpError(400, 'Nessun risultato fornito');
+  }
 
   // Configurazione punti della stagione (pole / giro veloce)
   const season = await db.prepare('SELECT points_pole, points_fastest_lap FROM seasons WHERE id = ?').get(race.season_id);
   const pointsPole = season ? Number(season.points_pole) || 0 : 0;
   const pointsFastestLap = season ? Number(season.points_fastest_lap ?? 1) : 1;
 
-  const rows = req.body.results || [];
-  if (!Array.isArray(rows) || rows.length === 0) {
-    throw new HttpError(400, 'Nessun risultato fornito');
-  }
-
-  // Sostituisce interamente i risultati della gara in un'unica transazione (batch atomico).
   const INSERT_SQL =
     `INSERT INTO results
       (race_id, user_id, team_id, grid_position, position, points, finish_time, gap,
@@ -94,22 +98,21 @@ export const saveResults = asyncHandler(async (req, res) => {
     });
   }
 
-  // Segna la gara come conclusa (se richiesto o di default)
-  const markCompleted = req.body.mark_completed !== false;
-  if (markCompleted) {
+  // Segna la gara come conclusa (di default) + metadati opzionali
+  if (opts.markCompleted !== false) {
     stmts.push({ sql: "UPDATE races SET status = 'completed' WHERE id = ?", args: [raceId] });
   }
-  if (req.body.comment !== undefined) {
-    stmts.push({ sql: 'UPDATE races SET comment = ? WHERE id = ?', args: [req.body.comment, raceId] });
+  if (opts.comment !== undefined) {
+    stmts.push({ sql: 'UPDATE races SET comment = ? WHERE id = ?', args: [opts.comment, raceId] });
   }
-  if (req.body.mvp_user_id !== undefined) {
-    stmts.push({ sql: 'UPDATE races SET mvp_user_id = ? WHERE id = ?', args: [req.body.mvp_user_id || null, raceId] });
+  if (opts.mvpUserId !== undefined) {
+    stmts.push({ sql: 'UPDATE races SET mvp_user_id = ? WHERE id = ?', args: [opts.mvpUserId || null, raceId] });
   }
 
   await db.raw.batch(stmts, 'write');
 
   // Restituisce i risultati salvati
-  const saved = await db
+  return db
     .prepare(
       `SELECT r.*, u.display_name, u.avatar, t.name AS team_name, t.color AS team_color
          FROM results r
@@ -119,6 +122,22 @@ export const saveResults = asyncHandler(async (req, res) => {
         ORDER BY (r.dnf), (r.position IS NULL), r.position ASC`
     )
     .all(raceId);
+}
 
+/**
+ * PUT /api/races/:id/results (admin)
+ * Body: { results: [ { user_id, team_id, grid_position, position, finish_time,
+ *                      gap, fastest_lap, pole, dnf, dnf_reason, penalty_seconds,
+ *                      penalty_note, overtakes, notes, points? } ], mark_completed }
+ *
+ * Se `points` non è fornito per una riga, viene calcolato automaticamente.
+ */
+export const saveResults = asyncHandler(async (req, res) => {
+  const raceId = Number(req.params.id);
+  const saved = await persistResults(raceId, req.body.results || [], {
+    markCompleted: req.body.mark_completed !== false,
+    comment: req.body.comment,
+    mvpUserId: req.body.mvp_user_id,
+  });
   res.json({ message: 'Risultati salvati e classifiche aggiornate', results: saved });
 });
