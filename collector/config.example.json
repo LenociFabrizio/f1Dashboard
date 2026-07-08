@@ -1,0 +1,18 @@
+{
+  "udp": {
+    "port": 20777,
+    "host": "0.0.0.0"
+  },
+  "server": {
+    "ingestUrl": "https://il-tuo-sito.vercel.app/api/ingest/sessions",
+    "collectorToken": "INCOLLA_QUI_LO_STESSO_COLLECTOR_TOKEN_DEL_SITO"
+  },
+  "live": {
+    "enabled": true,
+    "port": 4600
+  },
+  "buffer": {
+    "dir": "./data/queue"
+  },
+  "captureSessionTypes": ["race", "sprint", "qualifying"]
+}

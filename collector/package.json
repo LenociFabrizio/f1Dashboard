@@ -1,0 +1,21 @@
+{
+  "name": "f1-telemetry-collector",
+  "version": "0.1.0",
+  "description": "Collector telemetria F1 25: ascolta i pacchetti UDP, aggrega la sessione e invia il JSON al portale del campionato.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "f1-collector": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
+  },
+  "keywords": ["f1", "f1-25", "telemetry", "udp", "codemasters", "ea"],
+  "author": "F1 League",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
