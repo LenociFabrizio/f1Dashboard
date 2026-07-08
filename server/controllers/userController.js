@@ -130,6 +130,7 @@ async function hardDeleteUser(id) {
     [
       { sql: 'DELETE FROM results WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE user_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_times WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM manual_stats WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM achievements WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM post_tags WHERE user_id = ?', args: [id] },

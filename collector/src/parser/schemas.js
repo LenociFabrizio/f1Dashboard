@@ -191,6 +191,49 @@ export function parseEvent(c /*, header */) {
 //  LAP DATA (id 2) — 57 byte/vettura. Solo i campi utili alla live view.
 //  Offset interni confermati dalla specifica F1 25.
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+//  SESSION HISTORY (id 11) — cronologia giri di UNA vettura per pacchetto
+//  (il gioco cicla su tutte le vetture). LapHistoryData = 14 byte.
+//  Fonte: specifica ufficiale F1 25 (packet size 1460).
+// ------------------------------------------------------------
+const LAP_HISTORY_ITEM_SIZE = 14;
+const MAX_HISTORY_LAPS = 100;
+
+export function parseSessionHistory(c /*, header */) {
+  const carIdx = c.u8();
+  const numLaps = c.u8();
+  c.u8();                     // m_numTyreStints (non usato qui)
+  const bestLapTimeLapNum = c.u8();
+  const bestS1LapNum = c.u8();
+  const bestS2LapNum = c.u8();
+  const bestS3LapNum = c.u8();
+
+  const lapsStart = c.off;    // inizio di m_lapHistoryData[100]
+  const count = Math.min(numLaps, MAX_HISTORY_LAPS);
+  const laps = [];
+  for (let i = 0; i < count; i++) {
+    c.seek(lapsStart + i * LAP_HISTORY_ITEM_SIZE);
+    const lapTimeMs = c.u32();
+    const s1ms = c.u16();
+    const s1min = c.u8();
+    const s2ms = c.u16();
+    const s2min = c.u8();
+    const s3ms = c.u16();
+    const s3min = c.u8();
+    const flags = c.u8();
+    laps.push({
+      lap: i + 1,
+      lapTimeMs,
+      // tempo settore completo = minuti*60000 + parte ms
+      s1Ms: s1min * 60000 + s1ms,
+      s2Ms: s2min * 60000 + s2ms,
+      s3Ms: s3min * 60000 + s3ms,
+      valid: (flags & 0x01) === 0x01, // bit0 = giro valido
+    });
+  }
+  return { carIdx, numLaps, bestLapTimeLapNum, bestS1LapNum, bestS2LapNum, bestS3LapNum, laps };
+}
+
 const LAPDATA_ITEM_SIZE = 57;
 const LAPDATA_TRAILING = 2; // m_timeTrialPBCarIdx, m_timeTrialRivalCarIdx
 

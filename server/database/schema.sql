@@ -232,6 +232,27 @@ CREATE TABLE IF NOT EXISTS captured_sessions (
 );
 
 -- ------------------------------------------------------------
+--  TEMPI SUL GIRO (cronologia per-giro dalla telemetria)
+--  Un record per pilota-giro, con tempo giro e tempi dei 3 settori
+--  (millisecondi) e validità. Popolati dall'import telemetria (Session
+--  History, pacchetto UDP 11). Sostituiti a ogni re-import della gara.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lap_times (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  race_id       INTEGER NOT NULL,
+  user_id       INTEGER NOT NULL,
+  lap           INTEGER NOT NULL,          -- numero del giro (1-based)
+  lap_time_ms   INTEGER,                    -- tempo sul giro (ms)
+  sector1_ms    INTEGER,                    -- settore 1 (ms)
+  sector2_ms    INTEGER,                    -- settore 2 (ms)
+  sector3_ms    INTEGER,                    -- settore 3 (ms)
+  valid         INTEGER NOT NULL DEFAULT 1, -- 1 = giro valido
+  FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (race_id, user_id, lap)
+);
+
+-- ------------------------------------------------------------
 --  STATISTICHE MANUALI (per stagione/pilota)
 --  Valori non ricavabili automaticamente e inseriti dall'admin.
 -- ------------------------------------------------------------
@@ -273,3 +294,4 @@ CREATE INDEX IF NOT EXISTS idx_posts_created   ON posts(created_at);
 CREATE INDEX IF NOT EXISTS idx_post_tags_post  ON post_tags(post_id);
 CREATE INDEX IF NOT EXISTS idx_game_identities_user ON game_identities(user_id);
 CREATE INDEX IF NOT EXISTS idx_captured_status      ON captured_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_lap_times_race       ON lap_times(race_id);

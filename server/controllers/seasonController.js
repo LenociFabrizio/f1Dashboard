@@ -238,6 +238,7 @@ export const deleteSeason = asyncHandler(async (req, res) => {
     [
       { sql: 'DELETE FROM results   WHERE race_id IN (SELECT id FROM races WHERE season_id = ?)', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE race_id IN (SELECT id FROM races WHERE season_id = ?)', args: [id] },
+      { sql: 'DELETE FROM lap_times  WHERE race_id IN (SELECT id FROM races WHERE season_id = ?)', args: [id] },
       { sql: 'DELETE FROM races        WHERE season_id = ?', args: [id] },
       { sql: 'DELETE FROM manual_stats WHERE season_id = ?', args: [id] },
       { sql: 'DELETE FROM news         WHERE season_id = ?', args: [id] },

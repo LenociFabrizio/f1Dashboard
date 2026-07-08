@@ -13,6 +13,7 @@ import {
   parseEvent,
   parseParticipants,
   parseFinalClassification,
+  parseSessionHistory,
   PACKET_ID,
 } from './schemas.js';
 
@@ -60,6 +61,8 @@ export function parsePacket(buffer) {
       return { header, ...parseParticipants(cursor, header, buffer) };
     case PACKET_ID.FINAL_CLASSIFICATION:
       return { header, ...parseFinalClassification(cursor, header, buffer) };
+    case PACKET_ID.SESSION_HISTORY:
+      return { header, ...parseSessionHistory(cursor, header) };
     default:
       return null; // pacchetto non necessario all'import
   }

@@ -29,6 +29,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
   const classification = state.classification?.cars || [];
   const numCars = state.classification?.numCars ?? classification.length;
   const overtakes = state.overtakes || {};
+  const history = state.history || {};
 
   const sessionType = normalizeSessionType(meta.sessionType);
   const isQualifying = sessionType === 'qualifying';
@@ -72,6 +73,16 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
         .map((c) => ({ carIndex: c.carIndex, position: c.position, bestLapMs: c.bestLapMs }))
     : [];
 
+  // Cronologia giri per vettura (tempi giro + settori). Solo giri completati
+  // (lapTimeMs > 0): l'ultimo giro "in corso" ha tempo 0 e viene escluso.
+  const lapHistoryOut = Object.values(history).map((h) => ({
+    carIndex: h.carIdx,
+    bestLapNum: h.bestLapTimeLapNum || null,
+    laps: (h.laps || [])
+      .filter((l) => l.lapTimeMs > 0)
+      .map((l) => ({ lap: l.lap, timeMs: l.lapTimeMs, s1Ms: l.s1Ms, s2Ms: l.s2Ms, s3Ms: l.s3Ms, valid: l.valid })),
+  })).filter((h) => h.laps.length);
+
   return {
     sessionUID: state.sessionUID,
     packetFormat: state.packetFormat ?? null,
@@ -86,6 +97,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     participants: participantsOut,
     qualifying: qualifyingOut,
     classification: classificationOut,
+    lapHistory: lapHistoryOut,
   };
 }
 

@@ -85,6 +85,20 @@ function ovtkEvent(overtaker, overtaken) {
   return w.b;
 }
 
+// Session History (id 11): carIdx + numLaps + numTyreStints + 4 best-lap-num
+// + lapHistoryData[100]*14 + tyreStints[8]*3.
+function sessionHistoryPacket(carIdx, laps) {
+  const w = new W(HEADER_SIZE + 7 + 100 * 14 + 8 * 3);
+  header(w, 11);
+  w.u8(carIdx).u8(laps.length).u8(0).u8(1).u8(1).u8(1).u8(1);
+  const base = HEADER_SIZE + 7;
+  laps.forEach((l, i) => {
+    w.seek(base + i * 14);
+    w.u32(l.time).u16(l.s1).u8(0).u16(l.s2).u8(0).u16(l.s3).u8(0).u8(l.valid ? 1 : 0);
+  });
+  return w.b;
+}
+
 /** itemSize = 45 (F1 24) o 46 (F1 25 con m_resultReason). */
 function finalClassificationPacket(cars, itemSize = 45) {
   const w = new W(HEADER_SIZE + 1 + 22 * itemSize);
@@ -139,6 +153,11 @@ function runSession(itemSize) {
   agg.ingest(parsePacket(ftlpEvent(1)));       // giro veloce a car 1
   agg.ingest(parsePacket(ovtkEvent(1, 0)));    // car 1 sorpassa car 0 (x2)
   agg.ingest(parsePacket(ovtkEvent(1, 0)));
+  agg.ingest(parsePacket(sessionHistoryPacket(1, [
+    { time: 82000, s1: 25000, s2: 30000, s3: 27000, valid: true },
+    { time: 81000, s1: 24800, s2: 29900, s3: 26300, valid: true },
+    { time: 0, s1: 0, s2: 0, s3: 0, valid: false }, // giro in corso (escluso)
+  ])));
   agg.ingest(parsePacket(finalClassificationPacket([
     { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81200, totalRaceTimeS: 3600.0, penS: 0, numStints: 2, stintsVisual: [16, 17] },
     { position: 2, numLaps: 50, grid: 2, points: 18, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3605.5, penS: 5, numStints: 2, stintsVisual: [16, 18] },
@@ -163,6 +182,13 @@ test('aggregator → builder produce il payload corretto (Final Classification 4
   assert.equal(p.classification[1].penaltiesTimeS, 5);
   assert.equal(p.classification[1].overtakes, 2); // 2 eventi OVTK per car 1
   assert.equal(p.classification[0].overtakes, 0);
+  // Cronologia giri (Session History): 2 giri validi per car 1 (il 3° in corso è escluso)
+  const hist = p.lapHistory.find((h) => h.carIndex === 1);
+  assert.ok(hist, 'lapHistory presente per car 1');
+  assert.equal(hist.laps.length, 2);
+  assert.equal(hist.laps[1].timeMs, 81000);
+  assert.equal(hist.laps[0].s1Ms, 25000);
+  assert.equal(hist.laps[0].valid, true);
   assert.equal(p.participants[0].name, 'MaxP_TM');
   assert.equal(p.participants[0].nameReliable, true);
 });

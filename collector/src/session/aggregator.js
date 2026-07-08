@@ -37,6 +37,7 @@ export class SessionAggregator extends EventEmitter {
       classification: null,  // Final Classification
       fastestLapCarIndex: null,
       overtakes: {},         // carIndex -> numero di sorpassi (eventi OVTK)
+      history: {},           // carIdx -> cronologia giri (Session History, pkt 11)
       finalized: false,
     };
     this.emit('session-start', { sessionUID: sessionUid });
@@ -69,6 +70,9 @@ export class SessionAggregator extends EventEmitter {
         break;
       case 3: // Event
         this._onEvent(packet);
+        break;
+      case 11: // Session History (una vettura per pacchetto): tieni l'ultima
+        if (packet.carIdx != null) s.history[packet.carIdx] = packet;
         break;
       case 8: // Final Classification → fine sessione
         s.classification = packet;

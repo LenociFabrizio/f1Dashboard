@@ -82,6 +82,45 @@ export const getRace = asyncHandler(async (req, res) => {
   res.json(race);
 });
 
+/** GET /api/races/:id/laps — tempi sul giro + settori (telemetria), per pilota */
+export const getRaceLaps = asyncHandler(async (req, res) => {
+  const raceId = Number(req.params.id);
+  const rows = await db
+    .prepare(
+      `SELECT lt.user_id, lt.lap, lt.lap_time_ms, lt.sector1_ms, lt.sector2_ms, lt.sector3_ms, lt.valid,
+              u.display_name, u.username, u.avatar, t.color AS team_color
+         FROM lap_times lt
+         JOIN users u ON u.id = lt.user_id
+         LEFT JOIN teams t ON t.id = u.team_id
+        WHERE lt.race_id = ?
+        ORDER BY u.display_name COLLATE NOCASE, lt.lap`
+    )
+    .all(raceId);
+
+  const byUser = new Map();
+  for (const r of rows) {
+    if (!byUser.has(r.user_id)) {
+      byUser.set(r.user_id, {
+        user_id: r.user_id,
+        display_name: r.display_name,
+        username: r.username,
+        avatar: r.avatar,
+        team_color: r.team_color,
+        laps: [],
+      });
+    }
+    byUser.get(r.user_id).laps.push({
+      lap: r.lap,
+      lap_time_ms: r.lap_time_ms,
+      sector1_ms: r.sector1_ms,
+      sector2_ms: r.sector2_ms,
+      sector3_ms: r.sector3_ms,
+      valid: r.valid,
+    });
+  }
+  res.json(Array.from(byUser.values()));
+});
+
 /** POST /api/races (admin) */
 export const createRace = asyncHandler(async (req, res) => {
   const { season_id, circuit_id, round, name, race_date, weather, laps, distance_km } = req.body;
@@ -122,6 +161,7 @@ export const deleteRace = asyncHandler(async (req, res) => {
     [
       { sql: 'DELETE FROM results WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_times WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM races WHERE id = ?', args: [id] },
     ],
     'write'

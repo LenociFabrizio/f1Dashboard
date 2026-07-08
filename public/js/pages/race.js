@@ -70,6 +70,96 @@ function infoTile(label, value) {
   return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:1.4rem">${value}</div></div>`;
 }
 
+/* ---------------- Tempi sul giro & settori (telemetria) ---------------- */
+const fmtLap = (ms) => {
+  if (!ms || ms <= 0) return '—';
+  const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000), mm = ms % 1000;
+  return `${m}:${String(s).padStart(2, '0')}.${String(mm).padStart(3, '0')}`;
+};
+const fmtSector = (ms) => {
+  if (!ms || ms <= 0) return '—';
+  return ms >= 60000 ? fmtLap(ms) : (ms / 1000).toFixed(3);
+};
+// Migliore assoluto = viola, migliore personale = verde.
+const timeClass = (v, overallBest, driverBest) =>
+  v && v === overallBest ? 'style="color:#b466ff;font-weight:700"'
+    : v && v === driverBest ? 'style="color:#22c55e;font-weight:700"' : '';
+
+function minValid(laps, key, needValid) {
+  let best = Infinity;
+  for (const l of laps) {
+    const v = l[key];
+    if (v > 0 && (!needValid || l.valid)) best = Math.min(best, v);
+  }
+  return best === Infinity ? 0 : best;
+}
+
+function renderLaps(drivers) {
+  if (!drivers.length) {
+    return '<div class="empty"><div class="em-ic">⏱️</div>Nessun tempo sul giro disponibile (importa la gara dalla telemetria).</div>';
+  }
+  // Migliori assoluti di sessione
+  const all = drivers.flatMap((d) => d.laps);
+  const ob = {
+    lap: minValid(all, 'lap_time_ms', true),
+    s1: minValid(all, 'sector1_ms', false),
+    s2: minValid(all, 'sector2_ms', false),
+    s3: minValid(all, 'sector3_ms', false),
+  };
+
+  return drivers
+    .map((d, i) => {
+      const db = {
+        lap: minValid(d.laps, 'lap_time_ms', true),
+        s1: minValid(d.laps, 'sector1_ms', false),
+        s2: minValid(d.laps, 'sector2_ms', false),
+        s3: minValid(d.laps, 'sector3_ms', false),
+      };
+      const rows = d.laps
+        .map(
+          (l) => `
+          <tr class="${l.valid ? '' : 'row-dnf'}">
+            <td class="num">${l.lap}</td>
+            <td class="num mono" ${timeClass(l.sector1_ms, ob.s1, db.s1)}>${fmtSector(l.sector1_ms)}</td>
+            <td class="num mono" ${timeClass(l.sector2_ms, ob.s2, db.s2)}>${fmtSector(l.sector2_ms)}</td>
+            <td class="num mono" ${timeClass(l.sector3_ms, ob.s3, db.s3)}>${fmtSector(l.sector3_ms)}</td>
+            <td class="num mono" ${timeClass(l.valid ? l.lap_time_ms : 0, ob.lap, db.lap)}>${fmtLap(l.lap_time_ms)}${l.valid ? '' : ' <span class="text-dim" title="Giro non valido">✗</span>'}</td>
+          </tr>`
+        )
+        .join('');
+      return `
+        <details class="card" style="padding:0;margin-bottom:12px" ${i === 0 ? 'open' : ''}>
+          <summary style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+            <img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" class="avatar sm" alt="">
+            <span class="text-hi" style="font-weight:700">${esc(d.display_name)}</span>
+            <span class="text-lo" style="margin-left:auto;font-size:.85rem">Best: <span class="mono">${fmtLap(db.lap)}</span> · ${d.laps.length} giri</span>
+          </summary>
+          <div class="table-wrap" style="padding:0 8px 8px">
+            <table class="data compact">
+              <thead><tr><th class="num">Giro</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">Tempo</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </details>`;
+    })
+    .join('') +
+    `<div class="hint" style="margin-top:6px"><span style="color:#b466ff;font-weight:700">viola</span> = miglior tempo assoluto · <span style="color:#22c55e;font-weight:700">verde</span> = miglior tempo personale</div>`;
+}
+
+let lapsLoaded = false;
+async function loadLaps() {
+  if (lapsLoaded) return;
+  lapsLoaded = true;
+  const box = $('#laps-box');
+  try {
+    const drivers = await api.get(`/races/${raceId}/laps`, {}, { auth: false });
+    box.innerHTML = renderLaps(drivers);
+  } catch (e) {
+    lapsLoaded = false;
+    box.innerHTML = `<div class="empty">Errore nel caricamento dei tempi: ${esc(e.message)}</div>`;
+  }
+}
+
 function render(race) {
   const done = race.status === 'completed';
   const winner = done ? race.results.find((r) => !r.dnf && r.position === 1) : null;
@@ -132,18 +222,20 @@ function render(race) {
     <div class="tabs">
       <button class="tab active" data-tab="results">Risultati</button>
       <button class="tab" data-tab="quali">Qualifiche</button>
+      ${done ? '<button class="tab" data-tab="laps">Giri & Settori</button>' : ''}
       ${race.screenshot ? '<button class="tab" data-tab="media">Screenshot</button>' : ''}
     </div>
 
     <section id="tab-results">${resultsSection}</section>
     <section id="tab-quali" class="hidden">${qualiSection}</section>
+    ${done ? '<section id="tab-laps" class="hidden"><div id="laps-box"><div style="padding:40px;text-align:center"><span class="spinner"></span></div></div></section>' : ''}
     ${race.screenshot ? `<section id="tab-media" class="hidden"><div class="card" style="padding:12px"><img src="${esc(race.screenshot)}" alt="Screenshot risultati" style="width:100%;border-radius:var(--r-md);display:block"></div></section>` : ''}
 
     ${race.comment ? `<div class="card glass" style="margin-top:28px"><div class="eyebrow">Cronaca</div><p class="text-mid" style="margin:8px 0 0;line-height:1.7">${esc(race.comment)}</p></div>` : ''}
   `;
 
   // Tab switching
-  const sections = { results: '#tab-results', quali: '#tab-quali', media: '#tab-media' };
+  const sections = { results: '#tab-results', quali: '#tab-quali', laps: '#tab-laps', media: '#tab-media' };
   $$('.tab').forEach((t) =>
     t.addEventListener('click', () => {
       $$('.tab').forEach((x) => x.classList.toggle('active', x === t));
@@ -151,6 +243,7 @@ function render(race) {
         const node = $(sel);
         if (node) node.classList.toggle('hidden', k !== t.dataset.tab);
       });
+      if (t.dataset.tab === 'laps') loadLaps(); // caricamento pigro
     })
   );
 }
