@@ -177,6 +177,10 @@ export function parseEvent(c /*, header */) {
     case 'SGSV': // Stop-go served
       detail.vehicleIdx = c.u8();
       break;
+    case 'OVTK': // Overtake: chi sorpassa + chi è sorpassato
+      detail.overtakingVehicleIdx = c.u8();
+      detail.beingOvertakenVehicleIdx = c.u8();
+      break;
     default:
       break; // SSTA/SEND/CHQF/RDFL/… nessun dettaglio utile qui
   }

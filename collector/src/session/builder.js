@@ -28,6 +28,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
   const numActive = state.participants?.numActiveCars ?? participants.length;
   const classification = state.classification?.cars || [];
   const numCars = state.classification?.numCars ?? classification.length;
+  const overtakes = state.overtakes || {};
 
   const sessionType = normalizeSessionType(meta.sessionType);
   const isQualifying = sessionType === 'qualifying';
@@ -58,6 +59,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     // m_totalRaceTime è in SECONDI (double) → ms
     totalRaceTimeMs: c.totalRaceTime != null ? Math.round(c.totalRaceTime * 1000) : null,
     penaltiesTimeS: c.penaltiesTime ?? 0,
+    overtakes: overtakes[i] || 0,
     tyreStints: Array.isArray(c.tyreStintsVisual)
       ? c.tyreStintsVisual.slice(0, c.numTyreStints ?? 0).map(tyreCompoundName)
       : [],
@@ -76,6 +78,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     collectorVersion,
     sessionType,
     trackId: meta.trackId ?? null,
+    trackLength: meta.trackLength ?? null,
     totalLaps: meta.totalLaps ?? null,
     weather: weatherName(meta.weather),
     safetyCarPeriods: meta.numSafetyCarPeriods ?? null,

@@ -36,6 +36,7 @@ export class SessionAggregator extends EventEmitter {
       lapData: null,         // ultimo pacchetto LapData (per la live view)
       classification: null,  // Final Classification
       fastestLapCarIndex: null,
+      overtakes: {},         // carIndex -> numero di sorpassi (eventi OVTK)
       finalized: false,
     };
     this.emit('session-start', { sessionUID: sessionUid });
@@ -84,6 +85,12 @@ export class SessionAggregator extends EventEmitter {
       case 'FTLP': // Fastest Lap
         if (packet.detail && packet.detail.vehicleIdx != null) {
           s.fastestLapCarIndex = packet.detail.vehicleIdx;
+        }
+        break;
+      case 'OVTK': // Sorpasso: conta per chi sorpassa
+        if (packet.detail && packet.detail.overtakingVehicleIdx != null) {
+          const idx = packet.detail.overtakingVehicleIdx;
+          s.overtakes[idx] = (s.overtakes[idx] || 0) + 1;
         }
         break;
       case 'SEND': // Session Ended (backup: se abbiamo dati sufficienti)

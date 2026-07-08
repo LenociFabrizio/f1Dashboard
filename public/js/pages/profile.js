@@ -13,6 +13,7 @@ let me;
 function fillForm(u) {
   form.first_name.value = u.first_name || '';
   form.last_name.value = u.last_name || '';
+  if (form.username) form.username.value = u.username || '';
   form.email.value = u.email || '';
   $('#avatar-preview').src = avatarUrl(u);
   $('#pv-name').textContent = u.display_name || u.username;
@@ -146,6 +147,7 @@ form.addEventListener('submit', async (e) => {
     email: form.email.value.trim(),
     team_id: form.team_id.value ? Number(form.team_id.value) : null,
   };
+  if (form.username) payload.username = form.username.value.trim();
   try {
     const updated = await api.put('/users/me', payload);
     auth.user = { ...auth.user, ...updated };

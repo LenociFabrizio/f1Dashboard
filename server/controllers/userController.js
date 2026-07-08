@@ -81,6 +81,15 @@ export const updateMe = asyncHandler(async (req, res) => {
     if (req.body[f] !== undefined) updates[f] = req.body[f];
   }
 
+  // Cambio username (nickname) con controllo di univocità.
+  if (req.body.username !== undefined) {
+    const uname = String(req.body.username).trim();
+    if (!uname) throw new HttpError(400, 'Username non valido');
+    const taken = await db.prepare('SELECT id FROM users WHERE username = ? AND id <> ?').get(uname, req.user.id);
+    if (taken) throw new HttpError(409, 'Username già in uso');
+    updates.username = uname;
+  }
+
   // Cambio password opzionale
   if (req.body.password) {
     updates.password_hash = await bcrypt.hash(req.body.password, 10);

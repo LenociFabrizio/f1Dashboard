@@ -78,6 +78,13 @@ function ftlpEvent(vehicleIdx) {
   return w.b;
 }
 
+function ovtkEvent(overtaker, overtaken) {
+  const w = new W(HEADER_SIZE + 16);
+  header(w, 3);
+  w.chars('OVTK', 4).u8(overtaker).u8(overtaken);
+  return w.b;
+}
+
 /** itemSize = 45 (F1 24) o 46 (F1 25 con m_resultReason). */
 function finalClassificationPacket(cars, itemSize = 45) {
   const w = new W(HEADER_SIZE + 1 + 22 * itemSize);
@@ -130,6 +137,8 @@ function runSession(itemSize) {
     ], 2)));
   agg.ingest(parsePacket(sessionPacket(15))); // Race
   agg.ingest(parsePacket(ftlpEvent(1)));       // giro veloce a car 1
+  agg.ingest(parsePacket(ovtkEvent(1, 0)));    // car 1 sorpassa car 0 (x2)
+  agg.ingest(parsePacket(ovtkEvent(1, 0)));
   agg.ingest(parsePacket(finalClassificationPacket([
     { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81200, totalRaceTimeS: 3600.0, penS: 0, numStints: 2, stintsVisual: [16, 17] },
     { position: 2, numLaps: 50, grid: 2, points: 18, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3605.5, penS: 5, numStints: 2, stintsVisual: [16, 18] },
@@ -152,6 +161,8 @@ test('aggregator → builder produce il payload corretto (Final Classification 4
   assert.equal(p.classification[0].totalRaceTimeMs, 3600000); // secondi → ms
   assert.deepEqual(p.classification[0].tyreStints, ['soft', 'medium']);
   assert.equal(p.classification[1].penaltiesTimeS, 5);
+  assert.equal(p.classification[1].overtakes, 2); // 2 eventi OVTK per car 1
+  assert.equal(p.classification[0].overtakes, 0);
   assert.equal(p.participants[0].name, 'MaxP_TM');
   assert.equal(p.participants[0].nameReliable, true);
 });

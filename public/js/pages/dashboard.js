@@ -92,7 +92,7 @@ function render(data, me) {
         : `<div class="card"><div class="eyebrow">Statistiche</div><div class="empty" style="padding:30px">I grafici appariranno dopo la tua prima gara.</div></div>`}
     </div>
 
-    <div class="grid grid-2" style="align-items:start">
+    <div class="grid" style="align-items:start"><!-- Bacheca nascosta: colonna rimossa dalla dashboard -->
       <div>
         <h2 class="section-title">Classifica piloti</h2>
         <div class="table-wrap">
@@ -102,25 +102,6 @@ function render(data, me) {
           </table>
         </div>
         <a href="/standings.html" class="btn ghost sm" style="margin-top:12px">Classifica completa →</a>
-      </div>
-      <div>
-        <div class="flex items-center justify-between">
-          <h2 class="section-title" style="margin:0">Dalla bacheca</h2>
-          <a href="/feed.html" class="btn ghost sm">Apri →</a>
-        </div>
-        <div class="flex" style="flex-direction:column;gap:12px;margin-top:12px">
-          ${(data.posts || []).slice(0, 5).map((p) => {
-            const text = (p.body || '').trim();
-            const media = p.media_url ? `<div class="text-lo" style="font-size:0.8rem;margin-top:4px">${p.media_type === 'video' ? '🎬 Video' : '📷 Foto'}</div>` : '';
-            const tags = p.tags?.length ? ` · 🏷️ ${p.tags.map((t) => '@' + esc(t.username)).join(' ')}` : '';
-            return `
-            <a href="/feed.html" class="card" style="padding:16px;text-decoration:none;display:block">
-              <div class="text-lo" style="font-size:0.78rem">${esc(p.author_name || '')} · ${fmtDate(p.created_at)}${tags}</div>
-              ${text ? `<p class="text-mid" style="margin:6px 0 0;font-size:0.9rem">${esc(text.slice(0, 120))}${text.length > 120 ? '…' : ''}</p>` : ''}
-              ${media}
-            </a>`;
-          }).join('') || '<div class="empty">Ancora nessun post. <a href="/feed.html" class="text-red">Pubblica il primo!</a></div>'}
-        </div>
       </div>
     </div>
   `;

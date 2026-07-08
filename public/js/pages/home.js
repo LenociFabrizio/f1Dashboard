@@ -104,6 +104,7 @@ function renderCalendar(cal) {
 
 function renderPosts(posts) {
   const box = $('#posts-grid');
+  if (!box) return; // bacheca nascosta: nessun blocco da popolare
   if (!posts?.length) {
     box.innerHTML = '<div class="empty">Ancora nessun post. <a href="/feed.html" class="text-red">Apri la bacheca</a> e pubblica il primo!</div>';
     return;
