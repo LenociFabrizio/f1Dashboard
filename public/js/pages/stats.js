@@ -88,13 +88,15 @@ function compareTable(a, b) {
       </tr>`;
   }).join('');
   return `
-    <table class="data" style="width:100%">
-      <thead><tr>
-        <th>${esc(a.display_name)}</th><th style="text-align:center">vs</th>
-        <th style="text-align:right">${esc(b.display_name)}</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="data" style="width:100%;min-width:280px">
+        <thead><tr>
+          <th>${esc(a.display_name)}</th><th style="text-align:center">vs</th>
+          <th style="text-align:right">${esc(b.display_name)}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 async function renderCompare() {

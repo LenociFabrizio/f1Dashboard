@@ -317,6 +317,10 @@
   .leader-card .lc-value { font-size: 1.35rem; }
   .section-title { font-size: 1.05rem; }
 
+  /* Grafici un po' più bassi su telefono (più equilibrati rispetto alla larghezza) */
+  .chart-box { height: 260px; }
+  .chart-box.sm { height: 200px; }
+
   /* Home: hero più compatto e leggibile su telefono */
   .hero .hero-cta .btn { flex: 1 1 100%; }
   .hero-strip { gap: var(--sp-4) var(--sp-5); margin-top: var(--sp-5); }
