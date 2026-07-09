@@ -4,6 +4,7 @@
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
 import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges } from '../core/ui.js';
+import { setupUrlForRace } from '../core/f1data.js';
 
 mountChrome();
 
@@ -288,8 +289,13 @@ function render(race) {
       </div>`
     : `<div class="empty"><div class="em-ic">⏱️</div>Griglia di qualifica non disponibile.</div>`;
 
+  const setupUrl = setupUrlForRace(race);
+
   $('#race-main').innerHTML = `
-    <a href="/races.html" class="btn ghost sm" style="margin-bottom:20px">← Calendario</a>
+    <div class="flex justify-between items-center gap-3 wrap" style="margin-bottom:20px">
+      <a href="/races.html" class="btn ghost sm">← Calendario</a>
+      ${setupUrl ? `<a href="${setupUrl}" target="_blank" rel="noopener noreferrer" class="btn outline sm" title="Assetti consigliati per questo GP (simracingsetup.com)">🔧 Assetti consigliati ↗</a>` : ''}
+    </div>
 
     <div class="hero" style="margin-bottom:32px">
       <div class="hero-strip"></div>
