@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS users (
   favorite_driver   TEXT,                    -- pilota reale preferito
   reserve_driver    TEXT,                    -- pilota di riserva (BOT) reale F1 2025 del team
   biography         TEXT    DEFAULT '',
+  -- Aiuti alla guida dichiarati dal pilota (mostrati sul giro veloce)
+  assist_abs        INTEGER NOT NULL DEFAULT 0,       -- 0 = off, 1 = on
+  assist_tc         TEXT    NOT NULL DEFAULT 'off',   -- 'off' | 'medium' | 'full'
+  assist_gearbox    TEXT    NOT NULL DEFAULT 'auto',  -- 'auto' | 'manual'
   role              TEXT    NOT NULL DEFAULT 'pilota',  -- 'admin' | 'pilota'
   -- Predisposizione OAuth
   provider          TEXT    DEFAULT 'local', -- 'local' | 'psn' | 'ea'
@@ -251,6 +255,26 @@ CREATE TABLE IF NOT EXISTS lap_times (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE (race_id, user_id, lap)
 );
+
+-- ------------------------------------------------------------
+--  TRAIETTORIE (linea di gara dal Motion packet, UDP 0)
+--  Un record per pilota-gara: la traiettoria del SOLO giro veloce, come
+--  elenco di punti [x, z] (metri, piano orizzontale) decimati (~6 m).
+--  Popolate dall'import telemetria; sostituite a ogni re-import della gara.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lap_traces (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  race_id           INTEGER NOT NULL,
+  user_id           INTEGER NOT NULL,
+  lap               INTEGER,                    -- giro veloce di riferimento
+  best_lap_time_ms  INTEGER,                    -- tempo di quel giro (ms)
+  points            TEXT NOT NULL,              -- JSON: [[x,z], ...] (metri, decimati ~6m)
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (race_id, user_id)                     -- un solo (miglior) giro per pilota
+);
+CREATE INDEX IF NOT EXISTS idx_lap_traces_race ON lap_traces(race_id);
 
 -- ------------------------------------------------------------
 --  STATISTICHE MANUALI (per stagione/pilota)

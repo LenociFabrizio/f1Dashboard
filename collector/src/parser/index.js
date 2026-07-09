@@ -8,6 +8,7 @@
  */
 import { Cursor } from './binary.js';
 import {
+  parseMotion,
   parseSession,
   parseLapData,
   parseEvent,
@@ -51,6 +52,8 @@ export function parsePacket(buffer) {
   const header = parseHeader(cursor);
 
   switch (header.packetId) {
+    case PACKET_ID.MOTION:
+      return { header, ...parseMotion(cursor, header, buffer) };
     case PACKET_ID.SESSION:
       return { header, ...parseSession(cursor, header) };
     case PACKET_ID.LAP_DATA:

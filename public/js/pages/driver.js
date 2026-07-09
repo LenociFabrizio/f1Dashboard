@@ -78,6 +78,18 @@ function render(user, stats) {
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Punti per gara</div><div class="chart-box sm"><canvas id="perrace-chart"></canvas></div></div>
     </div>` : '';
 
+  const ls = hasRaces ? stats.lapStats : null;
+  const hasLapStats = ls && (ls.best_lap || ls.laps_recorded);
+  const lapsBlock = hasLapStats ? `
+    <h2 class="section-title">Telemetria — giri & settori</h2>
+    <div class="grid grid-auto stagger" style="margin-bottom:40px">
+      ${statCard('Miglior giro', ls.best_lap ?? '—', '⏱️')}
+      ${statCard('Miglior S1', ls.best_s1 ?? '—', '🟩')}
+      ${statCard('Miglior S2', ls.best_s2 ?? '—', '🟨')}
+      ${statCard('Miglior S3', ls.best_s3 ?? '—', '🟪')}
+      ${statCard('Giri registrati', ls.laps_recorded, '📈')}
+    </div>` : '';
+
   const historyBlock = hasRaces && stats.history.length ? `
     <h2 class="section-title">Storico gare</h2>
     <div class="table-wrap">
@@ -114,6 +126,7 @@ function render(user, stats) {
     ${ratesGrid}
     ${bestWorst}
     ${chartsBlock}
+    ${lapsBlock}
     ${historyBlock}
   `;
 

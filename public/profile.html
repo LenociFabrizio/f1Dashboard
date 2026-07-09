@@ -65,6 +65,38 @@
           <select class="select" name="team_id" id="team-select"></select>
         </div>
 
+        <div class="field">
+          <label>Aiuti alla guida</label>
+          <div class="assist-group" style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span class="text-lo" style="min-width:150px">🛞 ABS</span>
+              <div class="segmented" data-assist="assist_abs">
+                <button type="button" data-val="0">Off</button>
+                <button type="button" data-val="1">On</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span class="text-lo" style="min-width:150px">🎛️ Controllo trazione</span>
+              <div class="segmented" data-assist="assist_tc">
+                <button type="button" data-val="off">Off</button>
+                <button type="button" data-val="medium">Medio</button>
+                <button type="button" data-val="full">Pieno</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span class="text-lo" style="min-width:150px">⚙️ Cambio</span>
+              <div class="segmented" data-assist="assist_gearbox">
+                <button type="button" data-val="auto">Automatico</button>
+                <button type="button" data-val="manual">Manuale</button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="assist_abs" value="0">
+          <input type="hidden" name="assist_tc" value="off">
+          <input type="hidden" name="assist_gearbox" value="auto">
+          <div class="hint">Compaiono accanto al tuo giro veloce nelle gare</div>
+        </div>
+
         <div class="flex justify-between items-center wrap gap-3" style="margin-top:8px">
           <button type="button" class="btn ghost sm" id="pwd-btn">Cambia password</button>
           <button type="submit" class="btn primary" id="save-btn">Salva modifiche</button>

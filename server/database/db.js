@@ -109,6 +109,15 @@ async function runMigrations() {
   if (!userCols.some((c) => c.name === 'last_name')) {
     await db.run("ALTER TABLE users ADD COLUMN last_name TEXT DEFAULT ''");
   }
+  if (!userCols.some((c) => c.name === 'assist_abs')) {
+    await db.run('ALTER TABLE users ADD COLUMN assist_abs INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!userCols.some((c) => c.name === 'assist_tc')) {
+    await db.run("ALTER TABLE users ADD COLUMN assist_tc TEXT NOT NULL DEFAULT 'off'");
+  }
+  if (!userCols.some((c) => c.name === 'assist_gearbox')) {
+    await db.run("ALTER TABLE users ADD COLUMN assist_gearbox TEXT NOT NULL DEFAULT 'auto'");
+  }
 
   const resultCols = await db.all('PRAGMA table_info(results)');
   if (!resultCols.some((c) => c.name === 'bot_driver')) {

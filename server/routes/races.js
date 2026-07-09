@@ -18,6 +18,7 @@ router.get('/next', races.getNextRace);
 router.get('/last', races.getLastRace);
 router.get('/:id', races.getRace);
 router.get('/:id/laps', races.getRaceLaps);
+router.get('/:id/traces', races.getRaceTraces);
 
 // Admin
 router.post('/', requireAuth, requireAdmin, races.createRace);

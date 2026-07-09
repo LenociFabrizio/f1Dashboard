@@ -22,6 +22,7 @@ class W {
   u8(v) { this.b.writeUInt8(v & 0xff, this.o); this.o += 1; return this; }
   i8(v) { this.b.writeInt8(v, this.o); this.o += 1; return this; }
   u16(v) { this.b.writeUInt16LE(v, this.o); this.o += 2; return this; }
+  i16(v) { this.b.writeInt16LE(v, this.o); this.o += 2; return this; }
   u32(v) { this.b.writeUInt32LE(v, this.o); this.o += 4; return this; }
   f32(v) { this.b.writeFloatLE(v, this.o); this.o += 4; return this; }
   f64(v) { this.b.writeDoubleLE(v, this.o); this.o += 8; return this; }
@@ -96,6 +97,37 @@ function sessionHistoryPacket(carIdx, laps) {
     w.seek(base + i * 14);
     w.u32(l.time).u16(l.s1).u8(0).u16(l.s2).u8(0).u16(l.s3).u8(0).u8(l.valid ? 1 : 0);
   });
+  return w.b;
+}
+
+// Motion (id 0): CarMotionData 60 byte/vettura, array subito dopo l'header.
+// Scriviamo solo i primi 12 byte utili (worldPositionX/Y/Z). `posByCar` è un
+// array indicizzato per carIdx: gli slot mancanti restano a 0.
+const MOTION_ITEM_SIZE = 60;
+function motionPacket(posByCar) {
+  const w = new W(HEADER_SIZE + 22 * MOTION_ITEM_SIZE);
+  header(w, 0);
+  for (let i = 0; i < 22; i++) {
+    const p = posByCar[i];
+    if (!p) continue;
+    w.seek(HEADER_SIZE + i * MOTION_ITEM_SIZE).f32(p.x).f32(p.y ?? 0).f32(p.z);
+  }
+  return w.b;
+}
+
+// Lap Data (id 2): 57 byte/vettura + 2 byte di coda (time-trial idx).
+// Scriviamo lastLapTimeInMS (offset 0) e currentLapNum (offset 33).
+const LAPDATA_ITEM_SIZE = 57;
+function lapDataPacket(carsByIdx) {
+  const w = new W(HEADER_SIZE + 22 * LAPDATA_ITEM_SIZE + 2);
+  header(w, 2);
+  for (let i = 0; i < 22; i++) {
+    const c = carsByIdx[i];
+    if (!c) continue;
+    const base = HEADER_SIZE + i * LAPDATA_ITEM_SIZE;
+    w.seek(base).u32(c.lastLapTimeInMS ?? 0);
+    w.seek(base + 33).u8(c.currentLapNum ?? 0);
+  }
   return w.b;
 }
 
@@ -210,4 +242,43 @@ test('sessione senza classifica NON viene finalizzata', () => {
   agg.on('session-complete', (e) => { done = e; });
   agg.ingest(parsePacket(sessionPacket(5))); // qualifying, nessuna Final Classification
   assert.equal(done, null);
+});
+
+test('Motion → traiettoria: il giro veloce (car 1) finisce in payload.lapTraces', () => {
+  const agg = new SessionAggregator({ collectorVersion: 'test' });
+  let done = null;
+  agg.on('session-complete', (e) => { done = e; });
+
+  agg.ingest(parsePacket(participantsPacket(
+    [
+      { name: 'MaxP_TM', platform: 1, raceNumber: 1, teamId: 2, showNames: true },
+      { name: 'CharlesLec', platform: 1, raceNumber: 16, teamId: 1, showNames: true },
+    ], 2)));
+  agg.ingest(parsePacket(sessionPacket(15))); // Race
+
+  // Giro 1 in corso: la traiettoria di car 1 si accumula lungo una linea
+  // (punti distanziati 10 m → oltre la soglia di decimazione ~6 m).
+  agg.ingest(parsePacket(lapDataPacket([null, { currentLapNum: 1, lastLapTimeInMS: 0 }])));
+  for (let f = 0; f < 25; f++) {
+    agg.ingest(parsePacket(motionPacket([null, { x: f * 10, y: 0, z: 5 }])));
+  }
+
+  // Il giro 1 si chiude (currentLapNum→2, lastLapTimeInMS = tempo del giro 1).
+  agg.ingest(parsePacket(lapDataPacket([null, { currentLapNum: 2, lastLapTimeInMS: 81000 }])));
+  agg.ingest(parsePacket(motionPacket([null, { x: 0, y: 0, z: 0 }]))); // frame che innesca la transizione
+
+  agg.ingest(parsePacket(finalClassificationPacket([
+    { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3600.0, penS: 0, numStints: 1, stintsVisual: [16] },
+    { position: 2, numLaps: 50, grid: 2, points: 18, pits: 1, resultStatus: 3, bestLapMs: 82000, totalRaceTimeS: 3605.5, penS: 0, numStints: 1, stintsVisual: [16] },
+  ])));
+
+  assert.ok(done, 'session-complete emesso');
+  const traces = done.payload.lapTraces;
+  assert.ok(Array.isArray(traces), 'lapTraces è un array');
+  const t = traces.find((x) => x.carIndex === 1);
+  assert.ok(t, 'traiettoria presente per car 1');
+  assert.equal(t.lap, 1, 'il giro veloce è il giro 1');
+  assert.equal(t.timeMs, 81000);
+  assert.ok(t.points.length >= 20, 'punti decimati accumulati');
+  assert.ok(Array.isArray(t.points[0]) && t.points[0].length === 2, 'ogni punto è [x, z]');
 });

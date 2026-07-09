@@ -62,6 +62,7 @@ export const getUser = asyncHandler(async (req, res) => {
 const EDITABLE_FIELDS = [
   'first_name', 'last_name', 'email', 'nationality', 'favorite_number',
   'favorite_driver', 'reserve_driver', 'biography', 'avatar', 'team_id',
+  'assist_abs', 'assist_tc', 'assist_gearbox',
 ];
 
 /** Se cambia nome o cognome, ricalcola display_name usando i valori aggiornati + attuali. */
@@ -131,6 +132,7 @@ async function hardDeleteUser(id) {
       { sql: 'DELETE FROM results WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM lap_times WHERE user_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_traces WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM manual_stats WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM achievements WHERE user_id = ?', args: [id] },
       { sql: 'DELETE FROM post_tags WHERE user_id = ?', args: [id] },

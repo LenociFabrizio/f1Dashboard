@@ -27,6 +27,10 @@ export const register = asyncHandler(async (req, res) => {
   if (!username || !password || !email) {
     throw new HttpError(400, 'Username, email e password sono obbligatori');
   }
+  // Aiuti alla guida dichiarati (opzionali): normalizzati a valori noti.
+  const assist_abs = req.body.assist_abs ? 1 : 0;
+  const assist_tc = ['off', 'medium', 'full'].includes(req.body.assist_tc) ? req.body.assist_tc : 'off';
+  const assist_gearbox = req.body.assist_gearbox === 'manual' ? 'manual' : 'auto';
   if (!first_name || !last_name) {
     throw new HttpError(400, 'Nome e cognome sono obbligatori');
   }
@@ -48,10 +52,10 @@ export const register = asyncHandler(async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, provider, team_id, reserve_driver)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, provider, team_id, reserve_driver, assist_abs, assist_tc, assist_gearbox)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, display_name || username, first_name.trim(), last_name.trim(), email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null);
+    .run(username, display_name || username, first_name.trim(), last_name.trim(), email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null, assist_abs, assist_tc, assist_gearbox);
 
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   authResponse(res, user);

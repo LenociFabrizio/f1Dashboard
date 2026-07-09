@@ -59,6 +59,7 @@ export const getRace = asyncHandler(async (req, res) => {
   race.results = await db
     .prepare(
       `SELECT r.*, u.display_name, u.username, u.avatar, u.nationality,
+              u.assist_abs, u.assist_tc, u.assist_gearbox,
               t.name AS team_name, t.color AS team_color
          FROM results r
          JOIN users u ON u.id = r.user_id
@@ -121,6 +122,38 @@ export const getRaceLaps = asyncHandler(async (req, res) => {
   res.json(Array.from(byUser.values()));
 });
 
+/** GET /api/races/:id/traces — traiettorie (linea di gara del giro veloce), per pilota */
+export const getRaceTraces = asyncHandler(async (req, res) => {
+  const raceId = Number(req.params.id);
+  const rows = await db
+    .prepare(
+      `SELECT lt.user_id, lt.lap, lt.best_lap_time_ms, lt.points,
+              u.display_name, u.username, u.avatar, t.color AS team_color
+         FROM lap_traces lt
+         JOIN users u ON u.id = lt.user_id
+         LEFT JOIN teams t ON t.id = u.team_id
+        WHERE lt.race_id = ?
+        ORDER BY lt.best_lap_time_ms ASC`
+    )
+    .all(raceId);
+
+  const traces = rows.map((r) => {
+    let points = [];
+    try { points = JSON.parse(r.points) || []; } catch { points = []; }
+    return {
+      user_id: r.user_id,
+      display_name: r.display_name,
+      username: r.username,
+      avatar: r.avatar,
+      team_color: r.team_color,
+      lap: r.lap,
+      best_lap_time_ms: r.best_lap_time_ms,
+      points,
+    };
+  });
+  res.json(traces);
+});
+
 /** POST /api/races (admin) */
 export const createRace = asyncHandler(async (req, res) => {
   const { season_id, circuit_id, round, name, race_date, weather, laps, distance_km } = req.body;
@@ -162,6 +195,7 @@ export const deleteRace = asyncHandler(async (req, res) => {
       { sql: 'DELETE FROM results WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM lap_times WHERE race_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_traces WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM races WHERE id = ?', args: [id] },
     ],
     'write'

@@ -20,6 +20,7 @@
 import { HEADER_SIZE } from './index.js';
 
 export const PACKET_ID = {
+  MOTION: 0,
   SESSION: 1,
   LAP_DATA: 2,
   EVENT: 3,
@@ -32,6 +33,30 @@ export const PACKET_ID = {
 };
 
 const NUM_CARS = 22;
+
+// ------------------------------------------------------------
+//  MOTION (id 0) — posizione mondiale di ogni vettura (telemetria GPS).
+//  CarMotionData = 60 byte/vettura in F1 25; l'array parte SUBITO dopo
+//  l'header (nessun byte di conteggio). Ci servono solo i primi 12 byte
+//  (m_worldPositionX/Y/Z, 3× f32): usiamo X e Z (piano orizzontale) per
+//  disegnare la linea di gara; Y (quota) è scartata. Lo stride è ricavato
+//  dalla lunghezza del pacchetto per robustezza tra versioni.
+// ------------------------------------------------------------
+export function parseMotion(c, _header, buffer) {
+  const arrayStart = HEADER_SIZE; // 29 — l'array CarMotionData segue l'header
+  const stride = Math.floor((buffer.length - arrayStart) / NUM_CARS);
+  const cars = [];
+  for (let i = 0; i < NUM_CARS; i++) {
+    const base = arrayStart + i * stride;
+    if (base + 12 > buffer.length) break;
+    c.seek(base);
+    const x = c.f32();
+    const y = c.f32();
+    const z = c.f32();
+    cars.push({ x, y, z });
+  }
+  return { cars };
+}
 
 // ------------------------------------------------------------
 //  SESSION (id 1) — leggiamo la testa confermata del pacchetto.

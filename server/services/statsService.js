@@ -7,7 +7,15 @@
  */
 import db from '../database/db.js';
 import { round } from '../utils/helpers.js';
+import { msToLapTime } from '../utils/f1-mappings.js';
 import { getDriverStandings } from './standingsService.js';
+
+/** Settore in ms → stringa: "s.mmm" sotto il minuto, altrimenti "m:ss.mmm". */
+function fmtSectorMs(ms) {
+  const n = Number(ms);
+  if (!n || n <= 0) return null;
+  return n >= 60000 ? msToLapTime(n) : (n / 1000).toFixed(3);
+}
 
 /** Tutti i risultati "grezzi" di un pilota nella stagione, arricchiti. */
 async function driverRaceRows(seasonId, userId) {
@@ -120,6 +128,32 @@ export async function getDriverStats(seasonId, userId) {
   // Trend ultimi 5 GP (posizioni; null = DNF)
   stats.last5 = stats.history.slice(-5).map((h) => h.position);
 
+  // Telemetria: migliori tempi giro/settori della stagione (da lap_times).
+  const lapAgg = await db
+    .prepare(
+      `SELECT MIN(CASE WHEN lt.valid = 1 AND lt.lap_time_ms > 0 THEN lt.lap_time_ms END) AS best_lap_ms,
+              MIN(CASE WHEN lt.sector1_ms > 0 THEN lt.sector1_ms END) AS best_s1_ms,
+              MIN(CASE WHEN lt.sector2_ms > 0 THEN lt.sector2_ms END) AS best_s2_ms,
+              MIN(CASE WHEN lt.sector3_ms > 0 THEN lt.sector3_ms END) AS best_s3_ms,
+              COUNT(*) AS laps_recorded
+         FROM lap_times lt
+         JOIN races ra ON ra.id = lt.race_id
+        WHERE ra.season_id = ? AND ra.status = 'completed' AND lt.user_id = ?`
+    )
+    .get(seasonId, userId);
+
+  stats.lapStats = {
+    best_lap_ms: lapAgg?.best_lap_ms || null,
+    best_lap: msToLapTime(lapAgg?.best_lap_ms),
+    best_s1_ms: lapAgg?.best_s1_ms || null,
+    best_s1: fmtSectorMs(lapAgg?.best_s1_ms),
+    best_s2_ms: lapAgg?.best_s2_ms || null,
+    best_s2: fmtSectorMs(lapAgg?.best_s2_ms),
+    best_s3_ms: lapAgg?.best_s3_ms || null,
+    best_s3: fmtSectorMs(lapAgg?.best_s3_ms),
+    laps_recorded: lapAgg?.laps_recorded || 0,
+  };
+
   return stats;
 }
 
@@ -168,6 +202,45 @@ export async function getChampionshipStats(seasonId) {
     )
     .get(seasonId);
 
+  // Primati telemetria: giro veloce assoluto + miglior settore della stagione.
+  const fastestLapRow = await db
+    .prepare(
+      `SELECT u.display_name AS name, u.avatar, t.name AS team, ra.name AS race, lt.lap_time_ms AS ms
+         FROM lap_times lt
+         JOIN races ra ON ra.id = lt.race_id
+         JOIN users u  ON u.id = lt.user_id
+         LEFT JOIN teams t ON t.id = u.team_id
+        WHERE ra.season_id = ? AND ra.status='completed' AND lt.valid = 1 AND lt.lap_time_ms > 0
+        ORDER BY lt.lap_time_ms ASC LIMIT 1`
+    )
+    .get(seasonId);
+
+  const SECTOR_COLS = { sector1_ms: 1, sector2_ms: 1, sector3_ms: 1 };
+  const bestSectorRow = async (col) => {
+    if (!SECTOR_COLS[col]) return null;
+    return db
+      .prepare(
+        `SELECT u.display_name AS name, u.avatar, t.name AS team, ra.name AS race, lt.${col} AS ms
+           FROM lap_times lt
+           JOIN races ra ON ra.id = lt.race_id
+           JOIN users u  ON u.id = lt.user_id
+           LEFT JOIN teams t ON t.id = u.team_id
+          WHERE ra.season_id = ? AND ra.status='completed' AND lt.${col} > 0
+          ORDER BY lt.${col} ASC LIMIT 1`
+      )
+      .get(seasonId);
+  };
+  const [s1Row, s2Row, s3Row] = await Promise.all([
+    bestSectorRow('sector1_ms'), bestSectorRow('sector2_ms'), bestSectorRow('sector3_ms'),
+  ]);
+
+  const lapRecord = (row) => (row && row.ms > 0
+    ? { name: row.name, value: msToLapTime(row.ms), avatar: row.avatar, team: row.team, context: row.race }
+    : null);
+  const sectorRecord = (row) => (row && row.ms > 0
+    ? { name: row.name, value: fmtSectorMs(row.ms), avatar: row.avatar, team: row.team, context: row.race }
+    : null);
+
   return {
     standings,
     leaders: {
@@ -176,6 +249,10 @@ export async function getChampionshipStats(seasonId) {
       most_podiums: topBy('podiums'),
       most_fastest_laps: topBy('fastest_laps'),
       most_overtakes: topBy('overtakes'),
+      fastest_lap: lapRecord(fastestLapRow),
+      best_sector1: sectorRecord(s1Row),
+      best_sector2: sectorRecord(s2Row),
+      best_sector3: sectorRecord(s3Row),
       most_points: { name: standings[0].display_name, value: standings[0].points, avatar: standings[0].avatar, team: standings[0].team_name },
       best_avg_position: (() => {
         const withAvg = standings.filter((s) => s.avg_position != null);

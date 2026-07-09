@@ -155,6 +155,49 @@ export function flagEmoji(code) {
   return String.fromCodePoint(...[...cc].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
+/**
+ * Badge degli aiuti alla guida dichiarati dal pilota (ABS · controllo di
+ * trazione · cambio). Ritorna una stringa HTML (può essere vuota se l'utente
+ * non ha dichiarato aiuti). Pensato per essere mostrato accanto al giro veloce.
+ */
+export function assistBadges(u) {
+  if (!u) return '';
+  const out = [];
+  if (Number(u.assist_abs)) {
+    out.push('<span class="badge gray" title="ABS attivo">🛞 ABS</span>');
+  }
+  const tc = u.assist_tc;
+  if (tc === 'medium' || tc === 'full') {
+    out.push(`<span class="badge gray" title="Controllo di trazione: ${tc === 'full' ? 'pieno' : 'medio'}">🎛️ TC${tc === 'full' ? '+' : ''}</span>`);
+  }
+  // Il cambio è una scelta binaria: lo indichiamo sempre (M = manuale, A = automatico).
+  out.push(u.assist_gearbox === 'manual'
+    ? '<span class="badge gray" title="Cambio manuale">⚙️ M</span>'
+    : '<span class="badge gray" title="Cambio automatico">⚙️ A</span>');
+  return out.join(' ');
+}
+
+/**
+ * Collega i controlli `.segmented[data-assist]` ai rispettivi input nascosti
+ * (name = data-assist). Inizializza lo stato attivo dal valore corrente
+ * dell'input e lo aggiorna al click. Riusato da registrazione e profilo.
+ */
+export function wireAssists(root = document) {
+  root.querySelectorAll('.segmented[data-assist]').forEach((grp) => {
+    const name = grp.dataset.assist;
+    const hidden = root.querySelector(`input[name="${name}"]`);
+    const buttons = [...grp.querySelectorAll('button[data-val]')];
+    const sync = (val) => buttons.forEach((b) => b.classList.toggle('active', b.dataset.val === String(val)));
+    if (hidden) sync(hidden.value);
+    buttons.forEach((b) =>
+      b.addEventListener('click', () => {
+        if (hidden) hidden.value = b.dataset.val;
+        sync(b.dataset.val);
+      })
+    );
+  });
+}
+
 /** Ordinale di posizione (1 → 1°). */
 export const ordinal = (n) => (n == null ? '—' : `${n}°`);
 

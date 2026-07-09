@@ -18,6 +18,11 @@
 import { EventEmitter } from 'node:events';
 import { buildPayload } from './builder.js';
 
+// Traiettoria (giro veloce): parametri di campionamento/limite.
+const TRACE_MIN_DIST_SQ = 36;   // (~6 m)² tra punti consecutivi: decimazione distanza-based
+const MAX_TRACE_POINTS = 1500;  // cap di sicurezza per singolo giro
+const MIN_TRACE_POINTS = 20;    // un giro con troppi pochi punti non è una traccia utile
+
 export class SessionAggregator extends EventEmitter {
   /** @param {{collectorVersion?:string}} [opts] */
   constructor({ collectorVersion = '' } = {}) {
@@ -38,6 +43,7 @@ export class SessionAggregator extends EventEmitter {
       fastestLapCarIndex: null,
       overtakes: {},         // carIndex -> numero di sorpassi (eventi OVTK)
       history: {},           // carIdx -> cronologia giri (Session History, pkt 11)
+      traces: {},            // carIdx -> traiettoria (Motion, pkt 0): giro corrente + miglior giro
       finalized: false,
     };
     this.emit('session-start', { sessionUID: sessionUid });
@@ -58,6 +64,9 @@ export class SessionAggregator extends EventEmitter {
     const s = this.state;
 
     switch (header.packetId) {
+      case 0: // Motion → traiettoria (linea di gara)
+        this._onMotion(packet);
+        break;
       case 1: // Session
         s.meta = packet;
         break;
@@ -102,6 +111,52 @@ export class SessionAggregator extends EventEmitter {
         break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Motion (pkt 0): accumula la linea di gara per vettura. Il Motion non
+   * porta il numero di giro, quindi facciamo il join con l'ultimo LapData
+   * (currentLapNum + lastLapTimeInMS). In RAM teniamo solo il giro corrente
+   * e il miglior giro completato: al cambio di giro promuoviamo il giro
+   * appena chiuso se più veloce del best precedente.
+   */
+  _onMotion(packet) {
+    const s = this.state;
+    if (!s.lapData || !packet.cars) return; // senza LapData non sappiamo il giro
+    const lapCars = s.lapData.cars || [];
+    const numActive = s.participants?.numActiveCars ?? packet.cars.length;
+
+    for (let i = 0; i < packet.cars.length && i < numActive; i++) {
+      const pos = packet.cars[i];
+      const ld = lapCars[i];
+      if (!pos || !ld) continue;
+      const lapNum = ld.currentLapNum;
+      if (!lapNum) continue; // pre-via / non ancora in giro
+
+      const t = (s.traces[i] ||= { curLap: lapNum, curPoints: [], best: null, lastX: null, lastZ: null });
+
+      // Cambio di giro: valuta il giro appena chiuso (t.curLap) e riparte.
+      if (lapNum !== t.curLap) {
+        const closedTime = ld.lastLapTimeInMS;
+        if (closedTime > 0 && t.curPoints.length >= MIN_TRACE_POINTS &&
+            (!t.best || closedTime < t.best.timeMs)) {
+          t.best = { lap: t.curLap, timeMs: closedTime, points: t.curPoints };
+        }
+        t.curLap = lapNum;
+        t.curPoints = [];
+        t.lastX = null;
+        t.lastZ = null;
+      }
+
+      // Decimazione distanza-based: campiona un punto solo ogni ~6 m.
+      const { x, z } = pos;
+      const far = t.lastX === null || ((x - t.lastX) ** 2 + (z - t.lastZ) ** 2) >= TRACE_MIN_DIST_SQ;
+      if (far && t.curPoints.length < MAX_TRACE_POINTS) {
+        t.curPoints.push([Math.round(x), Math.round(z)]);
+        t.lastX = x;
+        t.lastZ = z;
+      }
     }
   }
 

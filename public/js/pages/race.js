@@ -3,7 +3,7 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs } from '../core/ui.js';
+import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges } from '../core/ui.js';
 
 mountChrome();
 
@@ -18,7 +18,12 @@ function posCell(r, idx) {
 function resultRow(r, idx) {
   const badges = [];
   if (r.pole) badges.push('<span class="badge gold" title="Pole position">POLE</span>');
-  if (r.fastest_lap) badges.push('<span class="badge blue" title="Giro veloce">GV</span>');
+  if (r.fastest_lap) {
+    badges.push('<span class="badge blue" title="Giro veloce">GV</span>');
+    // Aiuti alla guida del pilota, mostrati sul giro veloce.
+    const assists = assistBadges(r);
+    if (assists) badges.push(assists);
+  }
   const penalty = r.penalty_seconds
     ? `<div class="dc-sub text-red" title="${esc(r.penalty_note || 'Penalità')}">+${r.penalty_seconds}s pen.</div>`
     : '';
@@ -160,6 +165,91 @@ async function loadLaps() {
   }
 }
 
+/* ---------------- Traiettorie (linea di gara del giro veloce) ---------------- */
+// La mappa è disegnata dai punti reali (Motion packet): niente asset esterni.
+// Piano orizzontale = (x, z); l'asse verticale SVG è invertito (z verso l'alto).
+function renderMap(drivers) {
+  const withPts = (drivers || []).filter((d) => Array.isArray(d.points) && d.points.length > 1);
+  if (!withPts.length) {
+    return '<div class="empty"><div class="em-ic">🗺️</div>Nessuna traiettoria disponibile (importa la gara con il collector aggiornato).</div>';
+  }
+
+  // Bounding box su TUTTI i punti (così le linee sono in scala comune)
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const d of withPts) {
+    for (const p of d.points) {
+      if (p[0] < minX) minX = p[0];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minZ) minZ = p[1];
+      if (p[1] > maxZ) maxZ = p[1];
+    }
+  }
+  const w = Math.max(1, maxX - minX), h = Math.max(1, maxZ - minZ);
+  const pad = Math.max(w, h) * 0.05;
+  const vbW = (w + pad * 2).toFixed(1), vbH = (h + pad * 2).toFixed(1);
+  const tx = (x) => (x - minX + pad).toFixed(1);
+  const ty = (z) => (maxZ - z + pad).toFixed(1); // inverte l'asse verticale
+
+  const polylines = withPts
+    .map((d) => {
+      const pts = d.points.map((p) => `${tx(p[0])},${ty(p[1])}`).join(' ');
+      const color = d.team_color || '#e10600';
+      return `<polyline data-uid="${d.user_id}" points="${pts}" fill="none" stroke="${color}"
+        stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+        vector-effect="non-scaling-stroke" style="opacity:.9"/>`;
+    })
+    .join('');
+
+  const legend = withPts
+    .map((d) => {
+      const color = d.team_color || '#e10600';
+      return `<button type="button" class="trace-leg active" data-uid="${d.user_id}"
+        style="display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:transparent;color:inherit;cursor:pointer">
+        <span class="dot" style="background:${color}"></span>
+        <span class="text-hi">${esc(d.display_name)}</span>
+        <span class="mono text-lo" style="margin-left:auto">${fmtLap(d.best_lap_time_ms)}</span>
+      </button>`;
+    })
+    .join('');
+
+  return `
+    <div class="card" style="padding:12px">
+      <div style="width:100%;aspect-ratio:16/10;background:rgba(255,255,255,0.03);border-radius:var(--r-md);overflow:hidden">
+        <svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
+          ${polylines}
+        </svg>
+      </div>
+      <div class="trace-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">${legend}</div>
+      <div class="hint" style="margin-top:8px">Traiettoria del <b>giro veloce</b> di ogni pilota (dati reali di gioco) · clicca un nome per mostrarla o nasconderla</div>
+    </div>`;
+}
+
+function wireMap(box) {
+  box.querySelectorAll('.trace-leg').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const on = btn.classList.toggle('active');
+      const line = box.querySelector(`polyline[data-uid="${btn.dataset.uid}"]`);
+      if (line) line.style.display = on ? '' : 'none';
+      btn.style.opacity = on ? '' : '.4';
+    });
+  });
+}
+
+let mapLoaded = false;
+async function loadMap() {
+  if (mapLoaded) return;
+  mapLoaded = true;
+  const box = $('#map-box');
+  try {
+    const drivers = await api.get(`/races/${raceId}/traces`, {}, { auth: false });
+    box.innerHTML = renderMap(drivers);
+    wireMap(box);
+  } catch (e) {
+    mapLoaded = false;
+    box.innerHTML = `<div class="empty">Errore nel caricamento delle traiettorie: ${esc(e.message)}</div>`;
+  }
+}
+
 function render(race) {
   const done = race.status === 'completed';
   const winner = done ? race.results.find((r) => !r.dnf && r.position === 1) : null;
@@ -223,19 +313,21 @@ function render(race) {
       <button class="tab active" data-tab="results">Risultati</button>
       <button class="tab" data-tab="quali">Qualifiche</button>
       ${done ? '<button class="tab" data-tab="laps">Giri & Settori</button>' : ''}
+      ${done ? '<button class="tab" data-tab="map">Traiettorie</button>' : ''}
       ${race.screenshot ? '<button class="tab" data-tab="media">Screenshot</button>' : ''}
     </div>
 
     <section id="tab-results">${resultsSection}</section>
     <section id="tab-quali" class="hidden">${qualiSection}</section>
     ${done ? '<section id="tab-laps" class="hidden"><div id="laps-box"><div style="padding:40px;text-align:center"><span class="spinner"></span></div></div></section>' : ''}
+    ${done ? '<section id="tab-map" class="hidden"><div id="map-box"><div style="padding:40px;text-align:center"><span class="spinner"></span></div></div></section>' : ''}
     ${race.screenshot ? `<section id="tab-media" class="hidden"><div class="card" style="padding:12px"><img src="${esc(race.screenshot)}" alt="Screenshot risultati" style="width:100%;border-radius:var(--r-md);display:block"></div></section>` : ''}
 
     ${race.comment ? `<div class="card glass" style="margin-top:28px"><div class="eyebrow">Cronaca</div><p class="text-mid" style="margin:8px 0 0;line-height:1.7">${esc(race.comment)}</p></div>` : ''}
   `;
 
   // Tab switching
-  const sections = { results: '#tab-results', quali: '#tab-quali', laps: '#tab-laps', media: '#tab-media' };
+  const sections = { results: '#tab-results', quali: '#tab-quali', laps: '#tab-laps', map: '#tab-map', media: '#tab-media' };
   $$('.tab').forEach((t) =>
     t.addEventListener('click', () => {
       $$('.tab').forEach((x) => x.classList.toggle('active', x === t));
@@ -244,6 +336,7 @@ function render(race) {
         if (node) node.classList.toggle('hidden', k !== t.dataset.tab);
       });
       if (t.dataset.tab === 'laps') loadLaps(); // caricamento pigro
+      if (t.dataset.tab === 'map') loadMap();
     })
   );
 }

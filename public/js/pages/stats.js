@@ -20,6 +20,10 @@ const LEADER_META = {
   best_avg_position: { ic: '📊', label: 'Miglior media' },
   most_consistent: { ic: '🎯', label: 'Più costante' },
   biggest_comeback: { ic: '🚀', label: 'Miglior rimonta' },
+  fastest_lap: { ic: '💨', label: 'Giro più veloce' },
+  best_sector1: { ic: '🟩', label: 'Miglior Settore 1' },
+  best_sector2: { ic: '🟨', label: 'Miglior Settore 2' },
+  best_sector3: { ic: '🟪', label: 'Miglior Settore 3' },
 };
 
 function leaderCard(key, d) {
@@ -32,6 +36,7 @@ function leaderCard(key, d) {
         <div class="lc-label">${m.label}</div>
         <div class="lc-name">${esc(d.name)}</div>
         ${d.team ? `<div class="dc-sub">${esc(d.team)}</div>` : ''}
+        ${d.context ? `<div class="dc-sub">🏁 ${esc(d.context)}</div>` : ''}
       </div>
       <div class="lc-value">${val}</div>
     </div>`;

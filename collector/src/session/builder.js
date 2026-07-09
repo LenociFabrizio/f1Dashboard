@@ -5,8 +5,10 @@
  * (il "contratto") atteso dall'endpoint di ingest del sito.
  *
  * Solo dati AGGREGATI e utili all'import: nessuna telemetria grezza ad
- * alta frequenza. Le mescole/tipi vengono normalizzati in stringhe via
- * parser/enums.js così il backend non deve conoscere il protocollo.
+ * alta frequenza. Anche la traiettoria (lapTraces) è aggregata — solo il
+ * giro veloce di ogni pilota, con punti decimati (~6 m). Le mescole/tipi
+ * vengono normalizzati in stringhe via parser/enums.js così il backend non
+ * deve conoscere il protocollo.
  * ------------------------------------------------------------
  */
 import {
@@ -30,6 +32,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
   const numCars = state.classification?.numCars ?? classification.length;
   const overtakes = state.overtakes || {};
   const history = state.history || {};
+  const traces = state.traces || {};
 
   const sessionType = normalizeSessionType(meta.sessionType);
   const isQualifying = sessionType === 'qualifying';
@@ -83,6 +86,16 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
       .map((l) => ({ lap: l.lap, timeMs: l.lapTimeMs, s1Ms: l.s1Ms, s2Ms: l.s2Ms, s3Ms: l.s3Ms, valid: l.valid })),
   })).filter((h) => h.laps.length);
 
+  // Traiettoria del solo giro veloce di ogni pilota (punti [x,z] decimati).
+  const lapTracesOut = Object.entries(traces)
+    .map(([carIndex, t]) => t.best && {
+      carIndex: Number(carIndex),
+      lap: t.best.lap,
+      timeMs: t.best.timeMs,
+      points: t.best.points,
+    })
+    .filter(Boolean);
+
   return {
     sessionUID: state.sessionUID,
     packetFormat: state.packetFormat ?? null,
@@ -98,6 +111,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     qualifying: qualifyingOut,
     classification: classificationOut,
     lapHistory: lapHistoryOut,
+    lapTraces: lapTracesOut,
   };
 }
 

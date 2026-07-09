@@ -3,7 +3,7 @@
    ============================================================= */
 import api from '../core/api.js';
 import auth from '../core/auth.js';
-import { $, $$, esc, toast } from '../core/ui.js';
+import { $, $$, esc, toast, wireAssists } from '../core/ui.js';
 import { driversForTeamName } from '../core/f1data.js';
 import { compressImage } from '../core/media.js';
 import { mountCookieBanner } from '../core/cookies.js';
@@ -14,6 +14,9 @@ mountCookieBanner();
 
 const form = $('#register-form');
 const submitBtn = $('#submit-btn');
+
+// Aiuti alla guida (controlli segmentati → input nascosti)
+wireAssists(form);
 
 /* ---- Avatar (opzionale): selezione + anteprima + compressione ---- */
 let avatarFile = null; // File compresso pronto per l'upload post-registrazione
@@ -120,6 +123,9 @@ form.addEventListener('submit', async (e) => {
       password: fd.get('password'),
       team_id: fd.get('team_id') ? Number(fd.get('team_id')) : undefined,
       reserve_driver: fd.get('reserve_driver') || undefined,
+      assist_abs: Number(fd.get('assist_abs')) ? 1 : 0,
+      assist_tc: fd.get('assist_tc') || 'off',
+      assist_gearbox: fd.get('assist_gearbox') || 'auto',
     });
     // Avatar (opzionale): ora l'utente è autenticato, carichiamo il file
     if (avatarFile) {

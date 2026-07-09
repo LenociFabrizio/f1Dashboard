@@ -4,17 +4,31 @@
 import api from '../core/api.js';
 import auth, { guard } from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, esc, loader, toast, modal, confirmDialog } from '../core/ui.js';
+import { $, esc, loader, toast, modal, confirmDialog, wireAssists } from '../core/ui.js';
 
 const form = $('#profile-form');
 const saveBtn = $('#save-btn');
 let me;
+
+/** Aggiorna lo stato attivo dei controlli segmentati dagli input nascosti. */
+function syncAssists() {
+  form.querySelectorAll('.segmented[data-assist]').forEach((grp) => {
+    const val = form.elements[grp.dataset.assist]?.value;
+    grp.querySelectorAll('button[data-val]').forEach((b) =>
+      b.classList.toggle('active', b.dataset.val === String(val)));
+  });
+}
 
 function fillForm(u) {
   form.first_name.value = u.first_name || '';
   form.last_name.value = u.last_name || '';
   if (form.username) form.username.value = u.username || '';
   form.email.value = u.email || '';
+  // Aiuti alla guida
+  form.elements.assist_abs.value = String(u.assist_abs ? 1 : 0);
+  form.elements.assist_tc.value = ['off', 'medium', 'full'].includes(u.assist_tc) ? u.assist_tc : 'off';
+  form.elements.assist_gearbox.value = u.assist_gearbox === 'manual' ? 'manual' : 'auto';
+  syncAssists();
   $('#avatar-preview').src = avatarUrl(u);
   $('#pv-name').textContent = u.display_name || u.username;
   $('#pv-team').textContent = u.team_name || 'Nessun team';
@@ -148,6 +162,9 @@ form.addEventListener('submit', async (e) => {
     team_id: form.team_id.value ? Number(form.team_id.value) : null,
   };
   if (form.username) payload.username = form.username.value.trim();
+  payload.assist_abs = Number(form.elements.assist_abs.value) ? 1 : 0;
+  payload.assist_tc = form.elements.assist_tc.value || 'off';
+  payload.assist_gearbox = form.elements.assist_gearbox.value || 'auto';
   try {
     const updated = await api.put('/users/me', payload);
     auth.user = { ...auth.user, ...updated };
@@ -172,6 +189,7 @@ form.addEventListener('submit', async (e) => {
   try {
     me = await api.get(`/users/${user.id}`, {}, { auth: false });
     fillForm(me);
+    wireAssists(form); // collega i controlli segmentati agli input nascosti
     await loadTeams(me.team_id);
     await loadHandles();
   } catch (e) {
