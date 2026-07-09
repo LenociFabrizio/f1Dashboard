@@ -224,7 +224,9 @@
 }
 
 @media (max-width: 720px) {
-  .nav-toggle { display: block; margin-left: auto; }
+  /* Mobile: hamburger a SINISTRA, logo a DESTRA. */
+  .nav-toggle { display: block; order: -1; margin-left: 0; }
+  .brand { margin-left: auto; }
 
   /* Il pannello (link + account) è un drawer laterale che entra da sinistra */
   .nav-panel {
