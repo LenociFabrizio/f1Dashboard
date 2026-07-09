@@ -91,6 +91,14 @@ async function main() {
     ['Hungaroring', 'Ungheria', 'HU', 'Budapest', 4.381, 70],
     ['Autodromo di Monza', 'Italia', 'IT', 'Monza', 5.793, 53],
     ['Marina Bay', 'Singapore', 'SG', 'Singapore', 4.940, 62],
+    ['Circuit Zandvoort', 'Paesi Bassi', 'NL', 'Zandvoort', 4.259, 72],
+    ['Baku City Circuit', 'Azerbaigian', 'AZ', 'Baku', 6.003, 51],
+    ['Circuit of the Americas', 'USA', 'US', 'Austin', 5.513, 56],
+    ['Autódromo Hermanos Rodríguez', 'Messico', 'MX', 'Città del Messico', 4.304, 71],
+    ['Autódromo José Carlos Pace', 'Brasile', 'BR', 'San Paolo', 4.309, 71],
+    ['Las Vegas Strip Circuit', 'USA', 'US', 'Las Vegas', 6.201, 50],
+    ['Lusail International Circuit', 'Qatar', 'QA', 'Lusail', 5.419, 57],
+    ['Yas Marina Circuit', 'Emirati Arabi Uniti', 'AE', 'Abu Dhabi', 5.281, 58],
   ];
   const insertCircuit = db.prepare(
     `INSERT INTO circuits (name, country, country_code, city, length_km, laps_default) VALUES (?, ?, ?, ?, ?, ?)`

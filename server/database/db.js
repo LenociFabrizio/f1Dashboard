@@ -138,6 +138,52 @@ async function runMigrations() {
   if (resetCols.length && !resetCols.some((c) => c.name === 'token_plain')) {
     await db.run('ALTER TABLE password_resets ADD COLUMN token_plain TEXT');
   }
+
+  await ensureOfficialCircuits();
+}
+
+/**
+ * Circuiti ufficiali del Mondiale 2025. Inserisce SOLO quelli mancanti
+ * (match per nome), così completa il calendario anche su DB già popolati
+ * senza duplicare né toccare i dati esistenti.
+ * [nome, paese, country_code, città, lunghezza_km, giri]
+ */
+const OFFICIAL_CIRCUITS_2025 = [
+  ['Bahrain International Circuit', 'Bahrain', 'BH', 'Sakhir', 5.412, 57],
+  ['Jeddah Corniche Circuit', 'Arabia Saudita', 'SA', 'Jeddah', 6.174, 50],
+  ['Albert Park Circuit', 'Australia', 'AU', 'Melbourne', 5.278, 58],
+  ['Suzuka International', 'Giappone', 'JP', 'Suzuka', 5.807, 53],
+  ['Shanghai International', 'Cina', 'CN', 'Shanghai', 5.451, 56],
+  ['Miami International', 'USA', 'US', 'Miami', 5.412, 57],
+  ['Autodromo di Imola', 'Italia', 'IT', 'Imola', 4.909, 63],
+  ['Circuit de Monaco', 'Monaco', 'MC', 'Monte Carlo', 3.337, 78],
+  ['Circuit de Barcelona', 'Spagna', 'ES', 'Barcellona', 4.657, 66],
+  ['Circuit Gilles Villeneuve', 'Canada', 'CA', 'Montreal', 4.361, 70],
+  ['Red Bull Ring', 'Austria', 'AT', 'Spielberg', 4.318, 71],
+  ['Silverstone Circuit', 'Gran Bretagna', 'GB', 'Silverstone', 5.891, 52],
+  ['Circuit de Spa', 'Belgio', 'BE', 'Spa', 7.004, 44],
+  ['Hungaroring', 'Ungheria', 'HU', 'Budapest', 4.381, 70],
+  ['Circuit Zandvoort', 'Paesi Bassi', 'NL', 'Zandvoort', 4.259, 72],
+  ['Autodromo di Monza', 'Italia', 'IT', 'Monza', 5.793, 53],
+  ['Baku City Circuit', 'Azerbaigian', 'AZ', 'Baku', 6.003, 51],
+  ['Marina Bay', 'Singapore', 'SG', 'Singapore', 4.940, 62],
+  ['Circuit of the Americas', 'USA', 'US', 'Austin', 5.513, 56],
+  ['Autódromo Hermanos Rodríguez', 'Messico', 'MX', 'Città del Messico', 4.304, 71],
+  ['Autódromo José Carlos Pace', 'Brasile', 'BR', 'San Paolo', 4.309, 71],
+  ['Las Vegas Strip Circuit', 'USA', 'US', 'Las Vegas', 6.201, 50],
+  ['Lusail International Circuit', 'Qatar', 'QA', 'Lusail', 5.419, 57],
+  ['Yas Marina Circuit', 'Emirati Arabi Uniti', 'AE', 'Abu Dhabi', 5.281, 58],
+];
+
+async function ensureOfficialCircuits() {
+  for (const c of OFFICIAL_CIRCUITS_2025) {
+    const exists = await db.prepare('SELECT id FROM circuits WHERE name = ?').get(c[0]);
+    if (!exists) {
+      await db
+        .prepare('INSERT INTO circuits (name, country, country_code, city, length_km, laps_default) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(...c);
+    }
+  }
 }
 
 export default db;
