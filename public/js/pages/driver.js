@@ -10,6 +10,28 @@ mountChrome();
 
 const userId = new URLSearchParams(location.search).get('id');
 
+// Piattaforme di gioco → etichetta + icona (dagli handle dichiarati dal pilota).
+const PLATFORM_META = {
+  steam: { label: 'Steam', ic: '💻' },
+  playstation: { label: 'PlayStation', ic: '🎮' },
+  xbox: { label: 'Xbox', ic: '🎮' },
+  origin: { label: 'EA / Origin', ic: '💻' },
+};
+function platformBadges(platforms) {
+  if (!platforms || !platforms.length) return '';
+  const chips = platforms
+    .map((p) => {
+      const m = PLATFORM_META[p] || { label: p, ic: '🎮' };
+      return `<span class="badge gray">${m.ic} ${esc(m.label)}</span>`;
+    })
+    .join(' ');
+  return `
+    <div class="flex items-center gap-2 wrap text-lo" style="margin-top:8px">
+      <span style="font-size:.82rem;text-transform:uppercase;letter-spacing:.06em">Gioca su</span>
+      ${chips}
+    </div>`;
+}
+
 function statCard(label, value, ic) {
   return `<div class="stat-card"><span class="stat-ic">${ic}</span><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
 }
@@ -120,6 +142,7 @@ function render(user, stats) {
             <span style="font-size:.82rem;text-transform:uppercase;letter-spacing:.06em">Aiuti attuali</span>
             ${assistBadges(user)}
           </div>
+          ${platformBadges(user.platforms)}
         </div>
         ${hasRaces ? `<div style="text-align:center"><div class="text-lo" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Ultime 5</div><div class="flex gap-2">${last5Dots(stats.last5)}</div></div>` : ''}
       </div>

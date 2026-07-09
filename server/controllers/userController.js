@@ -54,7 +54,13 @@ export const getUser = asyncHandler(async (req, res) => {
     )
     .get(req.params.id);
   if (!user) throw new HttpError(404, 'Pilota non trovato');
-  res.json(sanitizeUser(user));
+  // Piattaforme di gioco dichiarate (dagli handle F1 25), senza esporre i nickname.
+  const platRows = await db
+    .prepare("SELECT DISTINCT platform FROM game_identities WHERE user_id = ? AND platform <> '' ORDER BY platform")
+    .all(user.id);
+  const safe = sanitizeUser(user);
+  safe.platforms = platRows.map((p) => p.platform);
+  res.json(safe);
 });
 
 // Campi che l'utente può modificare del proprio profilo
