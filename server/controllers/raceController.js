@@ -63,7 +63,7 @@ export const getRace = asyncHandler(async (req, res) => {
               t.name AS team_name, t.color AS team_color
          FROM results r
          JOIN users u ON u.id = r.user_id
-         LEFT JOIN teams t ON t.id = r.team_id
+         LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
         WHERE r.race_id = ?
         ORDER BY (r.dnf), (r.position IS NULL), r.position ASC`
     )

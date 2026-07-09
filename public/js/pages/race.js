@@ -19,12 +19,7 @@ function posCell(r, idx) {
 function resultRow(r, idx) {
   const badges = [];
   if (r.pole) badges.push('<span class="badge gold" title="Pole position">POLE</span>');
-  if (r.fastest_lap) {
-    badges.push('<span class="badge blue" title="Giro veloce">GV</span>');
-    // Aiuti alla guida del pilota, mostrati sul giro veloce.
-    const assists = assistBadges(r);
-    if (assists) badges.push(assists);
-  }
+  if (r.fastest_lap) badges.push('<span class="badge blue" title="Giro veloce">GV</span>');
   const penalty = r.penalty_seconds
     ? `<div class="dc-sub text-red" title="${esc(r.penalty_note || 'Penalità')}">+${r.penalty_seconds}s pen.</div>`
     : '';
@@ -52,6 +47,7 @@ function resultRow(r, idx) {
       <td class="num text-lo hide-sm">${r.grid_position ?? '—'}</td>
       <td>${gap}</td>
       <td class="num hide-sm">${r.overtakes || 0}</td>
+      <td class="hide-sm" style="white-space:nowrap">${assistBadges(r) || '<span class="text-dim">—</span>'}</td>
       <td style="white-space:nowrap">${badges.join(' ') || '<span class="text-dim">—</span>'}</td>
       <td class="num pts">${r.points || 0}</td>
     </tr>`;
@@ -271,7 +267,7 @@ function render(race) {
             <tr>
               <th>Pos</th><th>Pilota</th><th class="hide-sm">Team</th>
               <th class="num hide-sm">Grid</th><th>Tempo / Gap</th>
-              <th class="num hide-sm">Sorp.</th><th>Note</th><th class="num">Punti</th>
+              <th class="num hide-sm">Sorp.</th><th class="hide-sm">Aiuti</th><th>Note</th><th class="num">Punti</th>
             </tr>
           </thead>
           <tbody>${race.results.map(resultRow).join('')}</tbody>
