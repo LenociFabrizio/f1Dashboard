@@ -188,6 +188,15 @@ export const addMyHandle = asyncHandler(async (req, res) => {
   const platform = String(req.body.platform || '').trim();
   if (!handle) throw new HttpError(400, 'Handle obbligatorio');
 
+  // Un solo handle per piattaforma per utente.
+  const samePlatform = await db
+    .prepare('SELECT id FROM game_identities WHERE user_id = ? AND platform = ?')
+    .get(req.user.id, platform);
+  if (samePlatform) {
+    const label = platform || 'Qualsiasi';
+    throw new HttpError(409, `Hai già un handle per la piattaforma "${label}". Rimuovilo prima di aggiungerne un altro.`);
+  }
+
   // L'unicità è su (platform, handle): se già assegnato ad altri, blocca.
   const existing = await db.prepare('SELECT user_id FROM game_identities WHERE platform = ? AND handle = ?').get(platform, handle);
   if (existing && existing.user_id !== req.user.id) {

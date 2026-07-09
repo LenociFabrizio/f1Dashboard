@@ -103,9 +103,31 @@ $('#pwd-btn').addEventListener('click', () => {
 /* ---- Handle di gioco F1 25 ---- */
 const PLATFORM_LABEL = { steam: 'Steam', playstation: 'PlayStation', xbox: 'Xbox', origin: 'EA / Origin', '': 'Qualsiasi' };
 
+/** Un solo handle per piattaforma: disabilita nel menu quelle già usate. */
+function updatePlatformSelect(list) {
+  const sel = $('#handle-platform');
+  const btn = $('#add-handle-btn');
+  if (!sel) return;
+  const used = new Set((list || []).map((h) => h.platform || ''));
+  let free = 0;
+  [...sel.options].forEach((o) => {
+    const taken = used.has(o.value);
+    o.disabled = taken;
+    o.textContent = (PLATFORM_LABEL[o.value] || o.value || 'Qualsiasi') + (taken ? ' — già aggiunta' : '');
+    if (!taken) free++;
+  });
+  // Se l'opzione selezionata è ora disabilitata, passa alla prima libera.
+  if (sel.selectedOptions[0]?.disabled) {
+    const firstFree = [...sel.options].find((o) => !o.disabled);
+    sel.value = firstFree ? firstFree.value : '';
+  }
+  if (btn) btn.disabled = free === 0;
+}
+
 function renderHandles(list) {
   const box = $('#handles-list');
   if (!box) return;
+  updatePlatformSelect(list);
   if (!list.length) {
     box.innerHTML = '<div class="hint">Nessun handle ancora. Aggiungine uno qui sotto.</div>';
     return;
