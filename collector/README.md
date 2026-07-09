@@ -6,6 +6,9 @@ Piccolo programma **Node.js** da eseguire sul PC di gioco. Ascolta la telemetria
 - **Robusto offline**: le sessioni vengono accodate su disco e inviate appena la rete torna.
 - **Vista live locale** (facoltativa) per controllare la classifica in tempo reale.
 
+> 🎮 **Giochi su console (PS5/Xbox)?** Il collector gira su un **altro PC della stessa rete** e la
+> console gli invia i dati via UDP. Guida passo-passo per non esperti: **[GUIDA-PS5.md](GUIDA-PS5.md)**.
+
 ## Requisiti
 
 - Node.js ≥ 18 sul PC di gioco.
@@ -25,6 +28,9 @@ Piccolo programma **Node.js** da eseguire sul PC di gioco. Ascolta la telemetria
 | **UDP Format** | **2025** |
 | Your Telemetry | Public |
 | Show online names | **On** *(consigliato: senza, i nickname possono risultare oscurati)* |
+
+> **Da console** (PS5/Xbox) l'`UDP IP Address` **non** è `127.0.0.1` ma l'**IP del PC** che gira il
+> collector sulla stessa rete (es. `192.168.1.50`) — vedi [GUIDA-PS5.md](GUIDA-PS5.md).
 
 ## Installazione e avvio
 
