@@ -3,10 +3,21 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges } from '../core/ui.js';
+import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges, celebrate } from '../core/ui.js';
 import { setupUrlForRace } from '../core/f1data.js';
+import auth from '../core/auth.js';
 
 mountChrome();
+
+/** Coriandoli se l'utente loggato ha vinto questa gara, stelle se è stato MVP. */
+function celebrateForUser(race) {
+  const me = auth.user;
+  if (!me || race.status !== 'completed') return;
+  const won = (race.results || []).some((r) => r.user_id === me.id && !r.dnf && r.position === 1);
+  const mvp = race.mvp_user_id === me.id;
+  if (won) celebrate('confetti');
+  if (mvp) setTimeout(() => celebrate('stars'), won ? 350 : 0);
+}
 
 const raceId = qs.get('id');
 
@@ -349,6 +360,7 @@ function render(race) {
     const race = await api.get(`/races/${raceId}`, {}, { auth: false });
     document.title = `${race.name.replace('Gran Premio ', 'GP ')} · Lega F1`;
     render(race);
+    celebrateForUser(race);
   } catch (e) {
     console.error(e);
     $('#race-main').innerHTML = `<div class="empty" style="padding:80px"><div class="em-ic">🚫</div>${esc(e.message || 'Gara non trovata')}</div>`;

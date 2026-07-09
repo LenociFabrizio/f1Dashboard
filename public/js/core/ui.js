@@ -148,6 +148,68 @@ export function lightbox(src, { alt = '' } = {}) {
   return { close };
 }
 
+/* ---------------- Celebrazione (coriandoli / stelle) ---------------- */
+/**
+ * Breve animazione a schermo intero (~2s). kind: 'confetti' | 'stars'.
+ * Canvas leggero, nessuna dipendenza. Non blocca l'interazione.
+ */
+export function celebrate(kind = 'confetti', { duration = 2200 } = {}) {
+  if (typeof document === 'undefined' || !window.requestAnimationFrame) return;
+  // Rispetta chi preferisce meno animazioni.
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const canvas = el('canvas', { 'aria-hidden': 'true', style: 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2000' });
+  document.body.append(canvas);
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = () => window.innerWidth, H = () => window.innerHeight;
+  const resize = () => { canvas.width = W() * dpr; canvas.height = H() * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COLORS = ['#e10600', '#ffd54a', '#27F4D2', '#3671C6', '#52E252', '#ff7b76', '#ffffff'];
+  const stars = kind === 'stars';
+  const N = stars ? 70 : 130;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const parts = Array.from({ length: N }, () => ({
+    x: rnd(0, W()), y: rnd(-H() * 0.5, 0),
+    vx: rnd(-2.5, 2.5), vy: rnd(2, 6),
+    rot: rnd(0, Math.PI * 2), vr: rnd(-0.25, 0.25),
+    size: stars ? rnd(9, 20) : rnd(5, 11),
+    color: stars ? (Math.random() < 0.5 ? '#ffd54a' : '#fff3b0') : COLORS[(Math.random() * COLORS.length) | 0],
+  }));
+
+  function drawStar(x, y, r, rot, color) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.restore();
+  }
+
+  const start = performance.now();
+  function frame(now) {
+    const t = now - start;
+    const alpha = t > duration - 500 ? Math.max(0, (duration - t) / 500) : 1;
+    ctx.clearRect(0, 0, W(), H());
+    ctx.globalAlpha = alpha;
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.rot += p.vr;
+      if (stars) {
+        drawStar(p.x, p.y, p.size, p.rot, p.color);
+      } else {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        ctx.restore();
+      }
+    }
+    if (t < duration) requestAnimationFrame(frame);
+    else { window.removeEventListener('resize', resize); canvas.remove(); }
+  }
+  requestAnimationFrame(frame);
+}
+
 /** Dialog di conferma. Ritorna Promise<boolean>. */
 export function confirmDialog({ title = 'Confermi?', message = '', confirmText = 'Conferma', danger = false } = {}) {
   return new Promise((resolve) => {
