@@ -23,6 +23,9 @@ router.delete('/me/handles/:hid', requireAuth, users.deleteMyHandle);
 
 router.get('/', users.listUsers);
 router.get('/reserved', users.listReservedDrivers);
+// Richieste di reset password (admin) — prima di '/:id' per non farsele "catturare".
+router.get('/reset-requests', requireAuth, requireAdmin, users.listResetRequests);
+router.delete('/reset-requests/:rid', requireAuth, requireAdmin, users.revokeResetRequest);
 router.get('/:id', users.getUser);
 
 // Admin

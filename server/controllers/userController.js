@@ -205,6 +205,34 @@ export const deleteMyHandle = asyncHandler(async (req, res) => {
   res.json({ message: 'Handle rimosso' });
 });
 
+// ---------------------- ADMIN: richieste di reset password ----------------------
+// Il reset avviene senza email: l'utente richiede, l'admin vede qui la richiesta
+// con il link (token) da inoltrargli manualmente (WhatsApp/Discord).
+
+/** GET /api/users/reset-requests (admin) — richieste di reset attive (non usate, non scadute) */
+export const listResetRequests = asyncHandler(async (_req, res) => {
+  const rows = await db
+    .prepare(
+      `SELECT pr.id, pr.token_plain AS token, pr.created_at, pr.expires_at,
+              u.id AS user_id, u.display_name, u.username, u.email
+         FROM password_resets pr
+         JOIN users u ON u.id = pr.user_id
+        WHERE pr.used_at IS NULL AND pr.expires_at > datetime('now') AND pr.token_plain IS NOT NULL
+        ORDER BY pr.created_at DESC`
+    )
+    .all();
+  res.json(rows);
+});
+
+/** DELETE /api/users/reset-requests/:rid (admin) — annulla/segna gestita una richiesta */
+export const revokeResetRequest = asyncHandler(async (req, res) => {
+  const info = await db
+    .prepare('DELETE FROM password_resets WHERE id = ?')
+    .run(Number(req.params.rid));
+  if (!info.changes) throw new HttpError(404, 'Richiesta non trovata');
+  res.json({ message: 'Richiesta rimossa' });
+});
+
 // ---------------------- ADMIN ----------------------
 
 /** PUT /api/users/:id  (admin) — modifica qualunque utente */

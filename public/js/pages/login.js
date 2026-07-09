@@ -50,7 +50,7 @@ $('#forgot-link').addEventListener('click', (e) => {
   const m = modal({
     title: 'Recupera password',
     content: el('div', {}, [
-      el('p', { class: 'text-lo', text: 'Inserisci la tua email: ti invieremo un link per reimpostare la password.', style: 'margin-bottom:14px' }),
+      el('p', { class: 'text-lo', text: 'Inserisci la tua email: un amministratore riceverà la richiesta e ti invierà il link per reimpostare la password.', style: 'margin-bottom:14px' }),
       el('div', { class: 'field' }, [input]),
     ]),
     footer: [go],
@@ -63,7 +63,7 @@ $('#forgot-link').addEventListener('click', (e) => {
     try {
       const r = await api.post('/auth/forgot-password', { email }, { auth: false });
       m.close();
-      toast.info(r.message || 'Se l\'email è registrata, riceverai il link per il reset.', { title: 'Reset password', duration: 7000 });
+      toast.info(r.message || 'Richiesta registrata: un amministratore ti fornirà il link per il reset.', { title: 'Reset password', duration: 7000 });
       // In sviluppo, se l'invio email non è configurato, il server restituisce
       // il link diretto: lo apriamo così il flusso è testabile senza provider.
       if (r.dev_reset_url) {

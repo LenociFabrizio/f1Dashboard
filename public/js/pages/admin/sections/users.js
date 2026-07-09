@@ -3,9 +3,54 @@
    ============================================================= */
 import api from '../../../core/api.js';
 import { avatarUrl } from '../../../core/components.js';
-import { esc, toast, confirmDialog } from '../../../core/ui.js';
+import { esc, toast, confirmDialog, fmtDate } from '../../../core/ui.js';
 import { state, loadRefs, sectionHead, formModal, opts, empty } from '../shared.js';
 import { driversForTeamName } from '../../../core/f1data.js';
+
+/* -------- Richieste di reset password (flusso senza email) -------- */
+const resetLink = (token) => `${location.origin}/reset-password.html?token=${token}`;
+
+function resetPanel(list) {
+  const rows = (list || []).map((r) => `
+    <div class="flex items-center justify-between gap-3" data-req="${r.id}"
+         style="padding:10px 12px;border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px;flex-wrap:wrap">
+      <div style="min-width:200px">
+        <div class="text-hi" style="font-weight:700">${esc(r.display_name || r.username)}
+          <span class="text-lo" style="font-weight:400">@${esc(r.username)}</span></div>
+        <div class="text-lo" style="font-size:.82rem">${esc(r.email || '—')} · richiesto il ${fmtDate(r.created_at, { withTime: true })}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn primary sm" data-copy="${esc(r.token)}">📋 Copia link</button>
+        <button class="btn ghost sm" data-done="${r.id}" title="Rimuovi richiesta">✓ Fatto</button>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="card" style="margin-bottom:22px;padding:16px">
+      <h3 style="margin:0 0 4px">🔑 Richieste di reset password ${list && list.length ? `(${list.length})` : ''}</h3>
+      <p class="hint" style="margin:0 0 14px">Copia il link e invialo al pilota (WhatsApp/Discord). È valido 1 ora e usabile una sola volta. Dopo l'invio premi “Fatto”.</p>
+      ${list && list.length ? rows : '<div class="hint">Nessuna richiesta in sospeso.</div>'}
+    </div>`;
+}
+
+function wireResetPanel(root, rerender) {
+  root.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    const link = resetLink(b.dataset.copy);
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copiato negli appunti.');
+    } catch {
+      // Clipboard non disponibile (es. contesto non sicuro): mostralo da copiare a mano.
+      window.prompt('Copia il link di reset:', link);
+    }
+  }));
+  root.querySelectorAll('[data-done]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      await api.del(`/users/reset-requests/${b.dataset.done}`);
+      toast.success('Richiesta rimossa.');
+      rerender();
+    } catch (e) { toast.error(e.message); }
+  }));
+}
 
 function driversForTeamId(teamId) {
   const team = state.teams.find((t) => t.id === Number(teamId));
@@ -65,8 +110,12 @@ function row(u) {
 
 async function render(root) {
   const list = state.users;
+  let resets = [];
+  try { resets = await api.get('/users/reset-requests'); } catch { /* non bloccare la sezione */ }
+
   root.innerHTML = sectionHead('Piloti / Utenti', 'Crea account, assegna team e ruoli.',
     '<button class="btn primary sm" id="new-user">+ Nuovo pilota</button>') +
+    resetPanel(resets) +
     (list.length ? `
       <div class="table-wrap">
         <table class="data">
@@ -74,6 +123,8 @@ async function render(root) {
           <tbody>${list.map(row).join('')}</tbody>
         </table>
       </div>` : empty('👤', 'Nessun utente.'));
+
+  wireResetPanel(root, () => render(root));
 
   root.querySelector('#new-user').addEventListener('click', async () => {
     const ok = await formModal({

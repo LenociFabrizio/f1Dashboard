@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL,
   token_hash  TEXT    NOT NULL UNIQUE,          -- sha256(token) in hex
+  token_plain TEXT,                             -- token in chiaro: serve all'admin per copiare il link
   expires_at  TEXT    NOT NULL,                 -- ISO/datetime di scadenza
   used_at     TEXT,                             -- valorizzato quando consumato
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),

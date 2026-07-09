@@ -132,6 +132,12 @@ async function runMigrations() {
   if (!hasSeason('points_fastest_lap')) {
     await db.run('ALTER TABLE seasons ADD COLUMN points_fastest_lap INTEGER NOT NULL DEFAULT 1');
   }
+
+  // password_resets può esistere già (deploy precedente) senza token_plain.
+  const resetCols = await db.all('PRAGMA table_info(password_resets)');
+  if (resetCols.length && !resetCols.some((c) => c.name === 'token_plain')) {
+    await db.run('ALTER TABLE password_resets ADD COLUMN token_plain TEXT');
+  }
 }
 
 export default db;

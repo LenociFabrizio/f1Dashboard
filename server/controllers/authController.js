@@ -131,7 +131,7 @@ export const loginEa = mockOAuthLogin(PROVIDERS.EA);
 export const forgotPassword = asyncHandler(async (req, res) => {
   const email = String(req.body.email || '').trim();
   const genericMessage =
-    'Se l\'indirizzo è associato a un account, riceverai un\'email con le istruzioni per reimpostare la password.';
+    'Richiesta registrata. Se l\'indirizzo è associato a un account, un amministratore ti fornirà a breve il link per reimpostare la password.';
 
   // Solo account "local" con email e password possono usare il reset.
   const user = email
@@ -154,9 +154,9 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     .run(user.id); // invalida eventuali richieste precedenti non usate
   await db
     .prepare(
-      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, datetime('now', '+1 hour'))"
+      "INSERT INTO password_resets (user_id, token_hash, token_plain, expires_at) VALUES (?, ?, ?, datetime('now', '+1 hour'))"
     )
-    .run(user.id, hashToken(token));
+    .run(user.id, hashToken(token), token);
 
   const base = config.clientUrl.replace(/\/+$/, '');
   const resetUrl = `${base}/reset-password.html?token=${token}`;
