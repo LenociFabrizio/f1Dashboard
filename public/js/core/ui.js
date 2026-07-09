@@ -199,6 +199,7 @@ export function flagEmoji(code) {
 export function assistBadges(u) {
   if (!u) return '';
   const out = [];
+  // Mostriamo un badge solo quando l'aiuto è ATTIVO.
   if (Number(u.assist_abs)) {
     out.push('<span class="badge gray" title="ABS attivo">🛞 ABS</span>');
   }
@@ -206,10 +207,10 @@ export function assistBadges(u) {
   if (tc === 'medium' || tc === 'full') {
     out.push(`<span class="badge gray" title="Controllo di trazione: ${tc === 'full' ? 'pieno' : 'medio'}">🎛️ TC${tc === 'full' ? '+' : ''}</span>`);
   }
-  // Il cambio è una scelta binaria: lo indichiamo sempre (M = manuale, A = automatico).
-  out.push(u.assist_gearbox === 'manual'
-    ? '<span class="badge gray" title="Cambio manuale">⚙️ M</span>'
-    : '<span class="badge gray" title="Cambio automatico">⚙️ A</span>');
+  // Il cambio automatico è un aiuto; il manuale no → badge solo se automatico.
+  if (u.assist_gearbox !== 'manual') {
+    out.push('<span class="badge gray" title="Cambio automatico">⚙️ Cambio auto</span>');
+  }
   return out.join(' ');
 }
 

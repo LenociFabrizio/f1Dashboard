@@ -140,7 +140,7 @@ function render(user, stats) {
           ${user.reserve_driver ? `<div class="text-lo" style="margin-top:4px">🤖 Riserva (bot): <strong class="text-mid">${esc(user.reserve_driver)}</strong></div>` : ''}
           <div class="flex items-center gap-2 wrap text-lo" style="margin-top:10px">
             <span style="font-size:.82rem;text-transform:uppercase;letter-spacing:.06em">Aiuti attuali</span>
-            ${assistBadges(user)}
+            ${assistBadges(user) || '<span class="badge gray" title="Nessun aiuto attivo">🚫 Nessuno</span>'}
           </div>
           ${platformBadges(user.platforms)}
         </div>
