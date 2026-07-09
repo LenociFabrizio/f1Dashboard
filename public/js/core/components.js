@@ -47,10 +47,9 @@ export function mountNavbar() {
         <span class="nu-name">${esc(user?.display_name || user?.username || 'Pilota')}</span>
       </div>
       <div class="nav-dropdown" id="nav-dropdown">
-        <a href="/profile.html">👤 Il mio profilo</a>
-        <a href="/dashboard.html">📊 Dashboard</a>
         <a href="/driver.html?id=${user?.id}">🏎️ La mia pagina</a>
-        ${auth.isAdmin() ? '<hr><a href="/admin.html">⚙️ Area Admin</a>' : ''}
+        <a href="/profile.html">⚙️ Impostazioni</a>
+        ${auth.isAdmin() ? '<hr><a href="/admin.html">🛠️ Area Admin</a>' : ''}
         <hr>
         <button id="logout-btn">🚪 Esci</button>
       </div>`
