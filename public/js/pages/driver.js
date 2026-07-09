@@ -3,7 +3,7 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, esc, loader, fmtDate, flagEmoji, assistBadges } from '../core/ui.js';
+import { $, esc, loader, fmtDate, flagEmoji, assistBadges, lightbox } from '../core/ui.js';
 import { lineChart, barChart } from '../core/charts.js';
 
 mountChrome();
@@ -127,7 +127,7 @@ function render(user, stats) {
     <div class="hero" style="padding-block:2rem 2.5rem;margin-bottom:20px">
       <div class="hero-strip" style="border:0;padding:0;margin:0"></div>
       <div class="flex items-center gap-4 wrap">
-        <img src="${avatarUrl(user)}" onerror="this.src='/images/avatars/default.svg'" class="avatar xl" style="border:3px solid ${teamColor}">
+        <img id="driver-avatar" src="${avatarUrl(user)}" onerror="this.src='/images/avatars/default.svg'" class="avatar xl" style="border:3px solid ${teamColor};cursor:zoom-in" title="Clicca per ingrandire">
         <div style="flex:1;min-width:220px">
           ${user.favorite_number ? `<div style="font-size:3rem;font-weight:900;color:${teamColor};line-height:1">#${user.favorite_number}</div>` : ''}
           <h1 style="margin:2px 0">${esc(user.display_name)}</h1>
@@ -156,6 +156,10 @@ function render(user, stats) {
     ${lapsBlock}
     ${historyBlock}
   `;
+
+  // Zoom avatar (clic per ingrandire)
+  const av = $('#driver-avatar');
+  if (av) av.addEventListener('click', () => { if (av.src) lightbox(av.src, { alt: user.display_name }); });
 
   // Charts
   if (hasRaces && stats.history.length) {
