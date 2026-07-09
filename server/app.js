@@ -46,9 +46,16 @@ export function createApp() {
   // 404 per le API
   app.use(notFoundHandler);
 
-  // Fallback: per rotte non-API serve index.html (permette link diretti)
+  // Fallback: per rotte non-API serve index.html (permette link diretti).
+  // ATTENZIONE: NON serviamo la SPA per richieste di asset (path con
+  // estensione, es. .png/.jpg/.css). Se il file non esiste deve dare 404,
+  // altrimenti un <img> rotto riceverebbe index.html con status 200 e
+  // "onerror" non scatterebbe (avatar mancanti senza fallback al default).
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
+    if (path.extname(req.path)) {
+      return res.status(404).type('txt').send('Not found');
+    }
     res.sendFile(path.join(config.paths.public, 'index.html'));
   });
 
