@@ -153,7 +153,7 @@ export function lightbox(src, { alt = '' } = {}) {
  * Breve animazione a schermo intero (~2s). kind: 'confetti' | 'stars'.
  * Canvas leggero, nessuna dipendenza. Non blocca l'interazione.
  */
-export function celebrate(kind = 'confetti', { duration = 2200 } = {}) {
+export function celebrate(kind = 'confetti', { duration = 2200, colors = null } = {}) {
   if (typeof document === 'undefined' || !window.requestAnimationFrame) return;
   // Rispetta chi preferisce meno animazioni.
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -167,7 +167,7 @@ export function celebrate(kind = 'confetti', { duration = 2200 } = {}) {
   resize();
   window.addEventListener('resize', resize);
 
-  const COLORS = ['#e10600', '#ffd54a', '#27F4D2', '#3671C6', '#52E252', '#ff7b76', '#ffffff'];
+  const COLORS = colors && colors.length ? colors : ['#e10600', '#ffd54a', '#27F4D2', '#3671C6', '#52E252', '#ff7b76', '#ffffff'];
   const stars = kind === 'stars';
   const N = stars ? 70 : 130;
   const rnd = (a, b) => a + Math.random() * (b - a);

@@ -3,20 +3,28 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges, celebrate } from '../core/ui.js';
+import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges, celebrate, medalReveal } from '../core/ui.js';
 import { setupUrlForRace } from '../core/f1data.js';
 import auth from '../core/auth.js';
 
 mountChrome();
 
-/** Coriandoli se l'utente loggato ha vinto questa gara, stelle se è stato MVP. */
+// Colori "giro veloce" (viola) per i coriandoli dedicati.
+const FASTLAP_COLORS = ['#b466ff', '#9d4edd', '#c77dff', '#7b2ff7', '#e0aaff'];
+
+/**
+ * Una sola animazione per l'utente loggato, quella dell'obiettivo più difficile:
+ * podio (1°/2°/3°) → MVP → giro veloce.
+ */
 function celebrateForUser(race) {
   const me = auth.user;
   if (!me || race.status !== 'completed') return;
-  const won = (race.results || []).some((r) => r.user_id === me.id && !r.dnf && r.position === 1);
-  const mvp = race.mvp_user_id === me.id;
-  if (won) celebrate('confetti');
-  if (mvp) setTimeout(() => celebrate('stars'), won ? 350 : 0);
+  const mine = (race.results || []).find((r) => r.user_id === me.id);
+  const pos = mine && !mine.dnf ? mine.position : null;
+
+  if (pos === 1 || pos === 2 || pos === 3) medalReveal(pos);
+  else if (race.mvp_user_id === me.id) celebrate('stars');
+  else if (mine && mine.fastest_lap) celebrate('confetti', { colors: FASTLAP_COLORS });
 }
 
 const raceId = qs.get('id');
@@ -198,13 +206,28 @@ function renderMap(drivers) {
   const tx = (x) => (x - minX + pad).toFixed(1);
   const ty = (z) => (maxZ - z + pad).toFixed(1); // inverte l'asse verticale
 
+  // Sagoma del circuito (vista dall'alto): usiamo la traccia più completa come
+  // "asfalto", disegnata sotto le traiettorie colorate.
+  const ref = withPts.reduce((a, b) => (b.points.length > a.points.length ? b : a), withPts[0]);
+  const refPts = ref.points.map((p) => `${tx(p[0])},${ty(p[1])}`).join(' ');
+  const trackBand = `
+    <polyline points="${refPts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="26"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <polyline points="${refPts}" fill="none" stroke="rgba(175,185,205,0.20)" stroke-width="15"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  // Linea di partenza/traguardo sul primo punto della traccia di riferimento.
+  const sf = ref.points[0];
+  const startMark = sf
+    ? `<circle cx="${tx(sf[0])}" cy="${ty(sf[1])}" r="7" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`
+    : '';
+
   const polylines = withPts
     .map((d) => {
       const pts = d.points.map((p) => `${tx(p[0])},${ty(p[1])}`).join(' ');
       const color = d.team_color || '#e10600';
       return `<polyline data-uid="${d.user_id}" points="${pts}" fill="none" stroke="${color}"
-        stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
-        vector-effect="non-scaling-stroke" style="opacity:.9"/>`;
+        stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+        vector-effect="non-scaling-stroke" style="opacity:.95"/>`;
     })
     .join('');
 
@@ -224,11 +247,13 @@ function renderMap(drivers) {
     <div class="card" style="padding:12px">
       <div style="width:100%;aspect-ratio:16/10;background:rgba(255,255,255,0.03);border-radius:var(--r-md);overflow:hidden">
         <svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
+          ${trackBand}
+          ${startMark}
           ${polylines}
         </svg>
       </div>
       <div class="trace-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">${legend}</div>
-      <div class="hint" style="margin-top:8px">Traiettoria del <b>giro veloce</b> di ogni pilota (dati reali di gioco) · clicca un nome per mostrarla o nasconderla</div>
+      <div class="hint" style="margin-top:8px">Vista dall'alto del circuito (ricostruita dai dati di gioco) con la <b>traiettoria del giro veloce</b> di ogni pilota · il cerchio bianco è il traguardo · clicca un nome per mostrare/nascondere</div>
     </div>`;
 }
 
