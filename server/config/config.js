@@ -46,6 +46,15 @@ export const config = {
 
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
 
+  // Invio email transazionali (reset password) tramite Resend.
+  // Se resendApiKey è vuoto, il mailer non invia: in sviluppo stampa il link
+  // in console così il reset è comunque testabile senza configurare nulla.
+  mail: {
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    from: process.env.MAIL_FROM || 'Lega F1 <onboarding@resend.dev>',
+    enabled: Boolean(process.env.RESEND_API_KEY),
+  },
+
   // Provider OAuth (mock). Predisposti per integrazione reale futura.
   oauth: {
     psn: {

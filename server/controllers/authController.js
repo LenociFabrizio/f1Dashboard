@@ -10,10 +10,16 @@
  * ------------------------------------------------------------
  */
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 import db from '../database/db.js';
 import { signToken } from '../utils/jwt.js';
 import { asyncHandler, HttpError, sanitizeUser, fullName } from '../utils/helpers.js';
 import { ROLES, PROVIDERS } from '../utils/constants.js';
+import { config } from '../config/config.js';
+import { sendPasswordResetEmail } from '../utils/mailer.js';
+
+/** SHA-256 (hex) del token di reset: nel DB salviamo solo l'hash. */
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 /** Crea la risposta standard con token + utente. */
 function authResponse(res, user) {
@@ -117,16 +123,86 @@ export const loginPsn = mockOAuthLogin(PROVIDERS.PSN);
 /** POST /api/auth/ea */
 export const loginEa = mockOAuthLogin(PROVIDERS.EA);
 
-/** POST /api/auth/forgot-password (mock) */
+/**
+ * POST /api/auth/forgot-password
+ * Genera un token di reset, lo salva (solo hash) e invia l'email con il link.
+ * Risponde SEMPRE 200 per non rivelare se l'email esiste (anti-enumeration).
+ */
 export const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  // In un sistema reale invieremmo un'email con un token di reset.
-  // Qui rispondiamo sempre 200 per non rivelare l'esistenza dell'account.
-  res.json({
-    message:
-      'Se l\'indirizzo è associato a un account, riceverai le istruzioni per il reset. (Simulazione)',
-    demo_hint: email ? `Reset simulato per ${email}` : undefined,
-  });
+  const email = String(req.body.email || '').trim();
+  const genericMessage =
+    'Se l\'indirizzo è associato a un account, riceverai un\'email con le istruzioni per reimpostare la password.';
+
+  // Solo account "local" con email e password possono usare il reset.
+  const user = email
+    ? await db
+        .prepare(
+          "SELECT * FROM users WHERE email = ? AND is_active = 1 AND provider = 'local' AND password_hash IS NOT NULL"
+        )
+        .get(email)
+    : null;
+
+  if (!user) {
+    // Nessun account: rispondiamo comunque generico (senza rivelare nulla).
+    return res.json({ message: genericMessage });
+  }
+
+  // Token in chiaro (nell'URL) + hash salvato nel DB. Scadenza 1 ora, uso singolo.
+  const token = crypto.randomBytes(32).toString('hex');
+  await db
+    .prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL')
+    .run(user.id); // invalida eventuali richieste precedenti non usate
+  await db
+    .prepare(
+      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, datetime('now', '+1 hour'))"
+    )
+    .run(user.id, hashToken(token));
+
+  const base = config.clientUrl.replace(/\/+$/, '');
+  const resetUrl = `${base}/reset-password.html?token=${token}`;
+
+  let sent = { delivered: false };
+  try {
+    sent = await sendPasswordResetEmail(user.email, resetUrl, user.display_name || user.username);
+  } catch (err) {
+    console.error('Invio email reset fallito:', err.message);
+  }
+
+  const payload = { message: genericMessage };
+  // In sviluppo (o se il mailer non è configurato) esponiamo il link così il
+  // flusso è testabile senza provider email. MAI in produzione.
+  if (!config.isProd() && !sent.delivered) payload.dev_reset_url = resetUrl;
+  res.json(payload);
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Consuma il token e imposta la nuova password.
+ */
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+  if (!token) throw new HttpError(400, 'Token mancante');
+  if (!password || String(password).length < 6) {
+    throw new HttpError(400, 'La password deve avere almeno 6 caratteri');
+  }
+
+  const row = await db
+    .prepare(
+      "SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')"
+    )
+    .get(hashToken(token));
+  if (!row) throw new HttpError(400, 'Link di reset non valido o scaduto. Richiedine uno nuovo.');
+
+  const hash = await bcrypt.hash(String(password), 10);
+  await db.raw.batch(
+    [
+      { sql: "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", args: [hash, row.user_id] },
+      { sql: "UPDATE password_resets SET used_at = datetime('now') WHERE id = ?", args: [row.id] },
+    ],
+    'write'
+  );
+
+  res.json({ message: 'Password reimpostata. Ora puoi accedere con la nuova password.' });
 });
 
 /** GET /api/auth/me */

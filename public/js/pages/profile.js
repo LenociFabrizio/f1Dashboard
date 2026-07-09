@@ -5,6 +5,7 @@ import api from '../core/api.js';
 import auth, { guard } from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
 import { $, esc, loader, toast, modal, confirmDialog, wireAssists } from '../core/ui.js';
+import { cropAvatar } from '../core/avatar-crop.js';
 
 const form = $('#profile-form');
 const saveBtn = $('#save-btn');
@@ -43,13 +44,21 @@ async function loadTeams(selectedId) {
   } catch { /* team opzionale */ }
 }
 
-/* ---- Upload avatar ---- */
+/* ---- Upload avatar (con editor: zoom + spostamento) ---- */
 $('#avatar-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
+  e.target.value = ''; // permette di riselezionare lo stesso file
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { toast.error('Immagine troppo grande (max 5MB).'); return; }
+  if (!file.type.startsWith('image')) { toast.error('Seleziona un\'immagine.'); return; }
+  if (file.size > 20 * 1024 * 1024) { toast.error('Immagine troppo grande (max 20MB).'); return; }
+
+  let blob;
+  try { blob = await cropAvatar(file); }
+  catch { toast.error('Immagine non valida.'); return; }
+  if (!blob) return; // annullato dall'utente
+
   const fd = new FormData();
-  fd.append('avatar', file);
+  fd.append('avatar', blob, 'avatar.jpg');
   try {
     const { avatar } = await api.upload('/users/me/avatar', fd);
     $('#avatar-preview').src = avatar + '?t=' + Date.now();

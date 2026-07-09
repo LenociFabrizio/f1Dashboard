@@ -5,7 +5,7 @@ import api from '../core/api.js';
 import auth from '../core/auth.js';
 import { $, $$, esc, toast, wireAssists } from '../core/ui.js';
 import { driversForTeamName } from '../core/f1data.js';
-import { compressImage } from '../core/media.js';
+import { cropAvatar } from '../core/avatar-crop.js';
 import { mountCookieBanner } from '../core/cookies.js';
 
 if (auth.isLogged()) location.href = '/dashboard.html';
@@ -26,11 +26,15 @@ let previewUrl = null;
 
 avatarInput.addEventListener('change', async () => {
   const file = avatarInput.files?.[0];
+  avatarInput.value = ''; // permette di riselezionare lo stesso file
   if (!file) return;
-  if (!file.type.startsWith('image')) { toast.error('Seleziona un\'immagine.'); avatarInput.value = ''; return; }
-  try {
-    avatarFile = await compressImage(file, { maxDim: 512, quality: 0.85 });
-  } catch { avatarFile = file; }
+  if (!file.type.startsWith('image')) { toast.error('Seleziona un\'immagine.'); return; }
+  if (file.size > 20 * 1024 * 1024) { toast.error('Immagine troppo grande (max 20MB).'); return; }
+  let blob;
+  try { blob = await cropAvatar(file); }
+  catch { toast.error('Immagine non valida.'); return; }
+  if (!blob) return; // annullato
+  avatarFile = blob;
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(avatarFile);
   avatarPreview.src = previewUrl;

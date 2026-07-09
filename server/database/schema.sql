@@ -41,6 +41,23 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ------------------------------------------------------------
+--  RESET PASSWORD (recupero credenziali)
+--  Un record per richiesta di reset. Salviamo solo l'HASH del token
+--  (mai il token in chiaro): il link inviato via email contiene il token
+--  originale, che confrontiamo per hash. Scadenza breve, uso singolo.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS password_resets (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  token_hash  TEXT    NOT NULL UNIQUE,          -- sha256(token) in hex
+  expires_at  TEXT    NOT NULL,                 -- ISO/datetime di scadenza
+  used_at     TEXT,                             -- valorizzato quando consumato
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
+
+-- ------------------------------------------------------------
 --  TEAM / COSTRUTTORI
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS teams (
