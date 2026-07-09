@@ -17,13 +17,13 @@ function driverRow(d) {
     <tr>
       <td><span class="pos ${d.position <= 3 ? 'p' + d.position : ''}">${d.position}</span></td>
       <td>
-        <div class="driver-cell">
+        <a href="/driver.html?id=${d.user_id}" class="driver-cell">
           <img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt="">
           <div>
             <div class="dc-name">${esc(d.display_name)}</div>
             <div class="dc-sub">${esc(d.team_name || '—')}</div>
           </div>
-        </div>
+        </a>
       </td>
       <td class="num pts">${d.points}</td>
     </tr>`;
@@ -72,19 +72,31 @@ function renderLastResults(race, results) {
   const box = $('#last-results-body');
   if (!race || !results?.length) { box.innerHTML = '<div class="empty">Ancora nessun risultato.</div>'; return; }
   const head = $('#last-results-card .card-head h3');
-  if (head) head.textContent = `${race.name} · Top 5`;
-  box.innerHTML = results.map((r, i) => {
+  if (head) head.textContent = '🏁 Ultima gara · Top 5';
+
+  // Intestazione che chiarisce di quale gara si tratta (l'ultima disputata).
+  const raceHeader = `
+    <a href="/race.html?id=${race.id}" class="flex items-center gap-2 wrap" style="text-decoration:none;padding-bottom:10px;margin-bottom:6px;border-bottom:1px solid var(--border)">
+      <span class="badge red">Ultima gara</span>
+      <span style="font-size:1.25rem">${flagEmoji(race.country_code)}</span>
+      <span class="text-hi" style="font-weight:800">${esc(race.name.replace('Gran Premio ', 'GP '))}</span>
+      <span class="text-lo" style="font-size:0.82rem">· ${fmtDate(race.race_date)}</span>
+    </a>`;
+
+  const rows = results.map((r) => {
     const pos = r.dnf ? 'DNF' : (r.position ?? '—');
     const cls = !r.dnf && r.position <= 3 ? 'p' + r.position : '';
     return `
-      <div class="flex items-center gap-3" style="padding:9px 0;border-bottom:1px solid var(--border)">
+      <a href="/driver.html?id=${r.user_id}" class="flex items-center gap-3" style="padding:9px 0;border-bottom:1px solid var(--border);text-decoration:none">
         <span class="pos ${cls}">${pos}</span>
         <img class="avatar" style="width:30px;height:30px" src="${avatarUrl(r)}" onerror="this.src='/images/avatars/default.svg'" alt="">
         <span class="grow text-hi" style="font-weight:600">${esc(r.display_name)}</span>
         <span class="team-tag"><span class="dot" style="background:${r.team_color || '#e10600'}"></span></span>
         <span class="pts">${r.points} pt</span>
-      </div>`;
+      </a>`;
   }).join('');
+
+  box.innerHTML = raceHeader + rows;
 }
 
 function renderCalendar(cal) {
