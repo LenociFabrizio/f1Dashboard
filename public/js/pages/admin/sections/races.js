@@ -21,11 +21,42 @@ function fields() {
     { name: 'round', label: 'Round', type: 'number', required: true, min: 1 },
     { name: 'circuit_id', label: 'Circuito', type: 'select', required: true, options: opts.circuits() },
     { name: 'race_date', label: 'Data e ora', type: 'datetime-local' },
-    { name: 'laps', label: 'Giri (opzionale)', type: 'number', min: 1 },
+    { name: 'distance_pct', label: 'Distanza gara (%)', type: 'select', options: [
+      { value: '', label: 'Personalizzata (giri manuali)' },
+      { value: '25', label: '25%' },
+      { value: '35', label: '35%' },
+      { value: '50', label: '50%' },
+      { value: '100', label: '100% (gara piena)' },
+    ], hint: 'Scegli una percentuale per calcolare i giri dal tracciato' },
+    { name: 'laps', label: 'Giri', type: 'number', min: 1, hint: 'Impostati dalla % o modificabili a mano' },
     { name: 'status', label: 'Stato', type: 'select', options: [
       { value: 'scheduled', label: 'In programma' }, { value: 'completed', label: 'Conclusa' },
     ] },
   ];
+}
+
+/** Collega la % distanza ai giri: laps = round(giri_pieni_tracciato * % / 100). */
+function wireLapPercent(form) {
+  const circuitSel = form.querySelector('[name="circuit_id"]');
+  const pctSel = form.querySelector('[name="distance_pct"]');
+  const lapsInput = form.querySelector('[name="laps"]');
+  if (!circuitSel || !pctSel || !lapsInput) return;
+  const fullLaps = () => {
+    const c = state.circuits.find((x) => x.id === Number(circuitSel.value));
+    return c && c.laps_default ? Number(c.laps_default) : null;
+  };
+  const apply = () => {
+    const pct = Number(pctSel.value), full = fullLaps();
+    if (pct && full) lapsInput.value = Math.max(1, Math.round((full * pct) / 100));
+  };
+  // Preseleziona la % se i giri attuali corrispondono a una percentuale nota.
+  const full = fullLaps(), cur = Number(lapsInput.value);
+  if (full && cur && !pctSel.value) {
+    const match = ['100', '50', '35', '25'].find((p) => Math.round((full * Number(p)) / 100) === cur);
+    if (match) pctSel.value = match;
+  }
+  pctSel.addEventListener('change', apply);
+  circuitSel.addEventListener('change', () => { if (Number(pctSel.value)) apply(); });
 }
 
 /** Nome GP derivato dal tracciato selezionato. */
@@ -82,11 +113,15 @@ async function render(root) {
       const ok = await formModal({
         title: 'Nuova gara', fields: fields(),
         values: { round: nextRound, status: 'scheduled' },
-        onSubmit: (v) => api.post('/races', {
-          ...v,
-          season_id: state.season.id,
-          name: raceNameFromCircuit(v.circuit_id), // nome = tracciato scelto
-        }),
+        onRender: (form) => wireLapPercent(form),
+        onSubmit: (v) => {
+          delete v.distance_pct; // solo ausilio UI per calcolare i giri
+          return api.post('/races', {
+            ...v,
+            season_id: state.season.id,
+            name: raceNameFromCircuit(v.circuit_id), // nome = tracciato scelto
+          });
+        },
       });
       if (ok) { toast.success('Gara creata.'); render(root); }
     });
@@ -97,8 +132,12 @@ async function render(root) {
     const ok = await formModal({
       title: `Modifica: ${r.name}`, fields: fields(),
       values: { ...r, race_date: toLocalInput(r.race_date) },
+      onRender: (form) => wireLapPercent(form),
       // Riallinea il nome al tracciato (eventualmente cambiato).
-      onSubmit: (v) => api.put(`/races/${r.id}`, { ...v, name: raceNameFromCircuit(v.circuit_id) }),
+      onSubmit: (v) => {
+        delete v.distance_pct; // solo ausilio UI per calcolare i giri
+        return api.put(`/races/${r.id}`, { ...v, name: raceNameFromCircuit(v.circuit_id) });
+      },
     });
     if (ok) { toast.success('Gara aggiornata.'); render(root); }
   }));
