@@ -4,7 +4,7 @@
 import api from '../core/api.js';
 import auth, { guard } from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, esc, loader, toast, modal, confirmDialog, wireAssists } from '../core/ui.js';
+import { $, esc, loader, toast, modal, confirmDialog, wireAssists, lightbox } from '../core/ui.js';
 import { cropAvatar } from '../core/avatar-crop.js';
 
 const form = $('#profile-form');
@@ -68,6 +68,14 @@ $('#avatar-input').addEventListener('change', async (e) => {
   } catch (err) {
     toast.error(err.message || 'Upload fallito.');
   }
+});
+
+/* ---- Zoom avatar (clic per ingrandire) ---- */
+const avatarPreview = $('#avatar-preview');
+avatarPreview.style.cursor = 'zoom-in';
+avatarPreview.title = 'Clicca per ingrandire';
+avatarPreview.addEventListener('click', () => {
+  if (avatarPreview.src) lightbox(avatarPreview.src, { alt: 'Avatar' });
 });
 
 /* ---- Cambio password ---- */

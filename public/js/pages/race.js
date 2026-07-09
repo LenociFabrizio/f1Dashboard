@@ -61,10 +61,10 @@ function qualiRow(q) {
     <tr>
       <td><span class="pos ${q.position <= 3 ? 'p' + q.position : ''}">${q.position}</span></td>
       <td>
-        <div class="driver-cell">
+        <a href="/driver.html?id=${q.user_id}" class="driver-cell">
           <img src="${avatarUrl(q)}" onerror="this.src='/images/avatars/default.svg'" alt="">
           <div class="dc-name">${esc(q.display_name)}</div>
-        </div>
+        </a>
       </td>
       <td class="num mono text-hi">${esc(q.best_time || '—')}</td>
       <td class="num mono text-lo">${q.gap ? '+' + esc(q.gap) : '—'}</td>

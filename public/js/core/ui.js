@@ -112,6 +112,42 @@ export function modal({ title = '', content = '', footer = null, size = '', onCl
   return { close, root: modalEl, body };
 }
 
+/* ---------------- Lightbox (zoom immagine) ---------------- */
+/**
+ * Mostra un'immagine a schermo intero su sfondo scuro. Si chiude cliccando
+ * ovunque, con il tasto ✕ o con ESC.
+ * @param {string} src URL immagine
+ * @param {{alt?:string}} [opts]
+ */
+export function lightbox(src, { alt = '' } = {}) {
+  const overlay = el('div', {
+    class: 'lightbox-overlay',
+    style: 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);cursor:zoom-out;opacity:0;transition:opacity .2s;padding:24px',
+  });
+  const img = el('img', {
+    src, alt,
+    style: 'max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.6)',
+  });
+  const closeBtn = el('button', {
+    class: 'lightbox-close', html: '&times;', 'aria-label': 'Chiudi',
+    style: 'position:absolute;top:16px;right:22px;font-size:2.4rem;line-height:1;background:none;border:none;color:#fff;cursor:pointer;opacity:.85',
+  });
+  function close() {
+    overlay.style.opacity = '0';
+    document.removeEventListener('keydown', onKey);
+    document.body.style.overflow = '';
+    setTimeout(() => overlay.remove(), 200);
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  overlay.addEventListener('click', close); // click ovunque (immagine inclusa) chiude
+  document.addEventListener('keydown', onKey);
+  overlay.append(img, closeBtn);
+  document.body.append(overlay);
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => (overlay.style.opacity = '1'));
+  return { close };
+}
+
 /** Dialog di conferma. Ritorna Promise<boolean>. */
 export function confirmDialog({ title = 'Confermi?', message = '', confirmText = 'Conferma', danger = false } = {}) {
   return new Promise((resolve) => {

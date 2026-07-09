@@ -3,7 +3,7 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, esc, loader, fmtDate, flagEmoji } from '../core/ui.js';
+import { $, esc, loader, fmtDate, flagEmoji, assistBadges } from '../core/ui.js';
 import { lineChart, barChart } from '../core/charts.js';
 
 mountChrome();
@@ -116,6 +116,10 @@ function render(user, stats) {
           </div>
           ${user.favorite_driver ? `<div class="text-lo" style="margin-top:8px">Idolo: <strong class="text-mid">${esc(user.favorite_driver)}</strong></div>` : ''}
           ${user.reserve_driver ? `<div class="text-lo" style="margin-top:4px">🤖 Riserva (bot): <strong class="text-mid">${esc(user.reserve_driver)}</strong></div>` : ''}
+          <div class="flex items-center gap-2 wrap text-lo" style="margin-top:10px">
+            <span style="font-size:.82rem;text-transform:uppercase;letter-spacing:.06em">Aiuti attuali</span>
+            ${assistBadges(user)}
+          </div>
         </div>
         ${hasRaces ? `<div style="text-align:center"><div class="text-lo" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Ultime 5</div><div class="flex gap-2">${last5Dots(stats.last5)}</div></div>` : ''}
       </div>
