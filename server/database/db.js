@@ -140,6 +140,7 @@ async function runMigrations() {
   }
 
   await ensureOfficialCircuits();
+  await ensureFullCalendarOnce();
 }
 
 /**
@@ -184,6 +185,61 @@ async function ensureOfficialCircuits() {
         .run(...c);
     }
   }
+}
+
+/**
+ * GP mancanti del calendario 2025 da aggiungere alla stagione ATTIVA.
+ * [nome GP, nome circuito (per il lookup), data ISO]
+ */
+const MISSING_2025_GPS = [
+  ["Gran Premio dei Paesi Bassi", 'Circuit Zandvoort', '2025-08-31T15:00:00'],
+  ["Gran Premio dell'Azerbaigian", 'Baku City Circuit', '2025-09-21T13:00:00'],
+  ['Gran Premio degli Stati Uniti', 'Circuit of the Americas', '2025-10-19T20:00:00'],
+  ['Gran Premio di Città del Messico', 'Autódromo Hermanos Rodríguez', '2025-10-26T21:00:00'],
+  ['Gran Premio del Brasile', 'Autódromo José Carlos Pace', '2025-11-09T17:00:00'],
+  ['Gran Premio di Las Vegas', 'Las Vegas Strip Circuit', '2025-11-23T05:00:00'],
+  ['Gran Premio del Qatar', 'Lusail International Circuit', '2025-11-30T16:00:00'],
+  ['Gran Premio di Abu Dhabi', 'Yas Marina Circuit', '2025-12-07T14:00:00'],
+];
+
+/**
+ * Completa UNA VOLTA il calendario della stagione attiva con i GP ufficiali
+ * mancanti (round accodati). È one-shot (marcatore in app_meta): così se
+ * l'admin poi ne elimina qualcuno, non vengono ripristinati al riavvio.
+ * Ogni GP è comunque aggiunto solo se la stagione non ha già una gara su quel
+ * circuito (evita duplicati con eventuali inserimenti manuali).
+ */
+async function ensureFullCalendarOnce() {
+  const MARK = 'calendar_2025_gps_v1';
+  const done = await db.prepare('SELECT value FROM app_meta WHERE key = ?').get(MARK);
+  if (done) return;
+
+  const season = await db.prepare('SELECT id FROM seasons WHERE is_active = 1 ORDER BY id LIMIT 1').get();
+  if (season) {
+    const mx = await db.prepare('SELECT COALESCE(MAX(round), 0) AS m FROM races WHERE season_id = ?').get(season.id);
+    let nextRound = (mx?.m || 0) + 1;
+    for (const [name, circuitName, date] of MISSING_2025_GPS) {
+      const circ = await db
+        .prepare('SELECT id, laps_default, length_km FROM circuits WHERE name = ?')
+        .get(circuitName);
+      if (!circ) continue;
+      const exists = await db
+        .prepare('SELECT id FROM races WHERE season_id = ? AND circuit_id = ?')
+        .get(season.id, circ.id);
+      if (exists) continue;
+      const laps = circ.laps_default || null;
+      const dist = circ.length_km && laps ? Math.round(circ.length_km * laps * 10) / 10 : null;
+      await db
+        .prepare(
+          `INSERT INTO races (season_id, circuit_id, round, name, race_date, weather, laps, distance_km, status)
+           VALUES (?, ?, ?, ?, ?, 'Sereno', ?, ?, 'scheduled')`
+        )
+        .run(season.id, circ.id, nextRound, name, date, laps, dist);
+      nextRound++;
+    }
+  }
+  // Marca come eseguito anche se non c'era stagione attiva: si completa dal seed/admin.
+  await db.prepare('INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)').run(MARK, new Date().toISOString());
 }
 
 export default db;

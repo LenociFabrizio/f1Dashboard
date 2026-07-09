@@ -41,6 +41,17 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ------------------------------------------------------------
+--  META APPLICAZIONE (chiave/valore) — usata per migrazioni "one-shot"
+--  (es. popolamenti eseguiti una sola volta, così le modifiche manuali
+--   dell'admin non vengono ripristinate a ogni avvio).
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS app_meta (
+  key    TEXT PRIMARY KEY,
+  value  TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ------------------------------------------------------------
 --  RESET PASSWORD (recupero credenziali)
 --  Un record per richiesta di reset. Salviamo solo l'HASH del token
 --  (mai il token in chiaro): il link inviato via email contiene il token
