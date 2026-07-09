@@ -3,9 +3,20 @@
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
-import { $, $$, esc, loader, qs } from '../core/ui.js';
+import { $, $$, esc, loader, qs, medalReveal } from '../core/ui.js';
+import auth from '../core/auth.js';
 
 mountChrome();
+
+/** Se l'utente loggato è nei primi 3 della classifica, mostra la sua medaglia. */
+function medalForUser() {
+  const me = auth.user;
+  if (!me || !drivers.length) return;
+  const ranked = [...drivers].sort((a, b) => (b.points || 0) - (a.points || 0));
+  const idx = ranked.findIndex((d) => d.user_id === me.id);
+  const pos = idx >= 0 ? (ranked[idx].position ?? idx + 1) : 0;
+  if (pos >= 1 && pos <= 3) medalReveal(pos);
+}
 
 let season, drivers = [], constructors = [];
 let sortKey = 'points', sortDir = -1;
@@ -122,6 +133,7 @@ $$('#drivers-table thead th.sortable').forEach((th) =>
     initTabs();
     renderDrivers();
     renderConstructors();
+    medalForUser();
   } catch (e) {
     console.error(e);
     $('main').insertAdjacentHTML('beforeend', `<div class="empty">Errore: ${esc(e.message)}</div>`);

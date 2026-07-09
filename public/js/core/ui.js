@@ -210,6 +210,48 @@ export function celebrate(kind = 'confetti', { duration = 2200 } = {}) {
   requestAnimationFrame(frame);
 }
 
+/**
+ * Breve animazione con la medaglia della posizione (1/2/3): la medaglia
+ * "poppa" al centro con un bagliore e sfuma (~2s). Non blocca l'interazione.
+ */
+export function medalReveal(position, { duration = 2000 } = {}) {
+  if (typeof document === 'undefined' || !('animate' in Element.prototype)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const META = {
+    1: { e: '🥇', c: '#ffd54a', label: '1° posto!' },
+    2: { e: '🥈', c: '#c9ced4', label: '2° posto!' },
+    3: { e: '🥉', c: '#e0955e', label: '3° posto!' },
+  }[position];
+  if (!META) return;
+
+  const overlay = el('div', { 'aria-hidden': 'true', style: 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2000' });
+  const glow = el('div', { style: `position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle, ${META.c}66, transparent 68%);filter:blur(4px)` });
+  const medal = el('div', { text: META.e, style: 'font-size:8.5rem;line-height:1;filter:drop-shadow(0 10px 26px rgba(0,0,0,.55))' });
+  const label = el('div', { text: META.label, style: `position:absolute;top:calc(50% + 90px);font-weight:900;font-size:1.35rem;letter-spacing:.02em;color:${META.c};text-shadow:0 2px 10px rgba(0,0,0,.6)` });
+  overlay.append(glow, medal, label);
+  document.body.append(overlay);
+
+  medal.animate([
+    { transform: 'scale(0.2) rotate(-25deg)', opacity: 0 },
+    { transform: 'scale(1.18) rotate(8deg)', opacity: 1, offset: 0.35 },
+    { transform: 'scale(1) rotate(0deg)', opacity: 1, offset: 0.55 },
+    { transform: 'scale(1)', opacity: 1, offset: 0.82 },
+    { transform: 'scale(0.9)', opacity: 0 },
+  ], { duration, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  glow.animate([{ opacity: 0 }, { opacity: 1, offset: 0.4 }, { opacity: 1, offset: 0.82 }, { opacity: 0 }], { duration });
+  label.animate([
+    { opacity: 0, transform: 'translateY(12px)' },
+    { opacity: 0, offset: 0.4 },
+    { opacity: 1, transform: 'translateY(0)', offset: 0.6 },
+    { opacity: 1, offset: 0.82 },
+    { opacity: 0 },
+  ], { duration });
+
+  setTimeout(() => overlay.remove(), duration + 80);
+  // Un tocco di coriandoli per il gradino più alto.
+  if (position === 1) celebrate('confetti', { duration: 1600 });
+}
+
 /** Dialog di conferma. Ritorna Promise<boolean>. */
 export function confirmDialog({ title = 'Confermi?', message = '', confirmText = 'Conferma', danger = false } = {}) {
   return new Promise((resolve) => {
