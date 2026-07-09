@@ -1,5 +1,5 @@
 /* =============================================================
-   home.js — Homepage: hero, prossima gara, top 5, calendario, news
+   home.js — Homepage: hero, prossima gara, top 5, calendario
    ============================================================= */
 import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
