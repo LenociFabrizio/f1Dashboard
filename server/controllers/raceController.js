@@ -203,6 +203,24 @@ export const deleteRace = asyncHandler(async (req, res) => {
   res.json({ message: 'Gara eliminata' });
 });
 
+/** POST /api/races/:id/clear (admin) — svuota i dati della gara mantenendola in calendario */
+export const clearRaceData = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const race = await db.prepare('SELECT id FROM races WHERE id = ?').get(id);
+  if (!race) throw new HttpError(404, 'Gara non trovata');
+  await db.raw.batch(
+    [
+      { sql: 'DELETE FROM results WHERE race_id = ?', args: [id] },
+      { sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_times WHERE race_id = ?', args: [id] },
+      { sql: 'DELETE FROM lap_traces WHERE race_id = ?', args: [id] },
+      { sql: "UPDATE races SET status = 'scheduled', mvp_user_id = NULL, comment = '', screenshot = NULL WHERE id = ?", args: [id] },
+    ],
+    'write'
+  );
+  res.json({ message: 'Dati della gara svuotati' });
+});
+
 /** POST /api/races/:id/screenshot (admin) — carica immagine classifica/risultati */
 export const uploadScreenshot = asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'Nessun file caricato');

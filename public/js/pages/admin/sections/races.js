@@ -76,6 +76,7 @@ function row(r) {
       <td style="text-align:right;white-space:nowrap">
         <a class="btn ghost sm" href="#results?race=${r.id}">Risultati</a>
         <button class="btn ghost sm" data-edit="${r.id}">Modifica</button>
+        ${r.status === 'completed' ? `<button class="btn ghost sm" data-clear="${r.id}" style="color:var(--warning,#e0955e)">Svuota</button>` : ''}
         <button class="btn ghost sm" data-del="${r.id}" style="color:var(--danger)">Elimina</button>
       </td>
     </tr>`;
@@ -140,6 +141,17 @@ async function render(root) {
       },
     });
     if (ok) { toast.success('Gara aggiornata.'); render(root); }
+  }));
+
+  root.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', async () => {
+    const r = races.find((x) => x.id === Number(b.dataset.clear));
+    if (!(await confirmDialog({
+      title: 'Svuotare i dati della gara?',
+      message: `Risultati, qualifiche, tempi sul giro e traiettorie di "${r.name}" verranno rimossi e la gara tornerà "in programma". Il GP resta nel calendario. Operazione irreversibile.`,
+      danger: true, confirmText: 'Svuota dati',
+    }))) return;
+    try { await api.post(`/races/${r.id}/clear`); toast.success('Dati della gara svuotati.'); render(root); }
+    catch (e) { toast.error(e.message); }
   }));
 
   root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {

@@ -24,6 +24,7 @@ router.get('/:id/traces', races.getRaceTraces);
 router.post('/', requireAuth, requireAdmin, races.createRace);
 router.put('/:id', requireAuth, requireAdmin, races.updateRace);
 router.delete('/:id', requireAuth, requireAdmin, races.deleteRace);
+router.post('/:id/clear', requireAuth, requireAdmin, races.clearRaceData);
 router.put('/:id/results', requireAuth, requireAdmin, saveResults);
 router.put('/:id/qualifying', requireAuth, requireAdmin, races.setQualifying);
 router.post('/:id/screenshot', requireAuth, requireAdmin, upload.single('screenshot'), races.uploadScreenshot);
