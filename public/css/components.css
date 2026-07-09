@@ -23,33 +23,36 @@
 .btn:active { transform: translateY(1px) scale(0.99); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-primary {
+/* Varianti bottone. Supportiamo DUE convenzioni equivalenti:
+   con trattino (.btn-primary) e con spazio (.btn.primary), entrambe usate
+   nel markup e nei componenti JS. Gli alias evitano bottoni "nudi". */
+.btn-primary, .btn.primary {
   background: linear-gradient(180deg, var(--f1-red-light), var(--f1-red));
   color: #fff;
   box-shadow: 0 4px 16px rgba(225, 6, 0, 0.35);
 }
-.btn-primary:hover { box-shadow: 0 6px 26px rgba(225, 6, 0, 0.55); transform: translateY(-1px); color: #fff; }
+.btn-primary:hover, .btn.primary:hover { box-shadow: 0 6px 26px rgba(225, 6, 0, 0.55); transform: translateY(-1px); color: #fff; }
 
-.btn-ghost {
+.btn-ghost, .btn.ghost {
   background: var(--bg-100);
   border-color: var(--border-strong);
   color: var(--text-hi);
 }
-.btn-ghost:hover { background: var(--bg-150); border-color: var(--f1-red); color: #fff; }
+.btn-ghost:hover, .btn.ghost:hover { background: var(--bg-150); border-color: var(--f1-red); color: #fff; }
 
-.btn-outline {
+.btn-outline, .btn.outline {
   border-color: var(--border-strong);
   color: var(--text-mid);
 }
-.btn-outline:hover { border-color: var(--f1-red); color: var(--text-hi); }
+.btn-outline:hover, .btn.outline:hover { border-color: var(--f1-red); color: var(--text-hi); }
 
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: #c0392b; transform: translateY(-1px); }
+.btn-danger, .btn.danger { background: var(--danger); color: #fff; border-color: transparent; }
+.btn-danger:hover, .btn.danger:hover { background: #c0392b; transform: translateY(-1px); }
 
-.btn-sm { padding: 7px 13px; font-size: 0.82rem; }
-.btn-lg { padding: 14px 28px; font-size: 1.02rem; }
-.btn-block { width: 100%; }
-.btn-icon { padding: 9px; width: 38px; height: 38px; }
+.btn-sm, .btn.sm { padding: 7px 13px; font-size: 0.82rem; }
+.btn-lg, .btn.lg { padding: 14px 28px; font-size: 1.02rem; }
+.btn-block, .btn.block { width: 100%; }
+.btn-icon, .btn.icon { padding: 9px; width: 38px; height: 38px; }
 
 /* ---------------- Card ---------------- */
 .card {
