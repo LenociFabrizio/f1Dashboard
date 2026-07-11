@@ -37,7 +37,6 @@
       <a id="download-btn" href="/downloads/F1-Collector.zip" download class="btn btn-primary btn-lg">
         Scarica F1-Collector.zip
       </a>
-      <p id="download-meta" class="updated" style="margin-top:var(--sp-3)"></p>
       <div id="download-missing" hidden style="margin-top:var(--sp-3); color:var(--text-mid)">
         ⚠️ Il pacchetto non è ancora disponibile online. Chiedi all'amministratore di pubblicarlo.
       </div>
@@ -88,13 +87,10 @@
     // invece di un link rotto; se c'è, mostra la dimensione del file.
     (async () => {
       const btn = document.getElementById('download-btn');
-      const meta = document.getElementById('download-meta');
       const missing = document.getElementById('download-missing');
       try {
         const res = await fetch(btn.getAttribute('href'), { method: 'HEAD' });
         if (!res.ok) throw new Error('not found');
-        const len = Number(res.headers.get('content-length'));
-        if (len > 0) meta.textContent = `Dimensione: ${(len / 1024 / 1024).toFixed(1)} MB`;
       } catch {
         btn.classList.add('btn-disabled');
         btn.removeAttribute('href');
