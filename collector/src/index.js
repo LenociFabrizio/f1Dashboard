@@ -11,6 +11,7 @@
  * sessioni restano in coda e partono appena la connessione torna.
  * ------------------------------------------------------------
  */
+import os from 'node:os';
 import { loadConfig } from './config.js';
 import { UdpListener } from './udp/listener.js';
 import { parsePacket } from './parser/index.js';
@@ -21,6 +22,17 @@ import { LiveServer } from './live/server.js';
 
 const VERSION = '0.1.0';
 const log = (...a) => console.log(new Date().toISOString(), ...a);
+
+/** Indirizzi IPv4 di rete locale (non-interni) del PC. Utili per configurare la PS5. */
+function localIPv4s() {
+  const out = [];
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    for (const a of addrs || []) {
+      if (a.family === 'IPv4' && !a.internal) out.push(a.address);
+    }
+  }
+  return out;
+}
 
 function main() {
   const cfg = loadConfig();
@@ -59,7 +71,21 @@ function main() {
   uploader.on('warn', (m) => log(`⚠️  ${m}`));
 
   // --- listener UDP ---
-  listener.on('listening', (a) => log(`🎧 Ascolto UDP su ${a.address}:${a.port}`));
+  listener.on('listening', (a) => {
+    log(`🎧 Ascolto UDP su ${a.address}:${a.port}`);
+    // Suggerimento per chi gioca su PS5/Xbox: l'IP da inserire in F1 25.
+    const ips = localIPv4s();
+    log('──────────────────────────────────────────────');
+    if (ips.length) {
+      log('🎮 Se giochi su PS5/Xbox, in F1 25 → Impostazioni → Telemetria imposta:');
+      log(`     UDP IP Address = ${ips[0]}   (Porta = ${a.port})`);
+      if (ips.length > 1) log(`     (altri IP di questo PC: ${ips.slice(1).join(', ')})`);
+    } else {
+      log('🎮 Nessun IP di rete rilevato: collega il PC alla rete di casa per ricevere dalla PS5/Xbox.');
+    }
+    log('💻 Se giochi su questo stesso PC, in F1 25 usa UDP IP Address = 127.0.0.1');
+    log('──────────────────────────────────────────────');
+  });
   listener.on('error', (err) => log(`❌ Errore socket UDP: ${err.message}`));
   listener.on('packet', (buf) => {
     let packet;

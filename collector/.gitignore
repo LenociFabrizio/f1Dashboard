@@ -2,3 +2,6 @@ node_modules/
 config.json
 data/
 *.log
+# Runtime Node portable scaricato dal launcher + pacchetti di release
+runtime/
+dist/

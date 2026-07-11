@@ -14,6 +14,30 @@ in automatico sul sito del campionato.
 
 ---
 
+## 🖱️ Metodo facile (consigliato): 1 click
+
+Se l'amministratore ti ha dato il **pacchetto pronto** (una cartella ZIP tipo `F1-Collector.zip`),
+non devi installare né configurare nulla:
+
+1. **Scompatta lo ZIP** in una cartella (tasto destro → *Estrai tutto*).
+2. Apri la cartella e fai **doppio-click** su **`Avvia F1 Collector.bat`**.
+   - Se compare *"Windows ha protetto il PC"* o un avviso di sicurezza: clicca
+     **"Ulteriori informazioni" → "Esegui comunque"** (è normale, il file non è firmato).
+3. **Solo la prima volta** scarica in automatico ciò che serve (~30 MB): attendi il messaggio
+   *"Motore Node pronto"*. Le volte dopo parte subito.
+4. Se Windows chiede il permesso di rete, clicca **"Consenti accesso"** (almeno *Reti private*).
+5. Si apre da solo il browser sulla **vista live** e nella finestra compare l'**indirizzo IP del PC**:
+   è quello da mettere sulla PS5 al **Passo 5** qui sotto (campo *UDP IP Address*).
+6. **Lascia aperta** quella finestra mentre giochi. Per fermare: chiudi la finestra.
+
+> Ti restano da fare solo i passi lato **PlayStation** (Passo 5) e, se non arriva nulla, i controlli
+> su **rete/firewall** (Passi 2–3). Puoi saltare i Passi 1 e 4 (installazione Node e avvio manuale),
+> perché il pacchetto fa tutto da sé.
+
+Se invece vuoi capire tutto nel dettaglio o non hai il pacchetto pronto, continua con la guida manuale qui sotto. 👇
+
+---
+
 ## ✅ Cosa ti serve
 
 - **Una PS5** con **F1 25**.

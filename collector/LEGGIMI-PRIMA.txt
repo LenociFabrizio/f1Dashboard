@@ -1,0 +1,35 @@
+============================================================
+  F1 TELEMETRY COLLECTOR - COME AVVIARLO (facile)
+============================================================
+
+1) Fai DOPPIO CLIC su:  "Avvia F1 Collector.bat"
+
+   (La prima volta Windows potrebbe mostrare "Windows ha protetto
+    il PC" o un avviso di sicurezza: clicca "Ulteriori informazioni"
+    e poi "Esegui comunque". E' normale, il file non e' firmato.)
+
+2) SOLO LA PRIMA VOLTA scarica in automatico cio' che serve
+   (~30 MB). Aspetta il messaggio "Motore Node pronto". Le volte
+   successive parte subito.
+
+3) Se Windows chiede il permesso di rete, clicca "CONSENTI ACCESSO"
+   (almeno per le "Reti private").
+
+4) Si apre da solo il browser con la VISTA LIVE (http://localhost:4600)
+   e nella finestra nera compare l'INDIRIZZO IP del tuo PC.
+
+     -> Se giochi su PS5 / Xbox: in F1 25 vai in
+        Impostazioni -> Telemetria e metti quell'IP come
+        "UDP IP Address", porta 20777, UDP Format 2025.
+     -> Se giochi su QUESTO stesso PC: usa 127.0.0.1
+
+5) LASCIA APERTA la finestra nera per tutto il tempo che giochi.
+   Per fermare il collector: chiudi la finestra.
+
+A fine gara i dati vengono inviati automaticamente al sito del
+campionato: non devi fare altro.
+
+------------------------------------------------------------
+Guida completa (PS5, passo-passo): vedi il file GUIDA-PS5.md
+Nota: funziona su Windows a 64 bit.
+============================================================

@@ -32,7 +32,23 @@ Piccolo programma **Node.js** da eseguire sul PC di gioco. Ascolta la telemetria
 > **Da console** (PS5/Xbox) l'`UDP IP Address` **non** è `127.0.0.1` ma l'**IP del PC** che gira il
 > collector sulla stessa rete (es. `192.168.1.50`) — vedi [GUIDA-PS5.md](GUIDA-PS5.md).
 
-## Installazione e avvio
+## Avvio "a un click" (Windows) — per utenti non esperti
+
+Non serve installare nulla a mano. Distribuisci ai piloti un pacchetto pronto:
+
+```bash
+# (admin, una volta) crea il pacchetto con URL + token gia' dentro:
+cd collector
+npm run build:win -- --ingest https://<tuo-sito>/api/ingest/sessions --token <COLLECTOR_TOKEN> --zip
+# → produce dist/F1-Collector/ (e dist/F1-Collector.zip con --zip)
+```
+
+L'utente scompatta lo ZIP e fa **doppio-click su `Avvia F1 Collector.bat`**: al primo avvio
+scarica da sé il motore Node (portable, ~30 MB, una volta sola), avvia il collector, apre la
+vista live e mostra nella finestra l'**IP del PC** da inserire in F1 25 (per PS5/Xbox).
+Nessuna configurazione lato utente. Vedi **[GUIDA-PS5.md](GUIDA-PS5.md)**.
+
+## Installazione e avvio (manuale, sviluppatori)
 
 ```bash
 cd collector

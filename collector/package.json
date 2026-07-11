@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:win": "node scripts/build-release.mjs"
   },
   "keywords": ["f1", "f1-25", "telemetry", "udp", "codemasters", "ea"],
   "author": "F1 League",
