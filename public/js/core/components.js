@@ -155,7 +155,7 @@ export function mountFooter() {
         <a href="/collector.html">Collector PS5 / Xbox</a>
         <a href="/privacy.html">Privacy &amp; Cookie</a>
       </div>
-      <small>© ${year} Lega F1 · Progetto amatoriale non affiliato a Formula 1® o EA Sports.</small>
+      <small>© ${year} Lega F1 · Progetto sperimentale e amatoriale, senza scopo di lucro · Non affiliato a Formula 1® o EA Sports.</small>
     </div>`;
   const mount = $('#footer-mount');
   if (mount) mount.replaceWith(foot); else document.body.append(foot);
