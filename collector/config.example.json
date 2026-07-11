@@ -4,8 +4,8 @@
     "host": "0.0.0.0"
   },
   "server": {
-    "ingestUrl": "https://il-tuo-sito.vercel.app/api/ingest/sessions",
-    "collectorToken": "INCOLLA_QUI_LO_STESSO_COLLECTOR_TOKEN_DEL_SITO"
+    "ingestUrl": "https://f1-dashboard-eosin.vercel.app/api/ingest/sessions",
+    "collectorToken": "HVQPEIFUXR"
   },
   "live": {
     "enabled": true,

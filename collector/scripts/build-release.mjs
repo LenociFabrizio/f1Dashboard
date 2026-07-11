@@ -52,20 +52,27 @@ for (const rel of INCLUDE) {
   fs.cpSync(from, path.join(OUT, rel), { recursive: true });
 }
 
-// 3) Genera config.json iniettando URL + token (se forniti).
+// 3) Genera config.json. Priorità ai valori CLI/env; altrimenti si usano quelli
+//    già presenti in config.example.json (che dovrebbero contenere URL + token).
 const example = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.example.json'), 'utf-8'));
 example.server = example.server || {};
 if (ingestUrl) example.server.ingestUrl = ingestUrl;
 if (collectorToken) example.server.collectorToken = collectorToken;
 fs.writeFileSync(path.join(OUT, 'config.json'), JSON.stringify(example, null, 2) + '\n');
 
+// Valori effettivi finiti nel pacchetto (per il messaggio di riepilogo).
+const finalUrl = example.server.ingestUrl || '';
+const finalToken = example.server.collectorToken || '';
+const looksPlaceholder = (s) => !s || /il-tuo-sito|INCOLLA_QUI|<.*>/i.test(s);
+
 log('✅ Pacchetto pronto in:', path.relative(process.cwd(), OUT));
-if (!ingestUrl || !collectorToken) {
-  log('⚠️  ATTENZIONE: URL del sito e/o token non forniti.');
-  log('    Passa --ingest e --token (o le variabili COLLECTOR_INGEST_URL / COLLECTOR_TOKEN)');
-  log('    oppure modifica a mano config.json prima di distribuire.');
+if (looksPlaceholder(finalUrl) || looksPlaceholder(finalToken)) {
+  log('⚠️  ATTENZIONE: URL del sito e/o token non impostati (sembrano segnaposto).');
+  log('    Passa --ingest e --token (o COLLECTOR_INGEST_URL / COLLECTOR_TOKEN),');
+  log('    oppure valorizzali in config.example.json prima di ricostruire.');
 } else {
-  log('   config.json valorizzato con URL e token: l\'utente finale non deve configurare nulla.');
+  log('   config.json valorizzato: URL =', finalUrl);
+  log('   l\'utente finale non deve configurare nulla.');
 }
 
 // 4) Zip opzionale (via PowerShell Compress-Archive, nessuna dipendenza npm).
