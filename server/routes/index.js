@@ -17,6 +17,7 @@ import postRoutes from './posts.js';
 import dashboardRoutes from './dashboard.js';
 import ingestRoutes from './ingest.js';
 import captureRoutes from './captures.js';
+import personalRoutes from './personal.js';
 import notificationRoutes from './notifications.js';
 
 const router = Router();
@@ -35,6 +36,7 @@ router.use('/posts', postRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/ingest', ingestRoutes);
 router.use('/admin/captures', captureRoutes);
+router.use('/personal', personalRoutes);
 router.use('/', notificationRoutes); // /notifications e /change-requests (admin)
 
 export default router;

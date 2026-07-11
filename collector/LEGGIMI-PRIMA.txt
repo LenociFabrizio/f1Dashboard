@@ -12,6 +12,11 @@
    (~30 MB). Aspetta il messaggio "Motore Node pronto". Le volte
    successive parte subito.
 
+   Sempre alla prima volta ti verra' chiesto il tuo TOKEN personale:
+   lo trovi nella pagina "I miei tempi" del sito (dopo il login).
+   Incollalo e premi INVIO: serve per far arrivare i TUOI tempi
+   (prove a tempo e gare tra amici) nella tua area personale.
+
 3) Se Windows chiede il permesso di rete, clicca "CONSENTI ACCESSO"
    (almeno per le "Reti private").
 
@@ -26,8 +31,9 @@
 5) LASCIA APERTA la finestra nera per tutto il tempo che giochi.
    Per fermare il collector: chiudi la finestra.
 
-A fine gara i dati vengono inviati automaticamente al sito del
-campionato: non devi fare altro.
+A fine sessione (gara, qualifica o prova a tempo) i dati vengono
+inviati automaticamente al sito: non devi fare altro. Per le prove
+a tempo l'invio avviene quando esci al menu.
 
 ------------------------------------------------------------
 Guida completa (PS5, passo-passo): vedi il file GUIDA-PS5.md

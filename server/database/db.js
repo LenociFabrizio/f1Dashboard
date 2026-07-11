@@ -118,6 +118,12 @@ async function runMigrations() {
   if (!userCols.some((c) => c.name === 'assist_gearbox')) {
     await db.run("ALTER TABLE users ADD COLUMN assist_gearbox TEXT NOT NULL DEFAULT 'auto'");
   }
+  // Token personale per il collector: identifica l'utente nell'ingest personale
+  // (sezione "I miei tempi"). Generato on-demand, univoco a livello applicativo.
+  if (!userCols.some((c) => c.name === 'personal_token')) {
+    await db.run('ALTER TABLE users ADD COLUMN personal_token TEXT');
+    await db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_personal_token ON users(personal_token)');
+  }
 
   const resultCols = await db.all('PRAGMA table_info(results)');
   if (!resultCols.some((c) => c.name === 'bot_driver')) {

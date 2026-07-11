@@ -22,6 +22,7 @@ const NAV = [
   { href: '/collector.html', label: 'Collector PS5 / Xbox' },
   // Bacheca nascosta (non eliminata): voce di menu disattivata.
   // { href: '/feed.html', label: 'Bacheca' },
+  { href: '/practice.html', label: 'I miei tempi', auth: true },
   { href: '/dashboard.html', label: 'Dashboard', auth: true },
 ];
 
@@ -152,6 +153,7 @@ export function mountFooter() {
         <a href="/standings.html">Classifiche</a>
         <a href="/races.html">Calendario</a>
         <a href="/stats.html">Statistiche</a>
+        <a href="/practice.html">I miei tempi</a>
         <a href="/collector.html">Collector PS5 / Xbox</a>
         <a href="/privacy.html">Privacy &amp; Cookie</a>
       </div>

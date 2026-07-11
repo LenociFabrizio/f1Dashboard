@@ -13,17 +13,29 @@
  */
 import db from '../database/db.js';
 import { asyncHandler, HttpError } from '../utils/helpers.js';
+import { ingestPersonalSession } from '../services/personalService.js';
 
 /**
  * POST /api/ingest/sessions
  * Body: JSON aggregato della sessione (vedi captureService/collector).
- * Header: Authorization: Bearer <COLLECTOR_TOKEN>  (o X-Collector-Token)
+ * Header: Authorization: Bearer <token>  (o X-Collector-Token)
+ *
+ * Il token (risolto in collectorAuth) decide il ramo:
+ *   - 'personal' → import automatico nella sezione "I miei tempi" dell'utente;
+ *   - 'league'   → staging (captured_sessions) rivisto dall'admin.
  */
 export const ingestSession = asyncHandler(async (req, res) => {
   const payload = req.body;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new HttpError(400, 'Payload sessione mancante o non valido');
   }
+
+  // Ramo PERSONALE: import automatico, nessun passaggio dall'admin.
+  if (req.ingestMode === 'personal') {
+    const out = await ingestPersonalSession(payload, req.personalUserId);
+    return res.status(201).json({ mode: 'personal', ...out });
+  }
+
   const sessionUid = payload.sessionUID != null ? String(payload.sessionUID) : null;
   if (!sessionUid) throw new HttpError(400, 'sessionUID obbligatorio nel payload');
 

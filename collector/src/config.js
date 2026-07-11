@@ -19,7 +19,8 @@ const DEFAULTS = {
   live: { enabled: true, port: 4600 },
   buffer: { dir: './data/queue' },
   // Tipi di sessione che vengono catturati e inviati (gli altri sono ignorati).
-  captureSessionTypes: ['race', 'sprint', 'qualifying'],
+  // time_trial serve alla sezione personale "I miei tempi".
+  captureSessionTypes: ['race', 'sprint', 'qualifying', 'time_trial'],
 };
 
 /** Fonde in profondità due oggetti semplici (b sovrascrive a). */

@@ -87,12 +87,35 @@ echo.
 goto run
 
 :run
-REM --- config.json: se manca, la creiamo dal modello (caso admin) ---
+REM --- config.json: se manca, la creiamo dal modello ---
 if not exist "config.json" if exist "config.example.json" (
   copy /y "config.example.json" "config.json" >nul
-  echo [ATTENZIONE] config.json non trovato: creato dal modello.
-  echo             L'amministratore deve inserire URL del sito e token.
+  echo [INFO] config.json creato dal modello.
   echo.
+)
+
+REM --- Token personale: se manca, lo chiediamo e lo salviamo in config.json ---
+REM Serve per far arrivare i TUOI tempi nella pagina "I miei tempi" del sito.
+if exist "config.json" (
+  "%NODE_EXE%" -e "const fs=require('fs');try{const c=JSON.parse(fs.readFileSync('config.json','utf8'));process.exit(c.server&&c.server.collectorToken?0:2)}catch(e){process.exit(2)}"
+  if !errorlevel! EQU 2 (
+    echo ------------------------------------------------------------
+    echo  PRIMA CONFIGURAZIONE - il tuo TOKEN personale
+    echo ------------------------------------------------------------
+    echo  Per vedere i TUOI tempi sul sito serve il tuo token personale.
+    echo  Lo trovi nella pagina "I miei tempi" del sito, dopo il login.
+    echo.
+    set "PTOKEN="
+    set /p "PTOKEN=Incolla qui il token e premi INVIO: "
+    if defined PTOKEN (
+      "%NODE_EXE%" -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('config.json','utf8'));c.server=c.server||{};c.server.collectorToken=String(process.argv[1]).trim();fs.writeFileSync('config.json',JSON.stringify(c,null,2)+'\n')" "!PTOKEN!"
+      echo [OK] Token salvato in config.json.
+    ) else (
+      echo [ATTENZIONE] Nessun token inserito: i tempi non verranno inviati al sito
+      echo             finche' non lo aggiungi in config.json.
+    )
+    echo.
+  )
 )
 
 echo ------------------------------------------------------------

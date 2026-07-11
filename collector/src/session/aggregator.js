@@ -17,18 +17,26 @@
  */
 import { EventEmitter } from 'node:events';
 import { buildPayload } from './builder.js';
+import { normalizeSessionType } from '../parser/enums.js';
 
 // Traiettoria (giro veloce): parametri di campionamento/limite.
 const TRACE_MIN_DIST_SQ = 36;   // (~6 m)² tra punti consecutivi: decimazione distanza-based
 const MAX_TRACE_POINTS = 1500;  // cap di sicurezza per singolo giro
 const MIN_TRACE_POINTS = 20;    // un giro con troppi pochi punti non è una traccia utile
 
+// Prove a tempo (e altre sessioni senza Final Classification): se non arrivano
+// pacchetti per questo tempo, chiudiamo la sessione con ciò che abbiamo. È solo
+// un backup: la chiusura "buona" avviene all'uscita al menu (sessionUID → 0).
+const IDLE_FLUSH_MS = 120_000; // 2 min
+
 export class SessionAggregator extends EventEmitter {
-  /** @param {{collectorVersion?:string}} [opts] */
-  constructor({ collectorVersion = '' } = {}) {
+  /** @param {{collectorVersion?:string, idleFlushMs?:number}} [opts] */
+  constructor({ collectorVersion = '', idleFlushMs = IDLE_FLUSH_MS } = {}) {
     super();
     this.collectorVersion = collectorVersion;
+    this.idleFlushMs = idleFlushMs;
     this.state = null;
+    this._idleTimer = null;
   }
 
   /** Reimposta lo stato per una nuova sessione. */
@@ -36,6 +44,7 @@ export class SessionAggregator extends EventEmitter {
     this.state = {
       sessionUID: sessionUid,
       packetFormat: header.packetFormat,
+      playerCarIndex: header.playerCarIndex ?? null, // vettura del giocatore (owner)
       meta: null,            // ultimo pacchetto Session
       participants: null,    // ultimo pacchetto Participants
       lapData: null,         // ultimo pacchetto LapData (per la live view)
@@ -55,13 +64,24 @@ export class SessionAggregator extends EventEmitter {
     const { header } = packet;
     const uid = header.sessionUID;
 
-    // sessionUID 0 = nessuna sessione attiva (menu): ignora.
-    if (!uid || uid === '0') return;
+    // Fine sessione IMPLICITA: uscita al menu (uid 0) o cambio di sessione.
+    // Chiude le sessioni senza Final Classification (tipico delle prove a
+    // tempo) usando la cronologia giri già raccolta.
+    if (this.state && (!uid || uid === '0' || this.state.sessionUID !== uid)) {
+      this._finalizeIfPending('session-change');
+    }
+
+    // sessionUID 0 = nessuna sessione attiva (menu): niente altro da fare.
+    if (!uid || uid === '0') { this._clearIdleTimer(); return; }
 
     if (!this.state || this.state.sessionUID !== uid) {
       this._reset(uid, header);
     }
     const s = this.state;
+    if (header.playerCarIndex != null) s.playerCarIndex = header.playerCarIndex;
+
+    // Riarma il timer di inattività a ogni pacchetto ricevuto.
+    this._armIdleTimer();
 
     switch (header.packetId) {
       case 0: // Motion → traiettoria (linea di gara)
@@ -160,15 +180,47 @@ export class SessionAggregator extends EventEmitter {
     }
   }
 
+  /** Numero di vetture con cronologia giri raccolta. */
+  _hasHistory() {
+    return this.state && Object.keys(this.state.history || {}).length > 0;
+  }
+
+  /**
+   * Chiude la sessione SOLO se c'è qualcosa da inviare e non è già chiusa.
+   * Usata dalle chiusure implicite (menu/cambio sessione/inattività), dove una
+   * gara è già stata chiusa dal pacchetto 8 e le prove a tempo non hanno
+   * classifica ma hanno la cronologia giri.
+   */
+  _finalizeIfPending(reason) {
+    const s = this.state;
+    if (!s || s.finalized) return;
+    if (!s.classification && !this._hasHistory()) return; // niente da inviare
+    this._finalize(reason);
+  }
+
   /** Chiude la sessione ed emette il payload (una sola volta). */
   _finalize(reason) {
     const s = this.state;
     if (!s || s.finalized) return;
-    if (!s.classification) return; // niente classifica → niente da importare
+    // Serve almeno una classifica (gara/qualifica) oppure la cronologia giri
+    // (prove a tempo): altrimenti non c'è nulla da importare.
+    if (!s.classification && !this._hasHistory()) return;
     s.finalized = true;
+    this._clearIdleTimer();
 
     const payload = buildPayload(s, { collectorVersion: this.collectorVersion });
     this.emit('session-complete', { reason, payload });
+  }
+
+  /** (Ri)arma il timer di inattività per il flush di backup. */
+  _armIdleTimer() {
+    this._clearIdleTimer();
+    this._idleTimer = setTimeout(() => this._finalizeIfPending('idle-timeout'), this.idleFlushMs);
+    if (this._idleTimer.unref) this._idleTimer.unref(); // non tiene vivo il processo
+  }
+
+  _clearIdleTimer() {
+    if (this._idleTimer) { clearTimeout(this._idleTimer); this._idleTimer = null; }
   }
 
   /** Stato corrente (per la live view). */

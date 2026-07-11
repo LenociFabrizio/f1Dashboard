@@ -5,7 +5,7 @@
   },
   "server": {
     "ingestUrl": "https://f1-dashboard-eosin.vercel.app/api/ingest/sessions",
-    "collectorToken": "HVQPEIFUXR"
+    "collectorToken": ""
   },
   "live": {
     "enabled": true,
@@ -14,5 +14,5 @@
   "buffer": {
     "dir": "./data/queue"
   },
-  "captureSessionTypes": ["race", "sprint", "qualifying"]
+  "captureSessionTypes": ["race", "sprint", "qualifying", "time_trial"]
 }

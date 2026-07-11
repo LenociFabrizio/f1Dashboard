@@ -332,6 +332,49 @@ CREATE TABLE IF NOT EXISTS lap_traces (
 CREATE INDEX IF NOT EXISTS idx_lap_traces_race ON lap_traces(race_id);
 
 -- ------------------------------------------------------------
+--  SESSIONI PERSONALI (prove a tempo & gare tra amici)
+--  Import AUTOMATICO dal collector di ogni pilota (token personale),
+--  SENZA passare dall'admin e SENZA toccare i dati canonici di lega.
+--  Servono per la sezione "I miei tempi": best per tracciato e confronto
+--  tra piloti.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS personal_sessions (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id        INTEGER NOT NULL,               -- proprietario del collector
+  session_uid    TEXT    NOT NULL,               -- header UDP m_sessionUID
+  session_type   TEXT    DEFAULT '',             -- 'time_trial' | 'race' | ...
+  track_id       INTEGER,                         -- header UDP m_trackId
+  circuit_id     INTEGER,                         -- circuito del sito (suggerito), può essere null
+  weather        TEXT,
+  packet_format  INTEGER,
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
+  FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE SET NULL,
+  UNIQUE (session_uid, user_id)                   -- re-invio del collector idempotente
+);
+CREATE INDEX IF NOT EXISTS idx_personal_sessions_user ON personal_sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS personal_laps (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id     INTEGER NOT NULL,               -- FK personal_sessions
+  user_id        INTEGER NOT NULL,               -- a chi appartiene il giro (owner o amico abbinato)
+  track_id       INTEGER,                         -- denormalizzato per query per-tracciato
+  circuit_id     INTEGER,                         -- denormalizzato (può essere null)
+  lap            INTEGER NOT NULL,               -- numero del giro (1-based)
+  lap_time_ms    INTEGER,                         -- tempo sul giro (ms)
+  sector1_ms     INTEGER,
+  sector2_ms     INTEGER,
+  sector3_ms     INTEGER,
+  valid          INTEGER NOT NULL DEFAULT 1,      -- 1 = giro valido
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (session_id) REFERENCES personal_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id)    REFERENCES users(id)             ON DELETE CASCADE,
+  UNIQUE (session_id, user_id, lap)               -- re-invio idempotente
+);
+CREATE INDEX IF NOT EXISTS idx_personal_laps_user_track  ON personal_laps(user_id, track_id);
+CREATE INDEX IF NOT EXISTS idx_personal_laps_track_valid ON personal_laps(track_id, valid);
+
+-- ------------------------------------------------------------
 --  STATISTICHE MANUALI (per stagione/pilota)
 --  Valori non ricavabili automaticamente e inseriti dall'admin.
 -- ------------------------------------------------------------

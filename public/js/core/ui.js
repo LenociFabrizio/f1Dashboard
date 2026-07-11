@@ -305,6 +305,21 @@ export function fmtNum(n, dec = 0) {
   return Number(n).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
+/** Tempo sul giro (millisecondi) → "m:ss.mmm". */
+export function fmtLapTime(ms) {
+  if (!ms || ms <= 0) return '—';
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const mmm = ms % 1000;
+  return `${m}:${String(s).padStart(2, '0')}.${String(mmm).padStart(3, '0')}`;
+}
+
+/** Tempo di settore (ms) → secondi con 3 decimali, o formato giro se ≥ 1 min. */
+export function fmtSector(ms) {
+  if (!ms || ms <= 0) return '—';
+  return ms >= 60000 ? fmtLapTime(ms) : (ms / 1000).toFixed(3);
+}
+
 /** Bandiera emoji da codice ISO a due lettere. */
 export function flagEmoji(code) {
   if (!code || code.length !== 2) return '🏁';

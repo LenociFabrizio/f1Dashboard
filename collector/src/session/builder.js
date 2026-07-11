@@ -101,6 +101,9 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     packetFormat: state.packetFormat ?? null,
     collectorVersion,
     sessionType,
+    // Vettura del giocatore: consente al sito di attribuire i giri al
+    // proprietario del collector anche quando il nome online è oscurato.
+    playerCarIndex: state.playerCarIndex ?? null,
     trackId: meta.trackId ?? null,
     trackLength: meta.trackLength ?? null,
     totalLaps: meta.totalLaps ?? null,
