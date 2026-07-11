@@ -272,9 +272,26 @@ export function confirmDialog({ title = 'Confermi?', message = '', confirmText =
 /* ---------------- Formattatori ---------------- */
 const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
 
+/**
+ * Costruisce una Date interpretando correttamente il fuso.
+ * SQLite `datetime('now')` salva l'ora in UTC nel formato
+ * "YYYY-MM-DD HH:MM:SS" (senza indicatore di fuso): V8 la interpreterebbe
+ * come ora LOCALE, sfasando l'orario mostrato. Qui riconosciamo quel formato
+ * e lo trattiamo come UTC. Le stringhe già ISO (con 'T' e 'Z'/offset) e i
+ * timestamp numerici passano invariati.
+ */
+export function parseDbDate(v) {
+  if (v == null) return new Date(NaN);
+  if (typeof v === 'string') {
+    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)$/.exec(v.trim());
+    if (m) return new Date(`${m[1]}T${m[2]}Z`);
+  }
+  return new Date(v);
+}
+
 export function fmtDate(iso, { withTime = false } = {}) {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const d = parseDbDate(iso);
   if (isNaN(d)) return '—';
   const s = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   if (!withTime) return s;

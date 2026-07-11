@@ -5,7 +5,7 @@
    riusando il flusso risultati esistente. L'admin verifica solo le anomalie.
    ============================================================= */
 import api from '../../../core/api.js';
-import { $, $$, esc, toast, flagEmoji, confirmDialog } from '../../../core/ui.js';
+import { $, $$, esc, toast, flagEmoji, confirmDialog, parseDbDate } from '../../../core/ui.js';
 import { state, sectionHead, empty } from '../shared.js';
 
 let captures = [];
@@ -17,7 +17,7 @@ const SESSION_LABEL = {
 };
 
 const fmtWhen = (iso) => {
-  const d = new Date(iso);
+  const d = parseDbDate(iso);
   return isNaN(d) ? '—' : d.toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
