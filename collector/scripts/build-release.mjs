@@ -87,6 +87,20 @@ if (args.flags.has('zip')) {
       { stdio: 'inherit' }
     );
     log('📦 ZIP creato:', path.relative(process.cwd(), zipPath));
+
+    // 5) Pubblica lo ZIP tra i file statici del sito, così la pagina di download
+    //    (public/collector.html → /downloads/F1-Collector.zip) lo serve subito.
+    //    ROOT = collector/ ; il progetto sito sta un livello sopra.
+    const publicDownloads = path.resolve(ROOT, '..', 'public', 'downloads');
+    if (fs.existsSync(path.dirname(publicDownloads))) {
+      fs.mkdirSync(publicDownloads, { recursive: true });
+      const published = path.join(publicDownloads, 'F1-Collector.zip');
+      fs.copyFileSync(zipPath, published);
+      log('🌐 Pubblicato per il download dal sito:', path.relative(process.cwd(), published));
+      log('   (ricorda di committare public/downloads/F1-Collector.zip per il deploy)');
+    } else {
+      log('ℹ️  Cartella public/ del sito non trovata: salto la pubblicazione per il download.');
+    }
   } catch (err) {
     log('⚠️  Zip non riuscito (PowerShell non disponibile?). Comprimi a mano la cartella:', OUT);
   }

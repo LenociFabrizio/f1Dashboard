@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collector PS5 · Scarica il pacchetto · Lega F1</title>
+  <meta name="description" content="Scarica il pacchetto pronto del collector telemetria per collegare la tua PS5 (F1 25) al PC e inviare i dati di gara al portale della Lega F1.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div id="app-loader"><div class="loader-mark">LEGA<span>F1</span></div><div class="loader-bar"><i></i></div></div>
+  <div id="navbar-mount"></div>
+
+  <main class="page container" style="max-width:820px">
+    <div class="page-head">
+      <div class="eyebrow">🎮 Telemetria PlayStation 5</div>
+      <h1>Collector PS5</h1>
+      <p class="lead">Scarica il pacchetto pronto all'uso per far arrivare i dati di gara di <strong>F1&nbsp;25 su PS5</strong>
+        al portale della lega. Nessuna installazione da fare sulla PlayStation: gira tutto su un PC della stessa rete.</p>
+    </div>
+
+    <!-- CARD DOWNLOAD -->
+    <div class="card" style="text-align:center; padding: var(--sp-6);">
+      <div style="font-size:2.6rem; line-height:1">⬇️</div>
+      <h2 style="margin:.4em 0 .2em">Pacchetto «1 click»</h2>
+      <p style="color:var(--text-mid); max-width:52ch; margin:0 auto var(--sp-4)">
+        Contiene tutto il necessario, già configurato per il nostro sito. Scompatti lo ZIP e fai doppio-click
+        su <code>Avvia F1 Collector.bat</code>.
+      </p>
+      <a id="download-btn" href="/downloads/F1-Collector.zip" download class="btn btn-primary btn-lg">
+        Scarica F1-Collector.zip
+      </a>
+      <p id="download-meta" class="updated" style="margin-top:var(--sp-3)"></p>
+      <div id="download-missing" hidden style="margin-top:var(--sp-3); color:var(--text-mid)">
+        ⚠️ Il pacchetto non è ancora disponibile online. Chiedi all'amministratore di pubblicarlo.
+      </div>
+    </div>
+
+    <!-- ISTRUZIONI -->
+    <div class="card legal" style="margin-top:var(--sp-5)">
+      <h2>Come si usa (in breve)</h2>
+      <ul>
+        <li><strong>Ti serve un PC</strong> (Windows) acceso mentre giochi, collegato alla <strong>stessa rete</strong> della PS5.</li>
+        <li><strong>Scompatta</strong> lo ZIP e fai doppio-click su <code>Avvia F1 Collector.bat</code>.
+          Se compare l'avviso di Windows: <em>«Ulteriori informazioni» → «Esegui comunque»</em> (è normale).</li>
+        <li>La prima volta scarica in automatico ciò che serve (~30&nbsp;MB). Poi si apre la <strong>vista live</strong>
+          e mostra l'<strong>indirizzo IP del PC</strong>.</li>
+        <li>Se Windows chiede il permesso di rete, clicca <strong>«Consenti accesso»</strong> (almeno reti private).</li>
+        <li><strong>Lascia aperta</strong> quella finestra mentre giochi. A fine gara i dati vengono inviati al sito.</li>
+      </ul>
+
+      <h2>Impostazioni telemetria su F1 25 (PS5)</h2>
+      <p>Sulla PlayStation: <em>Game Options → Settings → Telemetry Settings</em>. Imposta:</p>
+      <ul>
+        <li><strong>UDP Telemetry:</strong> On</li>
+        <li><strong>UDP Broadcast Mode:</strong> Off</li>
+        <li><strong>UDP IP Address:</strong> l'<strong>IP del PC</strong> mostrato dal collector (es. <code>192.168.1.50</code>) — <em>non</em> <code>127.0.0.1</code></li>
+        <li><strong>UDP Port:</strong> <code>20777</code></li>
+        <li><strong>UDP Send Rate:</strong> 30</li>
+        <li><strong>UDP Format:</strong> <code>2025</code></li>
+        <li><strong>Your Telemetry:</strong> Public · <strong>Show online names:</strong> On</li>
+      </ul>
+
+      <h2>Buono a sapersi</h2>
+      <ul>
+        <li>Basta <strong>una sola PS5</strong> nella lobby: la telemetria contiene i dati di <strong>tutte</strong> le vetture della sessione.</li>
+        <li>PS5 e PC devono restare sulla <strong>stessa rete</strong> (niente reti «ospite» separate né VPN attive).</li>
+        <li>Guida completa e risoluzione problemi: dentro lo ZIP trovi <code>LEGGIMI-PRIMA.txt</code> e il <code>README</code>.</li>
+      </ul>
+    </div>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script type="module">
+    import { mountChrome } from '/js/core/components.js';
+    import { loader } from '/js/core/ui.js';
+    mountChrome();
+    loader.hide();
+
+    // Verifica la disponibilità del pacchetto: se manca (404), mostra un avviso
+    // invece di un link rotto; se c'è, mostra la dimensione del file.
+    (async () => {
+      const btn = document.getElementById('download-btn');
+      const meta = document.getElementById('download-meta');
+      const missing = document.getElementById('download-missing');
+      try {
+        const res = await fetch(btn.getAttribute('href'), { method: 'HEAD' });
+        if (!res.ok) throw new Error('not found');
+        const len = Number(res.headers.get('content-length'));
+        if (len > 0) meta.textContent = `Dimensione: ${(len / 1024 / 1024).toFixed(1)} MB`;
+      } catch {
+        btn.classList.add('btn-disabled');
+        btn.removeAttribute('href');
+        btn.setAttribute('aria-disabled', 'true');
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '.5';
+        missing.hidden = false;
+      }
+    })();
+  </script>
+</body>
+</html>

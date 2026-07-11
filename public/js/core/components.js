@@ -151,6 +151,7 @@ export function mountFooter() {
         <a href="/standings.html">Classifiche</a>
         <a href="/races.html">Calendario</a>
         <a href="/stats.html">Statistiche</a>
+        <a href="/collector.html">Collector PS5</a>
         <a href="/privacy.html">Privacy &amp; Cookie</a>
       </div>
       <small>© ${year} Lega F1 · Progetto amatoriale non affiliato a Formula 1® o EA Sports.</small>
