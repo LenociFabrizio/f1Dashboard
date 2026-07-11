@@ -142,7 +142,7 @@ export const opts = {
   ],
   users: (includeEmpty = false) => [
     ...(includeEmpty ? [{ value: '', label: '— Nessuno —' }] : []),
-    ...state.users.map((u) => ({ value: u.id, label: u.display_name || u.username })),
+    ...state.users.map((u) => ({ value: u.id, label: u.display_name || u.handle })),
   ],
   circuits: () => state.circuits.map((c) => ({ value: c.id, label: `${c.name} (${c.country_code})` })),
   seasons: () => state.seasons.map((s) => ({ value: s.id, label: `${s.name} · ${s.year}` })),

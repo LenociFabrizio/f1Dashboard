@@ -32,6 +32,7 @@
       <div class="card" style="text-align:center">
         <img id="avatar-preview" class="avatar xl" style="margin:0 auto 16px;display:block" alt="Avatar">
         <div class="text-hi" id="pv-name" style="font-weight:900;font-size:1.15rem"></div>
+        <div class="text-lo" id="pv-handle" style="font-size:.9rem"></div>
         <div class="text-lo" id="pv-team" style="margin-bottom:16px"></div>
         <label class="btn outline sm block" style="cursor:pointer">
           Carica avatar
@@ -40,9 +41,10 @@
         <div class="hint" style="margin-top:8px">JPG/PNG, max 5MB</div>
       </div>
 
-      <!-- DATI -->
+      <!-- DATI ANAGRAFICI -->
       <form id="profile-form" class="card">
-        <div class="form-row">
+        <div class="eyebrow">Dati pilota</div>
+        <div class="form-row" style="margin-top:8px">
           <div class="field">
             <label>Nome</label>
             <input class="input" name="first_name" maxlength="40" autocomplete="given-name">
@@ -52,52 +54,11 @@
             <input class="input" name="last_name" maxlength="40" autocomplete="family-name">
           </div>
         </div>
-        <div class="field">
-          <label>Nickname (username)</label>
-          <input class="input" name="username" maxlength="30" autocomplete="username">
-          <div class="hint">È il tuo @nome pubblico. Deve essere unico.</div>
-        </div>
 
         <div class="field">
           <label>Email</label>
           <input class="input" type="email" name="email">
-        </div>
-
-        <div class="field">
-          <label>Team</label>
-          <select class="select" name="team_id" id="team-select"></select>
-        </div>
-
-        <div class="field">
-          <label>Aiuti alla guida</label>
-          <div class="assist-group" style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span class="text-lo" style="min-width:150px">🛞 ABS</span>
-              <div class="segmented" data-assist="assist_abs">
-                <button type="button" data-val="0">Off</button>
-                <button type="button" data-val="1">On</button>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span class="text-lo" style="min-width:150px">🎛️ Controllo trazione</span>
-              <div class="segmented" data-assist="assist_tc">
-                <button type="button" data-val="off">Off</button>
-                <button type="button" data-val="medium">Medio</button>
-                <button type="button" data-val="full">Pieno</button>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span class="text-lo" style="min-width:150px">⚙️ Cambio</span>
-              <div class="segmented" data-assist="assist_gearbox">
-                <button type="button" data-val="auto">Automatico</button>
-                <button type="button" data-val="manual">Manuale</button>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="assist_abs" value="0">
-          <input type="hidden" name="assist_tc" value="off">
-          <input type="hidden" name="assist_gearbox" value="auto">
-          <div class="hint">Compaiono accanto al tuo giro veloce nelle gare</div>
+          <div class="hint">Usata per accedere e per il recupero password.</div>
         </div>
 
         <div class="flex justify-between items-center wrap gap-3" style="margin-top:8px">
@@ -107,14 +68,88 @@
       </form>
     </div>
 
+    <!-- AIUTI ALLA GUIDA (sezione a sé) -->
+    <form id="assists-form" class="card" style="margin-top:28px">
+      <div class="eyebrow">Aiuti alla guida</div>
+      <p class="text-lo" style="margin:4px 0 14px;font-size:.9rem">Compaiono accanto al tuo giro veloce nelle gare.</p>
+      <div class="assist-group" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="text-lo" style="min-width:150px">🛞 ABS</span>
+          <div class="segmented" data-assist="assist_abs">
+            <button type="button" data-val="0">Off</button>
+            <button type="button" data-val="1">On</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="text-lo" style="min-width:150px">🎛️ Controllo trazione</span>
+          <div class="segmented" data-assist="assist_tc">
+            <button type="button" data-val="off">Off</button>
+            <button type="button" data-val="medium">Medio</button>
+            <button type="button" data-val="full">Pieno</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="text-lo" style="min-width:150px">⚙️ Cambio</span>
+          <div class="segmented" data-assist="assist_gearbox">
+            <button type="button" data-val="auto">Automatico</button>
+            <button type="button" data-val="manual">Manuale</button>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" name="assist_abs" value="0">
+      <input type="hidden" name="assist_tc" value="off">
+      <input type="hidden" name="assist_gearbox" value="auto">
+      <div class="flex justify-end" style="margin-top:16px">
+        <button type="submit" class="btn primary" id="save-assists-btn">Salva aiuti</button>
+      </div>
+    </form>
+
+    <!-- SQUADRA E PILOTA DI RISERVA (richiede approvazione admin) -->
+    <div class="card" style="margin-top:28px">
+      <div class="eyebrow">Squadra e riserva</div>
+      <p class="text-lo" style="margin:4px 0 14px;font-size:.9rem">
+        Il cambio di scuderia e di pilota di riserva (BOT) deve essere <strong>approvato da un amministratore</strong>.
+        Fino all'approvazione restano attivi i valori attuali.
+      </p>
+
+      <!-- Banner richiesta in sospeso -->
+      <div id="change-banner" class="card" style="display:none;border-color:rgba(255,193,7,.45);background:rgba(255,193,7,.08);margin-bottom:16px">
+        <div class="flex justify-between items-center wrap gap-3">
+          <div>
+            <div class="text-hi" style="font-weight:800">⏳ Richiesta in attesa di approvazione</div>
+            <div class="text-lo" id="change-detail" style="font-size:.9rem;margin-top:4px"></div>
+          </div>
+          <button type="button" class="btn ghost sm" id="cancel-change-btn">Annulla richiesta</button>
+        </div>
+      </div>
+
+      <form id="team-form">
+        <div class="form-row">
+          <div class="field">
+            <label>Scuderia</label>
+            <select class="select" name="team_id" id="team-select"></select>
+          </div>
+          <div class="field">
+            <label>Pilota di riserva (BOT)</label>
+            <select class="select" name="reserve_driver" id="reserve-select"><option value="">— Nessuno —</option></select>
+            <div class="hint">Piloti reali F1 2025 della scuderia selezionata</div>
+          </div>
+        </div>
+        <div class="flex justify-end" style="margin-top:8px">
+          <button type="submit" class="btn primary" id="request-change-btn">Richiedi cambio</button>
+        </div>
+      </form>
+    </div>
+
     <!-- Handle di gioco F1 25 -->
     <div class="card" style="margin-top:28px">
-      <div class="eyebrow">Telemetria F1 25</div>
+      <div class="eyebrow">Nickname di gioco F1 25</div>
       <div class="text-hi" style="font-weight:800;margin-top:6px">I tuoi handle di gioco</div>
       <p class="text-lo" style="margin:4px 0 14px;font-size:0.9rem">
         Indica il nickname con cui giochi a F1 25 (e la piattaforma). Serve a riconoscerti
         automaticamente quando l'admin importa i risultati di una gara dalla telemetria.
-        Puoi aggiungerne più di uno se giochi su piattaforme diverse.
+        L'handle contrassegnato come <strong>pubblico</strong> è il tuo nome <strong>@handle</strong>
+        mostrato in tutto il sito. Puoi aggiungerne più di uno se giochi su piattaforme diverse.
       </p>
       <div id="handles-list" style="margin-bottom:14px"></div>
       <div class="form-row" style="align-items:flex-end">

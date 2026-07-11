@@ -8,7 +8,7 @@
  * ------------------------------------------------------------
  */
 import db from '../database/db.js';
-import { round } from '../utils/helpers.js';
+import { round, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
 
 /**
  * Classifica Piloti per una stagione.
@@ -19,12 +19,13 @@ export async function getDriverStandings(seasonId) {
   // Prende tutti i risultati della stagione con dati pilota/team
   const rows = await db
     .prepare(
-      `SELECT r.*, u.username, u.display_name, u.avatar, u.nationality, u.favorite_number,
+      `SELECT r.*, ${HANDLE_SELECT}, u.display_name, u.avatar, u.nationality, u.favorite_number,
               u.reserve_driver, ra.round AS race_round, ra.name AS race_name,
               t.name AS team_name, t.color AS team_color
          FROM results r
          JOIN races  ra ON ra.id = r.race_id
          JOIN users  u  ON u.id  = r.user_id
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
         WHERE ra.season_id = ? AND ra.status = 'completed'`
     )
@@ -36,7 +37,7 @@ export async function getDriverStandings(seasonId) {
     if (!map.has(row.user_id)) {
       map.set(row.user_id, {
         user_id: row.user_id,
-        username: row.username,
+        handle: row.handle,
         display_name: row.display_name,
         avatar: row.avatar,
         nationality: row.nationality,

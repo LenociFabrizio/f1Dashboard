@@ -1,47 +1,78 @@
 /* =============================================================
    profile.js — Modifica del proprio profilo + upload avatar
+   Sezioni separate: dati pilota, aiuti alla guida, squadra/riserva
+   (con approvazione admin) e handle di gioco (nome pubblico @handle).
    ============================================================= */
 import api from '../core/api.js';
 import auth, { guard } from '../core/auth.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
 import { $, esc, loader, toast, modal, confirmDialog, wireAssists, lightbox } from '../core/ui.js';
 import { cropAvatar } from '../core/avatar-crop.js';
+import { driversForTeamName } from '../core/f1data.js';
 
 const form = $('#profile-form');
 const saveBtn = $('#save-btn');
+const assistsForm = $('#assists-form');
+const teamForm = $('#team-form');
 let me;
-
-/** Aggiorna lo stato attivo dei controlli segmentati dagli input nascosti. */
-function syncAssists() {
-  form.querySelectorAll('.segmented[data-assist]').forEach((grp) => {
-    const val = form.elements[grp.dataset.assist]?.value;
-    grp.querySelectorAll('button[data-val]').forEach((b) =>
-      b.classList.toggle('active', b.dataset.val === String(val)));
-  });
-}
+let teams = [];
+let pendingChange = null; // richiesta di cambio in sospeso (o null)
 
 function fillForm(u) {
   form.first_name.value = u.first_name || '';
   form.last_name.value = u.last_name || '';
-  if (form.username) form.username.value = u.username || '';
   form.email.value = u.email || '';
   // Aiuti alla guida
-  form.elements.assist_abs.value = String(u.assist_abs ? 1 : 0);
-  form.elements.assist_tc.value = ['off', 'medium', 'full'].includes(u.assist_tc) ? u.assist_tc : 'off';
-  form.elements.assist_gearbox.value = u.assist_gearbox === 'manual' ? 'manual' : 'auto';
-  syncAssists();
+  assistsForm.elements.assist_abs.value = String(u.assist_abs ? 1 : 0);
+  assistsForm.elements.assist_tc.value = ['off', 'medium', 'full'].includes(u.assist_tc) ? u.assist_tc : 'off';
+  assistsForm.elements.assist_gearbox.value = u.assist_gearbox === 'manual' ? 'manual' : 'auto';
+  wireAssists(assistsForm);
   $('#avatar-preview').src = avatarUrl(u);
-  $('#pv-name').textContent = u.display_name || u.username;
+  $('#pv-name').textContent = u.display_name || '';
+  $('#pv-handle').textContent = u.handle ? `@${u.handle}` : '';
   $('#pv-team').textContent = u.team_name || 'Nessun team';
 }
 
-async function loadTeams(selectedId) {
+/* ---- Squadra + pilota di riserva ---- */
+function fillReserve(selected) {
+  const teamId = Number(teamForm.team_id.value);
+  const team = teams.find((t) => t.id === teamId);
+  const drivers = team ? driversForTeamName(team.name) : [];
+  const sel = teamForm.reserve_driver;
+  sel.innerHTML =
+    '<option value="">— Nessuno —</option>' +
+    drivers.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if (selected && drivers.includes(selected)) sel.value = selected;
+}
+
+async function loadTeams(selectedTeamId, selectedReserve) {
   try {
-    const teams = await api.get('/teams', {}, { auth: false });
-    $('#team-select').innerHTML =
+    teams = await api.get('/teams', {}, { auth: false });
+    teamForm.team_id.innerHTML =
       '<option value="">— Nessun team —</option>' +
-      teams.map((t) => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+      teams.map((t) => `<option value="${t.id}" ${t.id === selectedTeamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+    fillReserve(selectedReserve);
   } catch { /* team opzionale */ }
+}
+
+teamForm.team_id.addEventListener('change', () => fillReserve(''));
+
+/** Mostra/nasconde il banner della richiesta in sospeso. */
+function renderChangeBanner() {
+  const banner = $('#change-banner');
+  if (!pendingChange) { banner.style.display = 'none'; return; }
+  const parts = [];
+  if (pendingChange.requested_team_id) parts.push(`Scuderia → <strong>${esc(pendingChange.requested_team_name || '—')}</strong>`);
+  if (pendingChange.requested_reserve) parts.push(`Riserva → <strong>${esc(pendingChange.requested_reserve)}</strong>`);
+  $('#change-detail').innerHTML = parts.join(' · ') || 'Nessun dettaglio';
+  banner.style.display = '';
+}
+
+async function loadChangeRequest() {
+  try {
+    pendingChange = await api.get('/users/me/change-request');
+  } catch { pendingChange = null; }
+  renderChangeBanner();
 }
 
 /* ---- Upload avatar (con editor: zoom + spostamento) ---- */
@@ -128,6 +159,9 @@ function renderHandles(list) {
   const box = $('#handles-list');
   if (!box) return;
   updatePlatformSelect(list);
+  // Aggiorna l'anteprima del nome pubblico con l'handle primario.
+  const primary = (list || []).find((h) => h.is_primary);
+  $('#pv-handle').textContent = primary ? `@${primary.handle}` : '';
   if (!list.length) {
     box.innerHTML = '<div class="hint">Nessun handle ancora. Aggiungine uno qui sotto.</div>';
     return;
@@ -137,11 +171,23 @@ function renderHandles(list) {
       (h) => `
       <div class="flex items-center justify-between gap-3" style="padding:8px 12px;border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px">
         <div><span class="text-hi" style="font-weight:700">${esc(h.handle)}</span>
+          ${h.is_primary ? '<span class="role-pill admin" style="margin-left:6px;font-size:.7rem">pubblico</span>' : ''}
           <span class="text-lo" style="font-size:.85rem"> · ${esc(PLATFORM_LABEL[h.platform] || h.platform || 'Qualsiasi')}${h.source === 'alias' ? ' · rilevato in gara' : ''}</span></div>
-        <button class="btn ghost sm" data-del-handle="${h.id}" title="Rimuovi">✕</button>
+        <div class="flex items-center gap-2">
+          ${h.is_primary ? '' : `<button class="btn ghost sm" data-primary-handle="${h.id}" title="Usa come nome pubblico">★ Rendi pubblico</button>`}
+          <button class="btn ghost sm" data-del-handle="${h.id}" title="Rimuovi">✕</button>
+        </div>
       </div>`
     )
     .join('');
+  box.querySelectorAll('[data-primary-handle]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      try {
+        renderHandles(await api.put(`/users/me/handles/${b.dataset.primaryHandle}/primary`, {}));
+        toast.success('Nome pubblico aggiornato.');
+      } catch (err) { toast.error(err.message); }
+    })
+  );
   box.querySelectorAll('[data-del-handle]').forEach((b) =>
     b.addEventListener('click', async () => {
       try {
@@ -189,7 +235,7 @@ $('#delete-account-btn').addEventListener('click', async () => {
   }
 });
 
-/* ---- Salvataggio profilo ---- */
+/* ---- Salvataggio dati anagrafici ---- */
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   saveBtn.disabled = true;
@@ -198,20 +244,13 @@ form.addEventListener('submit', async (e) => {
     first_name: form.first_name.value.trim(),
     last_name: form.last_name.value.trim(),
     email: form.email.value.trim(),
-    team_id: form.team_id.value ? Number(form.team_id.value) : null,
   };
-  if (form.username) payload.username = form.username.value.trim();
-  payload.assist_abs = Number(form.elements.assist_abs.value) ? 1 : 0;
-  payload.assist_tc = form.elements.assist_tc.value || 'off';
-  payload.assist_gearbox = form.elements.assist_gearbox.value || 'auto';
   try {
     const updated = await api.put('/users/me', payload);
     auth.user = { ...auth.user, ...updated };
     me = { ...me, ...updated };
-    // Ricarica il nome del team per l'anteprima
-    const teamOpt = $('#team-select').selectedOptions[0];
-    me.team_name = teamOpt && teamOpt.value ? teamOpt.textContent : null;
     fillForm(me);
+    await loadHandles(); // riallinea l'anteprima @handle
     toast.success('Profilo aggiornato!', { title: 'Salvato' });
   } catch (err) {
     toast.error(err.message || 'Salvataggio fallito.');
@@ -221,6 +260,57 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+/* ---- Salvataggio aiuti alla guida ---- */
+assistsForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#save-assists-btn');
+  btn.disabled = true;
+  const payload = {
+    assist_abs: Number(assistsForm.elements.assist_abs.value) ? 1 : 0,
+    assist_tc: assistsForm.elements.assist_tc.value || 'off',
+    assist_gearbox: assistsForm.elements.assist_gearbox.value || 'auto',
+  };
+  try {
+    const updated = await api.put('/users/me', payload);
+    me = { ...me, ...updated };
+    toast.success('Aiuti alla guida salvati.');
+  } catch (err) {
+    toast.error(err.message || 'Salvataggio fallito.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---- Richiesta cambio squadra / riserva ---- */
+teamForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#request-change-btn');
+  const teamId = teamForm.team_id.value ? Number(teamForm.team_id.value) : null;
+  const reserve = teamForm.reserve_driver.value || '';
+  btn.disabled = true;
+  try {
+    pendingChange = await api.post('/users/me/change-request', { team_id: teamId, reserve_driver: reserve });
+    renderChangeBanner();
+    toast.success('Richiesta inviata! Un amministratore la esaminerà.', { title: 'In attesa di approvazione' });
+    // Ripristina i select ai valori ATTUALI (il cambio non è ancora applicato).
+    teamForm.team_id.value = me.team_id || '';
+    fillReserve(me.reserve_driver || '');
+  } catch (err) {
+    toast.error(err.message || 'Invio fallito.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('#cancel-change-btn').addEventListener('click', async () => {
+  try {
+    await api.del('/users/me/change-request');
+    pendingChange = null;
+    renderChangeBanner();
+    toast.success('Richiesta annullata.');
+  } catch (err) { toast.error(err.message); }
+});
+
 (async function init() {
   const user = await guard();
   if (!user) return;
@@ -228,9 +318,9 @@ form.addEventListener('submit', async (e) => {
   try {
     me = await api.get(`/users/${user.id}`, {}, { auth: false });
     fillForm(me);
-    wireAssists(form); // collega i controlli segmentati agli input nascosti
-    await loadTeams(me.team_id);
+    await loadTeams(me.team_id, me.reserve_driver);
     await loadHandles();
+    await loadChangeRequest();
   } catch (e) {
     console.error(e);
     toast.error(e.message);

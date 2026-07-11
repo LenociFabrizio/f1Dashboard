@@ -3,6 +3,7 @@
    utente. Da montare in ogni pagina.
    ============================================================= */
 import auth from './auth.js';
+import api from './api.js';
 import { $, $$, el, esc } from './ui.js';
 import { mountCookieBanner } from './cookies.js';
 
@@ -42,9 +43,13 @@ export function mountNavbar() {
 
   const authArea = logged
     ? `
+      ${auth.isAdmin() ? `
+      <a class="nav-bell" id="nav-bell" href="/admin.html#notifications" title="Notifiche" aria-label="Notifiche">
+        🔔<span class="bell-badge" id="bell-badge" hidden>0</span>
+      </a>` : ''}
       <div class="nav-user" id="nav-user">
         <img src="${avatarUrl(user)}" alt="" onerror="this.src='/images/avatars/default.svg'">
-        <span class="nu-name">${esc(user?.display_name || user?.username || 'Pilota')}</span>
+        <span class="nu-name">${esc(user?.display_name || user?.handle || 'Pilota')}</span>
       </div>
       <div class="nav-dropdown" id="nav-dropdown">
         <a href="/driver.html?id=${user?.id}">🏎️ La mia pagina</a>
@@ -99,6 +104,9 @@ export function mountNavbar() {
 
   $('#logout-btn')?.addEventListener('click', () => auth.logout());
 
+  // Campanella notifiche (solo admin): mostra il conteggio degli elementi in sospeso.
+  if (logged && auth.isAdmin()) updateBellBadge();
+
   // Ombra allo scroll
   const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
   onScroll();
@@ -106,6 +114,25 @@ export function mountNavbar() {
 
   // Banner cookie (mostrato una volta, su tutte le pagine con navbar)
   mountCookieBanner();
+}
+
+/**
+ * Aggiorna il badge della campanella admin con il numero di notifiche
+ * in sospeso (richieste di cambio team/riserva + reset password).
+ * Esportata così le sezioni admin possono aggiornarla dopo un'azione.
+ */
+export async function updateBellBadge() {
+  const badge = $('#bell-badge');
+  if (!badge) return;
+  try {
+    const { count } = await api.get('/notifications/count');
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  } catch { badge.hidden = true; }
 }
 
 /**

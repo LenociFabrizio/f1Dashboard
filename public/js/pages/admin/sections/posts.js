@@ -12,13 +12,13 @@ function card(p) {
         ? `<video src="${esc(p.media_url)}" controls style="max-width:180px;border-radius:var(--r-sm)"></video>`
         : `<img src="${esc(p.media_url)}" alt="" style="max-width:180px;border-radius:var(--r-sm)">`)
     : '';
-  const tags = p.tags?.length ? `<div class="text-lo" style="font-size:0.82rem;margin-top:6px">🏷️ ${p.tags.map((t) => '@' + esc(t.username)).join(' ')}</div>` : '';
+  const tags = p.tags?.length ? `<div class="text-lo" style="font-size:0.82rem;margin-top:6px">🏷️ ${p.tags.map((t) => '@' + esc(t.handle || t.display_name)).join(' ')}</div>` : '';
   return `
     <div class="card" style="display:flex;justify-content:space-between;gap:16px;align-items:start">
       <div style="min-width:0;flex:1">
         <div class="flex items-center gap-2">
           <img src="${avatarUrl({ avatar: p.author_avatar })}" onerror="this.src='/images/avatars/default.svg'" style="width:30px;height:30px;border-radius:50%">
-          <div class="text-hi" style="font-weight:700">${esc(p.author_name)} <span class="text-lo" style="font-weight:400">@${esc(p.author_username)}</span></div>
+          <div class="text-hi" style="font-weight:700">${esc(p.author_name)} ${p.author_handle ? `<span class="text-lo" style="font-weight:400">@${esc(p.author_handle)}</span>` : ''}</div>
         </div>
         <div class="text-lo" style="font-size:0.76rem;margin:4px 0">${fmtDate(p.created_at, { withTime: true })}</div>
         ${p.body ? `<p class="text-mid" style="margin:6px 0;line-height:1.6">${esc(p.body)}</p>` : ''}

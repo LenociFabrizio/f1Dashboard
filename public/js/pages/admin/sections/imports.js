@@ -82,7 +82,7 @@ function userOptionSet(currentValue, taken) {
   let html = `<option value="">— non mappato —</option>`;
   for (const u of state.users) {
     if (taken.has(u.id) && String(u.id) !== String(currentValue ?? '')) continue;
-    html += `<option value="${u.id}" ${String(u.id) === String(currentValue ?? '') ? 'selected' : ''}>${esc(u.display_name || u.username)}</option>`;
+    html += `<option value="${u.id}" ${String(u.id) === String(currentValue ?? '') ? 'selected' : ''}>${esc(u.display_name || u.handle)}</option>`;
   }
   return html;
 }

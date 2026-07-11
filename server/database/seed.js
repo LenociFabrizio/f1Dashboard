@@ -124,11 +124,15 @@ async function main() {
   const adminPwd = bcrypt.hashSync('admin123', 10);
 
   const insertUser = db.prepare(
-    `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, favorite_driver, biography, avatar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO users (display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, favorite_driver, biography, avatar)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  // Il nickname di gioco è il nome pubblico "@handle" (handle primario).
+  const insertHandle = db.prepare(
+    `INSERT INTO game_identities (user_id, platform, handle, source, is_primary) VALUES (?, '', ?, 'profile', 1)`
   );
 
-  // [username, display, email, role, team, number, nat, favDriver, bio]
+  // [handle, display, email, role, team, number, nat, favDriver, bio]
   const drivers = [
     ['admin', 'Race Director', 'admin@f1league.it', 'admin', 'Ferrari', 0, 'IT', 'Charles Leclerc', 'Direttore di gara e fondatore della lega.'],
     ['maxpower', 'Max Power', 'max@f1league.it', 'pilota', 'Red Bull Racing', 1, 'NL', 'Max Verstappen', 'Aggressivo in staccata, imbattibile sotto la pioggia.'],
@@ -146,17 +150,18 @@ async function main() {
 
   const userIds = {};
   for (const d of drivers) {
-    const [username, display, email, role, team, num, nat, fav, bio] = d;
+    const [handle, display, email, role, team, num, nat, fav, bio] = d;
     const sp = display.indexOf(' ');
     const firstName = sp === -1 ? display : display.slice(0, sp);
     const lastName = sp === -1 ? '' : display.slice(sp + 1);
     const info = await insertUser.run(
-      username, display, firstName, lastName, email,
+      display, firstName, lastName, email,
       role === 'admin' ? adminPwd : pwd,
       role, teamIds[team], num, nat, fav, bio,
       `/images/avatars/default.svg`
     );
-    userIds[username] = info.lastInsertRowid;
+    userIds[handle] = info.lastInsertRowid;
+    await insertHandle.run(info.lastInsertRowid, handle);
   }
 
   // Alcuni piloti hanno un pilota di riserva (bot) assegnato

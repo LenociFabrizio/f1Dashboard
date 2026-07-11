@@ -133,7 +133,7 @@ function render(user, stats) {
           <h1 style="margin:2px 0">${esc(user.display_name)}</h1>
           <div class="flex items-center gap-3 wrap text-lo">
             <span class="team-tag"><span class="dot" style="background:${teamColor}"></span>${esc(user.team_name || 'Nessun team')}</span>
-            <span>@${esc(user.username)}</span>
+            ${user.handle ? `<span>@${esc(user.handle)}</span>` : ''}
             <span class="role-pill ${user.role === 'admin' ? 'admin' : ''}">${user.role === 'admin' ? 'Admin' : 'Pilota'}</span>
           </div>
           ${user.favorite_driver ? `<div class="text-lo" style="margin-top:8px">Idolo: <strong class="text-mid">${esc(user.favorite_driver)}</strong></div>` : ''}

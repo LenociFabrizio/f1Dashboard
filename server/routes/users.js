@@ -16,10 +16,16 @@ router.put('/me', requireAuth, users.updateMe);
 router.post('/me/avatar', requireAuth, upload.single('avatar'), users.uploadAvatar);
 router.delete('/me', requireAuth, users.deleteMe);
 
-// Handle di gioco F1 25 (per l'import automatico della telemetria)
+// Handle di gioco F1 25 (per l'import automatico della telemetria + nome pubblico "@handle")
 router.get('/me/handles', requireAuth, users.listMyHandles);
 router.post('/me/handles', requireAuth, users.addMyHandle);
+router.put('/me/handles/:hid/primary', requireAuth, users.setPrimaryHandle);
 router.delete('/me/handles/:hid', requireAuth, users.deleteMyHandle);
+
+// Richieste di cambio team / pilota di riserva (approvazione admin)
+router.get('/me/change-request', requireAuth, users.getMyChangeRequest);
+router.post('/me/change-request', requireAuth, users.createChangeRequest);
+router.delete('/me/change-request', requireAuth, users.cancelMyChangeRequest);
 
 router.get('/', users.listUsers);
 router.get('/reserved', users.listReservedDrivers);

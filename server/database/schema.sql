@@ -13,7 +13,8 @@
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  username          TEXT    NOT NULL UNIQUE,
+  -- Il nome pubblico "@handle" è il nickname di gioco PRIMARIO (game_identities.is_primary).
+  -- Lo storico "username" è stato rimosso: login solo via email.
   display_name      TEXT    NOT NULL,          -- derivato: "Nome Cognome"
   first_name        TEXT    DEFAULT '',        -- nome
   last_name         TEXT    DEFAULT '',        -- cognome
@@ -236,10 +237,35 @@ CREATE TABLE IF NOT EXISTS game_identities (
   platform      TEXT    DEFAULT '',        -- 'steam' | 'psn' | 'xbox' | 'origin' | ''
   handle        TEXT    NOT NULL,          -- nickname di gioco (Participants.m_name)
   source        TEXT    NOT NULL DEFAULT 'alias', -- 'profile' | 'alias'
+  is_primary    INTEGER NOT NULL DEFAULT 0,  -- 1 = handle pubblico "@handle" (max uno per utente)
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE (platform, handle)
 );
+
+-- ------------------------------------------------------------
+--  RICHIESTE DI CAMBIO (team / pilota di riserva)
+--  L'utente richiede dal profilo il cambio di squadra e/o del pilota
+--  di riserva (BOT). La richiesta resta 'pending': i valori attuali
+--  dell'utente NON cambiano finché l'admin non approva. Alla conferma
+--  l'admin applica i valori richiesti su users.
+--  Regola applicativa: una sola richiesta 'pending' per utente.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS change_requests (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id           INTEGER NOT NULL,
+  requested_team_id INTEGER,          -- NULL = nessun cambio team
+  requested_reserve TEXT,             -- NULL = nessun cambio riserva
+  status            TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
+  note              TEXT DEFAULT '',
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at       TEXT,
+  resolved_by       INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (requested_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+  FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_change_requests_status ON change_requests(status);
 
 -- ------------------------------------------------------------
 --  SESSIONI CATTURATE (staging telemetria)

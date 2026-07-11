@@ -7,7 +7,7 @@
  */
 import bcrypt from 'bcryptjs';
 import db from '../database/db.js';
-import { asyncHandler, HttpError, sanitizeUser, fullName } from '../utils/helpers.js';
+import { asyncHandler, HttpError, sanitizeUser, fullName, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
 import { ROLES } from '../utils/constants.js';
 import { persistUpload } from '../middleware/upload.js';
 
@@ -32,10 +32,11 @@ async function reserveTaken(name, exceptId = null) {
 export const listUsers = asyncHandler(async (_req, res) => {
   const users = await db
     .prepare(
-      `SELECT u.id, u.username, u.display_name, u.first_name, u.last_name, u.avatar, u.nationality, u.favorite_number,
+      `SELECT u.id, ${HANDLE_SELECT}, u.display_name, u.first_name, u.last_name, u.avatar, u.nationality, u.favorite_number,
               u.role, u.biography, u.favorite_driver, u.reserve_driver, u.team_id, u.created_at,
               t.name AS team_name, t.color AS team_color
          FROM users u
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
         WHERE u.is_active = 1
         ORDER BY u.display_name COLLATE NOCASE`
@@ -48,8 +49,10 @@ export const listUsers = asyncHandler(async (_req, res) => {
 export const getUser = asyncHandler(async (req, res) => {
   const user = await db
     .prepare(
-      `SELECT u.*, t.name AS team_name, t.color AS team_color, t.logo AS team_logo
-         FROM users u LEFT JOIN teams t ON t.id = u.team_id
+      `SELECT u.*, ${HANDLE_SELECT}, t.name AS team_name, t.color AS team_color, t.logo AS team_logo
+         FROM users u
+         ${PRIMARY_HANDLE_JOIN}
+         LEFT JOIN teams t ON t.id = u.team_id
         WHERE u.id = ?`
     )
     .get(req.params.id);
@@ -64,10 +67,11 @@ export const getUser = asyncHandler(async (req, res) => {
 });
 
 // Campi che l'utente può modificare del proprio profilo
-// (display_name è derivato da first_name + last_name, non modificabile direttamente)
+// (display_name è derivato da first_name + last_name, non modificabile direttamente;
+//  team_id e reserve_driver NON sono qui: passano dal flusso di approvazione admin)
 const EDITABLE_FIELDS = [
   'first_name', 'last_name', 'email', 'nationality', 'favorite_number',
-  'favorite_driver', 'reserve_driver', 'biography', 'avatar', 'team_id',
+  'favorite_driver', 'biography', 'avatar',
   'assist_abs', 'assist_tc', 'assist_gearbox',
 ];
 
@@ -86,15 +90,6 @@ export const updateMe = asyncHandler(async (req, res) => {
   const updates = {};
   for (const f of EDITABLE_FIELDS) {
     if (req.body[f] !== undefined) updates[f] = req.body[f];
-  }
-
-  // Cambio username (nickname) con controllo di univocità.
-  if (req.body.username !== undefined) {
-    const uname = String(req.body.username).trim();
-    if (!uname) throw new HttpError(400, 'Username non valido');
-    const taken = await db.prepare('SELECT id FROM users WHERE username = ? AND id <> ?').get(uname, req.user.id);
-    if (taken) throw new HttpError(409, 'Username già in uso');
-    updates.username = uname;
   }
 
   // Cambio password opzionale
@@ -177,7 +172,7 @@ export const deleteMe = asyncHandler(async (req, res) => {
 /** GET /api/users/me/handles — elenco dei propri handle di gioco */
 export const listMyHandles = asyncHandler(async (req, res) => {
   const rows = await db
-    .prepare('SELECT id, platform, handle, source, created_at FROM game_identities WHERE user_id = ? ORDER BY created_at')
+    .prepare('SELECT id, platform, handle, source, is_primary, created_at FROM game_identities WHERE user_id = ? ORDER BY is_primary DESC, created_at')
     .all(req.user.id);
   res.json(rows);
 });
@@ -202,22 +197,120 @@ export const addMyHandle = asyncHandler(async (req, res) => {
   if (existing && existing.user_id !== req.user.id) {
     throw new HttpError(409, 'Questo handle è già associato a un altro pilota');
   }
+  // Il primo handle dell'utente diventa automaticamente il PRIMARIO (nome pubblico).
+  const hasAny = await db.prepare('SELECT id FROM game_identities WHERE user_id = ?').get(req.user.id);
+  const isPrimary = hasAny ? 0 : 1;
   await db
-    .prepare(`INSERT INTO game_identities (user_id, platform, handle, source)
-              VALUES (?, ?, ?, 'profile')
+    .prepare(`INSERT INTO game_identities (user_id, platform, handle, source, is_primary)
+              VALUES (?, ?, ?, 'profile', ?)
               ON CONFLICT (platform, handle) DO UPDATE SET user_id = excluded.user_id, source = 'profile'`)
-    .run(req.user.id, platform, handle);
-  const rows = await db.prepare('SELECT id, platform, handle, source, created_at FROM game_identities WHERE user_id = ? ORDER BY created_at').all(req.user.id);
+    .run(req.user.id, platform, handle, isPrimary);
+  const rows = await db.prepare('SELECT id, platform, handle, source, is_primary, created_at FROM game_identities WHERE user_id = ? ORDER BY is_primary DESC, created_at').all(req.user.id);
   res.status(201).json(rows);
+});
+
+/** PUT /api/users/me/handles/:hid/primary — imposta l'handle come nome pubblico "@handle" */
+export const setPrimaryHandle = asyncHandler(async (req, res) => {
+  const hid = Number(req.params.hid);
+  const own = await db.prepare('SELECT id FROM game_identities WHERE id = ? AND user_id = ?').get(hid, req.user.id);
+  if (!own) throw new HttpError(404, 'Handle non trovato');
+  await db.raw.batch(
+    [
+      { sql: 'UPDATE game_identities SET is_primary = 0 WHERE user_id = ?', args: [req.user.id] },
+      { sql: 'UPDATE game_identities SET is_primary = 1 WHERE id = ? AND user_id = ?', args: [hid, req.user.id] },
+    ],
+    'write'
+  );
+  const rows = await db.prepare('SELECT id, platform, handle, source, is_primary, created_at FROM game_identities WHERE user_id = ? ORDER BY is_primary DESC, created_at').all(req.user.id);
+  res.json(rows);
 });
 
 /** DELETE /api/users/me/handles/:hid — rimuove un proprio handle */
 export const deleteMyHandle = asyncHandler(async (req, res) => {
-  const info = await db
-    .prepare('DELETE FROM game_identities WHERE id = ? AND user_id = ?')
-    .run(Number(req.params.hid), req.user.id);
-  if (!info.changes) throw new HttpError(404, 'Handle non trovato');
+  const target = await db
+    .prepare('SELECT id, is_primary FROM game_identities WHERE id = ? AND user_id = ?')
+    .get(Number(req.params.hid), req.user.id);
+  if (!target) throw new HttpError(404, 'Handle non trovato');
+  await db.prepare('DELETE FROM game_identities WHERE id = ? AND user_id = ?').run(target.id, req.user.id);
+  // Se ho eliminato il primario, promuovo il più vecchio rimasto.
+  if (target.is_primary) {
+    const next = await db
+      .prepare('SELECT id FROM game_identities WHERE user_id = ? ORDER BY created_at LIMIT 1')
+      .get(req.user.id);
+    if (next) await db.prepare('UPDATE game_identities SET is_primary = 1 WHERE id = ?').run(next.id);
+  }
   res.json({ message: 'Handle rimosso' });
+});
+
+// ---------------------- RICHIESTE DI CAMBIO TEAM / RISERVA ----------------------
+// L'utente richiede il cambio di squadra e/o pilota di riserva: la modifica
+// resta 'pending' finché l'admin non la approva (i valori attuali non cambiano).
+
+/** GET /api/users/me/change-request — la propria richiesta in sospeso (o null) */
+export const getMyChangeRequest = asyncHandler(async (req, res) => {
+  const row = await db
+    .prepare(
+      `SELECT cr.*, t.name AS requested_team_name
+         FROM change_requests cr
+         LEFT JOIN teams t ON t.id = cr.requested_team_id
+        WHERE cr.user_id = ? AND cr.status = 'pending'
+        ORDER BY cr.created_at DESC LIMIT 1`
+    )
+    .get(req.user.id);
+  res.json(row || null);
+});
+
+/** POST /api/users/me/change-request — crea/aggiorna la richiesta di cambio */
+export const createChangeRequest = asyncHandler(async (req, res) => {
+  const me = await db.prepare('SELECT team_id, reserve_driver FROM users WHERE id = ?').get(req.user.id);
+
+  // Team richiesto (NULL = nessun cambio). '' o valore uguale all'attuale = nessun cambio.
+  let requestedTeam = req.body.team_id === undefined || req.body.team_id === null || req.body.team_id === ''
+    ? null
+    : Number(req.body.team_id);
+  if (requestedTeam !== null) {
+    const team = await db.prepare('SELECT id FROM teams WHERE id = ? AND is_active = 1').get(requestedTeam);
+    if (!team) throw new HttpError(400, 'Scuderia non valida');
+    if (requestedTeam === me.team_id) requestedTeam = null; // nessun cambio effettivo
+  }
+
+  // Riserva richiesta (NULL = nessun cambio).
+  let requestedReserve = req.body.reserve_driver === undefined ? null : String(req.body.reserve_driver || '').trim();
+  if (requestedReserve === '' || requestedReserve === me.reserve_driver) requestedReserve = null;
+  if (requestedReserve && (await reserveTaken(requestedReserve, req.user.id))) {
+    throw new HttpError(409, 'Questo pilota di riserva è già assegnato a un altro utente');
+  }
+
+  if (requestedTeam === null && requestedReserve === null) {
+    throw new HttpError(400, 'Nessuna modifica richiesta rispetto ai valori attuali');
+  }
+
+  // Una sola richiesta pending per utente: sostituiamo l'eventuale precedente.
+  await db.prepare("DELETE FROM change_requests WHERE user_id = ? AND status = 'pending'").run(req.user.id);
+  await db
+    .prepare(
+      `INSERT INTO change_requests (user_id, requested_team_id, requested_reserve)
+       VALUES (?, ?, ?)`
+    )
+    .run(req.user.id, requestedTeam, requestedReserve);
+
+  const row = await db
+    .prepare(
+      `SELECT cr.*, t.name AS requested_team_name
+         FROM change_requests cr LEFT JOIN teams t ON t.id = cr.requested_team_id
+        WHERE cr.user_id = ? AND cr.status = 'pending' ORDER BY cr.created_at DESC LIMIT 1`
+    )
+    .get(req.user.id);
+  res.status(201).json(row);
+});
+
+/** DELETE /api/users/me/change-request — annulla la propria richiesta pending */
+export const cancelMyChangeRequest = asyncHandler(async (req, res) => {
+  const info = await db
+    .prepare("DELETE FROM change_requests WHERE user_id = ? AND status = 'pending'")
+    .run(req.user.id);
+  if (!info.changes) throw new HttpError(404, 'Nessuna richiesta in sospeso');
+  res.json({ message: 'Richiesta annullata' });
 });
 
 // ---------------------- ADMIN: richieste di reset password ----------------------
@@ -229,9 +322,10 @@ export const listResetRequests = asyncHandler(async (_req, res) => {
   const rows = await db
     .prepare(
       `SELECT pr.id, pr.token_plain AS token, pr.created_at, pr.expires_at,
-              u.id AS user_id, u.display_name, u.username, u.email
+              u.id AS user_id, u.display_name, ${HANDLE_SELECT}, u.email
          FROM password_resets pr
          JOIN users u ON u.id = pr.user_id
+         ${PRIMARY_HANDLE_JOIN}
         WHERE pr.used_at IS NULL AND pr.expires_at > datetime('now') AND pr.token_plain IS NOT NULL
         ORDER BY pr.created_at DESC`
     )
@@ -255,7 +349,8 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   const target = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!target) throw new HttpError(404, 'Utente non trovato');
 
-  const allowed = [...EDITABLE_FIELDS, 'role', 'is_active', 'username'];
+  // L'admin può modificare direttamente anche team e riserva (bypassa l'approvazione).
+  const allowed = [...EDITABLE_FIELDS, 'team_id', 'reserve_driver', 'role', 'is_active'];
   const updates = {};
   for (const f of allowed) if (req.body[f] !== undefined) updates[f] = req.body[f];
   if (req.body.password) updates.password_hash = await bcrypt.hash(req.body.password, 10);
@@ -276,12 +371,20 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
 
 /** POST /api/users  (admin) — crea utente/pilota manualmente */
 export const adminCreateUser = asyncHandler(async (req, res) => {
-  const { username, first_name, last_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =
+  const { first_name, last_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =
     req.body;
-  if (!username) throw new HttpError(400, 'Username obbligatorio');
-  const display_name = fullName(first_name, last_name) || username;
-  const exists = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-  if (exists) throw new HttpError(409, 'Username già esistente');
+  const handle = String(req.body.handle || '').trim();
+  const platform = String(req.body.platform || '').trim();
+  if (!handle) throw new HttpError(400, 'Nickname di gioco (handle) obbligatorio');
+  const display_name = fullName(first_name, last_name) || handle;
+  if (email) {
+    const exists = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (exists) throw new HttpError(409, 'Email già esistente');
+  }
+  const handleExists = await db
+    .prepare('SELECT id FROM game_identities WHERE platform = ? AND handle = ?')
+    .get(platform, handle);
+  if (handleExists) throw new HttpError(409, 'Questo nickname di gioco è già in uso');
   if (reserve_driver && (await reserveTaken(reserve_driver))) {
     throw new HttpError(409, 'Pilota di riserva già assegnato a un altro utente');
   }
@@ -289,11 +392,10 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   const hash = password ? await bcrypt.hash(password, 10) : null;
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, reserve_driver)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (display_name, first_name, last_name, email, password_hash, role, team_id, favorite_number, nationality, reserve_driver)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
-      username,
       display_name,
       (first_name || '').trim(),
       (last_name || '').trim(),
@@ -305,8 +407,15 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
       nationality || 'IT',
       reserve_driver || null
     );
+  // Nickname di gioco come handle PRIMARIO (nome pubblico "@handle").
+  await db
+    .prepare(
+      `INSERT INTO game_identities (user_id, platform, handle, source, is_primary)
+       VALUES (?, ?, ?, 'profile', 1)`
+    )
+    .run(info.lastInsertRowid, platform, handle);
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
-  res.status(201).json(sanitizeUser(user));
+  res.status(201).json({ ...sanitizeUser(user), handle });
 });
 
 /** DELETE /api/users/:id (admin) — elimina definitivamente l'utente e i suoi dati */

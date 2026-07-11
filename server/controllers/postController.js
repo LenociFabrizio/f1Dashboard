@@ -14,17 +14,18 @@
  */
 import { handleUpload } from '@vercel/blob/client';
 import db from '../database/db.js';
-import { asyncHandler, HttpError } from '../utils/helpers.js';
+import { asyncHandler, HttpError, PRIMARY_HANDLE_JOIN } from '../utils/helpers.js';
 import { verifyToken } from '../utils/jwt.js';
 import { persistUpload } from '../middleware/upload.js';
 import { ROLES } from '../utils/constants.js';
 
 const POST_SELECT = `
   SELECT p.id, p.author_id, p.body, p.media_url, p.media_type, p.created_at,
-         u.display_name AS author_name, u.username AS author_username,
+         u.display_name AS author_name, gph.handle AS author_handle,
          u.avatar AS author_avatar, t.name AS author_team, t.color AS author_team_color
     FROM posts p
     JOIN users u ON u.id = p.author_id
+    ${PRIMARY_HANDLE_JOIN}
     LEFT JOIN teams t ON t.id = u.team_id`;
 
 /** Allega a ogni post l'elenco degli utenti taggati. */
@@ -34,15 +35,17 @@ async function attachTags(posts) {
   const placeholders = ids.map(() => '?').join(',');
   const tags = await db
     .prepare(
-      `SELECT pt.post_id, pt.user_id, u.display_name, u.username
-         FROM post_tags pt JOIN users u ON u.id = pt.user_id
+      `SELECT pt.post_id, pt.user_id, u.display_name, gph.handle
+         FROM post_tags pt
+         JOIN users u ON u.id = pt.user_id
+         ${PRIMARY_HANDLE_JOIN}
         WHERE pt.post_id IN (${placeholders})`
     )
     .all(...ids);
   const byPost = new Map();
   for (const t of tags) {
     if (!byPost.has(t.post_id)) byPost.set(t.post_id, []);
-    byPost.get(t.post_id).push({ user_id: t.user_id, display_name: t.display_name, username: t.username });
+    byPost.get(t.post_id).push({ user_id: t.user_id, display_name: t.display_name, handle: t.handle });
   }
   return posts.map((p) => ({ ...p, tags: byPost.get(p.id) || [] }));
 }

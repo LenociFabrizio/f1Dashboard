@@ -1,5 +1,5 @@
 /* =============================================================
-   login.js — Login classico (email/username) + reset mock
+   login.js — Login classico (solo email) + reset mock
    ============================================================= */
 import api from '../core/api.js';
 import auth from '../core/auth.js';
@@ -34,7 +34,7 @@ form.addEventListener('submit', async (e) => {
   setLoading(submitBtn, true, 'Accedi');
   try {
     const user = await auth.login(identifier, password);
-    toast.success(`Bentornato, ${user.display_name || user.username}!`, { title: 'Accesso riuscito' });
+    toast.success(`Bentornato, ${user.display_name || user.handle || 'pilota'}!`, { title: 'Accesso riuscito' });
     setTimeout(() => (location.href = nextUrl()), 500);
   } catch (err) {
     toast.error(err.message || 'Credenziali non valide.', { title: 'Accesso fallito' });

@@ -95,7 +95,7 @@ function validate(fd) {
   const req = (name, cond) => { markInvalid(name, !cond); if (!cond) ok = false; };
   req('first_name', !!fd.get('first_name')?.trim());
   req('last_name', !!fd.get('last_name')?.trim());
-  req('username', !!fd.get('username')?.trim());
+  req('handle', !!fd.get('handle')?.trim());
   req('email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.get('email') || ''));
   req('password', (fd.get('password') || '').length >= 6);
   req('password2', fd.get('password') === fd.get('password2'));
@@ -120,7 +120,8 @@ form.addEventListener('submit', async (e) => {
   submitBtn.innerHTML = '<span class="spinner sm"></span> Creazione…';
   try {
     const user = await auth.register({
-      username: fd.get('username').trim(),
+      handle: fd.get('handle').trim(),
+      platform: fd.get('platform') || '',
       first_name: fd.get('first_name').trim(),
       last_name: fd.get('last_name').trim(),
       email: fd.get('email').trim(),
@@ -144,7 +145,7 @@ form.addEventListener('submit', async (e) => {
         toast.warning('Account creato, ma l\'avatar non è stato caricato. Riprova dal profilo.');
       }
     }
-    toast.success(`Benvenuto in pista, ${user.display_name || user.username}!`, { title: 'Account creato' });
+    toast.success(`Benvenuto in pista, ${user.display_name || user.handle}!`, { title: 'Account creato' });
     setTimeout(() => (location.href = '/profile.html'), 600);
   } catch (err) {
     toast.error(err.message || 'Registrazione fallita.', { title: 'Errore' });

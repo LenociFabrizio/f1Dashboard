@@ -77,7 +77,7 @@ function render(data, me) {
       <div class="flex items-center gap-4 wrap">
         <img src="${avatarUrl(me)}" onerror="this.src='/images/avatars/default.svg'" class="avatar lg" style="border-color:${me.team_color || 'var(--f1-red)'}">
         <div>
-          <h1 style="margin:0">Ciao, ${esc(me.display_name || me.username)}</h1>
+          <h1 style="margin:0">Ciao, ${esc(me.display_name || me.handle || 'pilota')}</h1>
           <p class="text-lo" style="margin:4px 0 0">Ecco il riepilogo della tua stagione.</p>
         </div>
         <a href="/profile.html" class="btn ghost sm" style="margin-left:auto">Modifica profilo</a>
@@ -124,7 +124,7 @@ function render(data, me) {
   mountChrome();
   try {
     const data = await api.get('/dashboard/me');
-    document.title = `Dashboard · ${me.display_name || me.username} · Lega F1`;
+    document.title = `Dashboard · ${me.display_name || me.handle || 'Pilota'} · Lega F1`;
     render(data, { ...me, ...(data.myStanding || {}) });
   } catch (e) {
     console.error(e);

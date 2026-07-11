@@ -6,7 +6,7 @@
  * ------------------------------------------------------------
  */
 import db from '../database/db.js';
-import { asyncHandler, HttpError } from '../utils/helpers.js';
+import { asyncHandler, HttpError, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
 import { persistUpload } from '../middleware/upload.js';
 
 /** Query di base per una gara con dati circuito. */
@@ -58,11 +58,12 @@ export const getRace = asyncHandler(async (req, res) => {
 
   race.results = await db
     .prepare(
-      `SELECT r.*, u.display_name, u.username, u.avatar, u.nationality,
+      `SELECT r.*, u.display_name, ${HANDLE_SELECT}, u.avatar, u.nationality,
               u.assist_abs, u.assist_tc, u.assist_gearbox,
               t.name AS team_name, t.color AS team_color
          FROM results r
          JOIN users u ON u.id = r.user_id
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
         WHERE r.race_id = ?
         ORDER BY (r.dnf), (r.position IS NULL), r.position ASC`
@@ -89,9 +90,10 @@ export const getRaceLaps = asyncHandler(async (req, res) => {
   const rows = await db
     .prepare(
       `SELECT lt.user_id, lt.lap, lt.lap_time_ms, lt.sector1_ms, lt.sector2_ms, lt.sector3_ms, lt.valid,
-              u.display_name, u.username, u.avatar, t.color AS team_color
+              u.display_name, ${HANDLE_SELECT}, u.avatar, t.color AS team_color
          FROM lap_times lt
          JOIN users u ON u.id = lt.user_id
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
         WHERE lt.race_id = ?
         ORDER BY u.display_name COLLATE NOCASE, lt.lap`
@@ -104,7 +106,7 @@ export const getRaceLaps = asyncHandler(async (req, res) => {
       byUser.set(r.user_id, {
         user_id: r.user_id,
         display_name: r.display_name,
-        username: r.username,
+        handle: r.handle,
         avatar: r.avatar,
         team_color: r.team_color,
         laps: [],
@@ -128,9 +130,10 @@ export const getRaceTraces = asyncHandler(async (req, res) => {
   const rows = await db
     .prepare(
       `SELECT lt.user_id, lt.lap, lt.best_lap_time_ms, lt.points,
-              u.display_name, u.username, u.avatar, t.color AS team_color
+              u.display_name, ${HANDLE_SELECT}, u.avatar, t.color AS team_color
          FROM lap_traces lt
          JOIN users u ON u.id = lt.user_id
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
         WHERE lt.race_id = ?
         ORDER BY lt.best_lap_time_ms ASC`
@@ -143,7 +146,7 @@ export const getRaceTraces = asyncHandler(async (req, res) => {
     return {
       user_id: r.user_id,
       display_name: r.display_name,
-      username: r.username,
+      handle: r.handle,
       avatar: r.avatar,
       team_color: r.team_color,
       lap: r.lap,

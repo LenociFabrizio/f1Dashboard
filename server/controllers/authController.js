@@ -21,17 +21,23 @@ import { sendPasswordResetEmail } from '../utils/mailer.js';
 /** SHA-256 (hex) del token di reset: nel DB salviamo solo l'hash. */
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-/** Crea la risposta standard con token + utente. */
-function authResponse(res, user) {
+/** Crea la risposta standard con token + utente (con handle pubblico). */
+async function authResponse(res, user) {
   const token = signToken({ id: user.id, role: user.role });
-  res.json({ token, user: sanitizeUser(user) });
+  const primary = await db
+    .prepare('SELECT handle FROM game_identities WHERE user_id = ? AND is_primary = 1')
+    .get(user.id);
+  res.json({ token, user: { ...sanitizeUser(user), handle: primary?.handle || null } });
 }
 
 /** POST /api/auth/register */
 export const register = asyncHandler(async (req, res) => {
-  const { username, first_name, last_name, email, password, team_id, reserve_driver } = req.body;
-  if (!username || !password || !email) {
-    throw new HttpError(400, 'Username, email e password sono obbligatori');
+  const { first_name, last_name, email, password, team_id, reserve_driver } = req.body;
+  // Il nome pubblico "@handle" è il nickname di gioco (F1 25): obbligatorio.
+  const handle = String(req.body.handle || '').trim();
+  const platform = String(req.body.platform || '').trim();
+  if (!handle || !password || !email) {
+    throw new HttpError(400, 'Nickname di gioco, email e password sono obbligatori');
   }
   // Aiuti alla guida dichiarati (opzionali): normalizzati a valori noti.
   const assist_abs = req.body.assist_abs ? 1 : 0;
@@ -44,10 +50,13 @@ export const register = asyncHandler(async (req, res) => {
     throw new HttpError(400, 'Scuderia e pilota di riserva (BOT) sono obbligatori');
   }
   const display_name = fullName(first_name, last_name);
-  const exists = await db
-    .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
-    .get(username, email);
-  if (exists) throw new HttpError(409, 'Username o email già registrati');
+  const emailExists = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (emailExists) throw new HttpError(409, 'Email già registrata');
+  // Il nickname di gioco è univoco per piattaforma.
+  const handleExists = await db
+    .prepare('SELECT id FROM game_identities WHERE platform = ? AND handle = ?')
+    .get(platform, handle);
+  if (handleExists) throw new HttpError(409, 'Questo nickname di gioco è già in uso');
 
   // Il pilota di riserva (BOT) è assegnabile a un solo utente
   const reservedBy = await db
@@ -58,29 +67,38 @@ export const register = asyncHandler(async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const info = await db
     .prepare(
-      `INSERT INTO users (username, display_name, first_name, last_name, email, password_hash, role, provider, team_id, reserve_driver, assist_abs, assist_tc, assist_gearbox)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (display_name, first_name, last_name, email, password_hash, role, provider, team_id, reserve_driver, assist_abs, assist_tc, assist_gearbox)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, display_name || username, first_name.trim(), last_name.trim(), email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null, assist_abs, assist_tc, assist_gearbox);
+    .run(display_name || handle, first_name.trim(), last_name.trim(), email, hash, ROLES.PILOTA, PROVIDERS.LOCAL, team_id || null, reserve_driver || null, assist_abs, assist_tc, assist_gearbox);
+
+  // Registra il nickname di gioco come handle PRIMARIO (nome pubblico + telemetria).
+  await db
+    .prepare(
+      `INSERT INTO game_identities (user_id, platform, handle, source, is_primary)
+       VALUES (?, ?, ?, 'profile', 1)`
+    )
+    .run(info.lastInsertRowid, platform, handle);
 
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
-  authResponse(res, user);
+  await authResponse(res, user);
 });
 
-/** POST /api/auth/login  (email/username + password) */
+/** POST /api/auth/login  (email + password) */
 export const login = asyncHandler(async (req, res) => {
-  const { identifier, password } = req.body; // identifier = email o username
-  if (!identifier || !password) throw new HttpError(400, 'Credenziali mancanti');
+  const { identifier, password } = req.body; // identifier = email
+  const email = String(identifier || '').trim();
+  if (!email || !password) throw new HttpError(400, 'Credenziali mancanti');
 
   const user = await db
-    .prepare('SELECT * FROM users WHERE (email = ? OR username = ?) AND is_active = 1')
-    .get(identifier, identifier);
+    .prepare('SELECT * FROM users WHERE email = ? AND is_active = 1')
+    .get(email);
 
   if (!user || !user.password_hash) throw new HttpError(401, 'Credenziali non valide');
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) throw new HttpError(401, 'Credenziali non valide');
 
-  authResponse(res, user);
+  await authResponse(res, user);
 });
 
 /**
@@ -100,21 +118,25 @@ function mockOAuthLogin(provider) {
       .get(provider, providerId);
 
     if (!user) {
-      // Genera username unico
-      let username = gamertag.replace(/[^a-z0-9_]/gi, '').toLowerCase() || `${provider}user`;
-      const clash = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-      if (clash) username = `${username}_${Date.now().toString().slice(-4)}`;
-
       const info = await db
         .prepare(
-          `INSERT INTO users (username, display_name, role, provider, provider_id, avatar)
-           VALUES (?, ?, ?, ?, ?, ?)`
+          `INSERT INTO users (display_name, role, provider, provider_id, avatar)
+           VALUES (?, ?, ?, ?, ?)`
         )
-        .run(username, gamertag, ROLES.PILOTA, provider, providerId, '/images/avatars/default.svg');
+        .run(gamertag, ROLES.PILOTA, provider, providerId, '/images/avatars/default.svg');
       user = await db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+      // Il gamertag diventa il nickname di gioco primario (nome pubblico "@handle").
+      const platform = provider === PROVIDERS.PSN ? 'playstation' : 'origin';
+      await db
+        .prepare(
+          `INSERT INTO game_identities (user_id, platform, handle, source, is_primary)
+           VALUES (?, ?, ?, 'profile', 1)
+           ON CONFLICT (platform, handle) DO NOTHING`
+        )
+        .run(user.id, platform, gamertag);
     }
 
-    authResponse(res, user);
+    await authResponse(res, user);
   });
 }
 
@@ -163,7 +185,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   let sent = { delivered: false };
   try {
-    sent = await sendPasswordResetEmail(user.email, resetUrl, user.display_name || user.username);
+    sent = await sendPasswordResetEmail(user.email, resetUrl, user.display_name);
   } catch (err) {
     console.error('Invio email reset fallito:', err.message);
   }

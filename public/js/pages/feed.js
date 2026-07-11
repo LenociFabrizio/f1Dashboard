@@ -13,7 +13,7 @@ mountChrome();
 
 const me = auth.user;
 let allUsers = [];           // per il tag picker
-const selectedTags = new Map(); // user_id -> {id, display_name, username}
+const selectedTags = new Map(); // user_id -> {id, display_name, handle}
 let pendingMedia = null;     // { url, type } dopo l'upload
 
 /* ---------------- Upload media ---------------- */
@@ -114,7 +114,7 @@ function renderChips() {
   if (!box) return;
   box.innerHTML = [...selectedTags.values()]
     .map(
-      (u) => `<span class="tag-chip">@${esc(u.username)}
+      (u) => `<span class="tag-chip">@${esc(u.handle || u.display_name)}
         <button type="button" data-untag="${u.id}" aria-label="Rimuovi">&times;</button></span>`
     )
     .join('');
@@ -130,13 +130,13 @@ function renderTagResults(term) {
   if (!q) { list.innerHTML = ''; list.classList.remove('open'); return; }
   const matches = allUsers
     .filter((u) => u.id !== me?.id && !selectedTags.has(u.id))
-    .filter((u) => u.display_name.toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q))
+    .filter((u) => u.display_name.toLowerCase().includes(q) || (u.handle || '').toLowerCase().includes(q))
     .slice(0, 6);
   list.innerHTML = matches.length
     ? matches.map((u) => `
         <button type="button" class="tag-opt" data-tag="${u.id}">
           <img src="${avatarUrl(u)}" onerror="this.src='/images/avatars/default.svg'" alt="">
-          <span><strong>${esc(u.display_name)}</strong> <span class="text-lo">@${esc(u.username)}</span></span>
+          <span><strong>${esc(u.display_name)}</strong> ${u.handle ? `<span class="text-lo">@${esc(u.handle)}</span>` : ''}</span>
         </button>`).join('')
     : '<div class="tag-opt text-lo" style="cursor:default">Nessun pilota trovato</div>';
   list.classList.add('open');
@@ -307,7 +307,7 @@ function mediaBlock(p) {
 function tagsBlock(p) {
   if (!p.tags?.length) return '';
   return `<div class="post-tags">🏷️ ${p.tags
-    .map((t) => `<a href="/driver.html?id=${t.user_id}">@${esc(t.username)}</a>`)
+    .map((t) => `<a href="/driver.html?id=${t.user_id}">@${esc(t.handle || t.display_name)}</a>`)
     .join(' ')}</div>`;
 }
 
@@ -321,7 +321,7 @@ function postCard(p) {
           <img src="${avatarUrl({ avatar: p.author_avatar })}" onerror="this.src='/images/avatars/default.svg'" alt="" style="border:2px solid ${color}">
           <div>
             <div class="dc-name">${esc(p.author_name)}</div>
-            <div class="dc-sub">@${esc(p.author_username)} · ${fmtDate(p.created_at, { withTime: true })}</div>
+            <div class="dc-sub">${p.author_handle ? `@${esc(p.author_handle)} · ` : ''}${fmtDate(p.created_at, { withTime: true })}</div>
           </div>
         </a>
         ${canDelete ? `<button class="btn ghost sm post-del" data-del="${p.id}" title="Elimina" style="color:var(--danger)">Elimina</button>` : ''}

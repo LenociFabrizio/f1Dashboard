@@ -27,14 +27,14 @@ function resultRowInput(u) {
   // Selettore "chi ha guidato": il titolare oppure il bot di riserva (se assegnato).
   const driverSelect = bot
     ? `<select class="r-driver dc-sub" style="margin-top:4px;max-width:190px;font-size:.8rem">
-         <option value="" ${byBot ? '' : 'selected'}>👤 ${esc(u.display_name || u.username)} (titolare)</option>
+         <option value="" ${byBot ? '' : 'selected'}>👤 ${esc(u.display_name || u.handle)} (titolare)</option>
          <option value="${esc(bot)}" ${byBot ? 'selected' : ''}>🤖 ${esc(bot)} (bot sostituto)</option>
        </select>`
     : `<div class="dc-sub text-dim" title="Nessun bot di riserva assegnato">nessun bot</div>`;
   return `
     <tr data-uid="${u.id}" data-team="${u.team_id ?? ''}">
       <td><input type="checkbox" class="r-in" ${inGara ? 'checked' : ''}></td>
-      <td><span class="text-hi">${esc(u.display_name || u.username)}</span><div class="dc-sub">${esc(u.team_name || '—')}</div>${driverSelect}</td>
+      <td><span class="text-hi">${esc(u.display_name || u.handle)}</span><div class="dc-sub">${esc(u.team_name || '—')}</div>${driverSelect}</td>
       <td><input class="input sm r-grid" type="number" min="1" max="30" value="${ex.grid_position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-pos" type="number" min="1" max="30" value="${ex.position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-gap" placeholder="+0.000" value="${esc(ex.gap ?? '')}" style="width:90px"></td>
@@ -71,7 +71,7 @@ function qualiRowInput(u) {
   return `
     <tr data-uid="${u.id}">
       <td><input type="checkbox" class="q-in" ${ex.user_id != null ? 'checked' : ''}></td>
-      <td><span class="text-hi">${esc(u.display_name || u.username)}</span></td>
+      <td><span class="text-hi">${esc(u.display_name || u.handle)}</span></td>
       <td><input class="input sm q-pos" type="number" min="1" max="30" value="${ex.position ?? ''}" style="width:56px"></td>
       <td><input class="input sm q-time" placeholder="1:23.456" value="${esc(ex.best_time ?? '')}" style="width:110px"></td>
       <td><input class="input sm q-gap" placeholder="+0.123" value="${esc(ex.gap ?? '')}" style="width:90px"></td>
@@ -90,7 +90,7 @@ function collectQualifying() {
 /* ---------- Rendering pagina ---------- */
 function renderEditor(root) {
   const users = state.users.filter((u) => u.role !== 'disabled');
-  const mvpOpts = [{ value: '', label: '— Nessuno —' }, ...users.map((u) => ({ value: u.id, label: u.display_name || u.username }))];
+  const mvpOpts = [{ value: '', label: '— Nessuno —' }, ...users.map((u) => ({ value: u.id, label: u.display_name || u.handle }))];
 
   root.innerHTML = sectionHead(
     'Risultati & Qualifiche',

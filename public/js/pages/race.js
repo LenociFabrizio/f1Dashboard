@@ -58,7 +58,7 @@ function resultRow(r, idx) {
             <div class="dc-name">${esc(r.display_name)}</div>
             ${r.bot_driver && r.bot_driver.trim()
               ? `<div class="dc-sub" title="Ha corso il bot di riserva al posto del titolare">🤖 ${esc(r.bot_driver)} <span class="text-dim">(sostituto)</span></div>`
-              : penalty || `<div class="dc-sub">@${esc(r.username)}</div>`}
+              : penalty || `<div class="dc-sub">${r.handle ? `@${esc(r.handle)}` : ''}</div>`}
           </div>
         </a>
       </td>

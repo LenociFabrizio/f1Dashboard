@@ -42,6 +42,16 @@ export function fullName(first, last) {
   return [first, last].map((s) => (s || '').trim()).filter(Boolean).join(' ');
 }
 
+/**
+ * Frammenti SQL riutilizzabili per esporre il nome pubblico "@handle",
+ * cioè il nickname di gioco PRIMARIO dell'utente (game_identities.is_primary).
+ * Uso: `SELECT ..., ${HANDLE_SELECT} FROM users u ${PRIMARY_HANDLE_JOIN}`.
+ * Richiede che la tabella utenti sia aliasata come `u`.
+ */
+export const PRIMARY_HANDLE_JOIN =
+  'LEFT JOIN game_identities gph ON gph.user_id = u.id AND gph.is_primary = 1';
+export const HANDLE_SELECT = 'gph.handle AS handle';
+
 /** Arrotonda a n decimali restituendo un numero. */
 export function round(value, decimals = 2) {
   if (value === null || value === undefined || isNaN(value)) return 0;

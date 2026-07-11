@@ -6,7 +6,7 @@
  * ------------------------------------------------------------
  */
 import db from '../database/db.js';
-import { asyncHandler } from '../utils/helpers.js';
+import { asyncHandler, PRIMARY_HANDLE_JOIN } from '../utils/helpers.js';
 import { getDriverStandings, getConstructorStandings } from '../services/standingsService.js';
 import { getDriverStats } from '../services/statsService.js';
 
@@ -27,10 +27,11 @@ async function recentPosts(limit = 5) {
   const posts = await db
     .prepare(
       `SELECT p.id, p.author_id, p.body, p.media_url, p.media_type, p.created_at,
-              u.display_name AS author_name, u.username AS author_username,
+              u.display_name AS author_name, gph.handle AS author_handle,
               u.avatar AS author_avatar, t.color AS author_team_color
          FROM posts p
          JOIN users u ON u.id = p.author_id
+         ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
         ORDER BY p.created_at DESC, p.id DESC LIMIT ?`
     )
@@ -39,15 +40,17 @@ async function recentPosts(limit = 5) {
   const ids = posts.map((p) => p.id);
   const tags = await db
     .prepare(
-      `SELECT pt.post_id, u.display_name, u.username
-         FROM post_tags pt JOIN users u ON u.id = pt.user_id
+      `SELECT pt.post_id, u.display_name, gph.handle
+         FROM post_tags pt
+         JOIN users u ON u.id = pt.user_id
+         ${PRIMARY_HANDLE_JOIN}
         WHERE pt.post_id IN (${ids.map(() => '?').join(',')})`
     )
     .all(...ids);
   const byPost = new Map();
   for (const t of tags) {
     if (!byPost.has(t.post_id)) byPost.set(t.post_id, []);
-    byPost.get(t.post_id).push({ display_name: t.display_name, username: t.username });
+    byPost.get(t.post_id).push({ display_name: t.display_name, handle: t.handle });
   }
   return posts.map((p) => ({ ...p, tags: byPost.get(p.id) || [] }));
 }

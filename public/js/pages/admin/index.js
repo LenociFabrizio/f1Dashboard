@@ -5,9 +5,11 @@
 import { guard } from '../../core/auth.js';
 import { mountNavbar } from '../../core/components.js';
 import { $, esc, loader, toast } from '../../core/ui.js';
+import api from '../../core/api.js';
 import { state, loadRefs } from './shared.js';
 
 import overview from './sections/overview.js';
+import notifications from './sections/notifications.js';
 import seasons from './sections/seasons.js';
 import races from './sections/races.js';
 import results from './sections/results.js';
@@ -20,6 +22,7 @@ import circuits from './sections/circuits.js';
 
 const SECTIONS = {
   overview: { icon: '📊', label: 'Panoramica', mod: overview },
+  notifications: { icon: '🔔', label: 'Notifiche', mod: notifications },
   seasons: { icon: '📅', label: 'Stagioni', mod: seasons },
   races: { icon: '🏁', label: 'Gare / Calendario', mod: races },
   results: { icon: '🏆', label: 'Risultati & Qualifiche', mod: results },
@@ -36,8 +39,21 @@ function buildSidebar(active) {
     .map(([key, s]) => `
       <a href="#${key}" class="${key === active ? 'active' : ''}">
         <span class="ic">${s.icon}</span> ${esc(s.label)}
+        ${key === 'notifications' ? '<span class="side-badge" id="notif-side-badge" hidden></span>' : ''}
       </a>`)
     .join('');
+  refreshNotifBadge();
+}
+
+/** Aggiorna il badge "Notifiche" nella sidebar admin. */
+export async function refreshNotifBadge() {
+  const badge = $('#notif-side-badge');
+  if (!badge) return;
+  try {
+    const { count } = await api.get('/notifications/count');
+    if (count > 0) { badge.textContent = count > 99 ? '99+' : String(count); badge.hidden = false; }
+    else badge.hidden = true;
+  } catch { badge.hidden = true; }
 }
 
 async function route() {

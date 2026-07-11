@@ -127,7 +127,7 @@ function renderPosts(posts) {
           ? `<div class="post-thumb">🎬 Video</div>`
           : `<div class="post-thumb" style="background-image:url('${esc(p.media_url)}')"></div>`)
       : '';
-    const tags = p.tags?.length ? `<div class="text-lo" style="font-size:0.8rem;margin-top:6px">🏷️ ${p.tags.map((t) => '@' + esc(t.username)).join(' ')}</div>` : '';
+    const tags = p.tags?.length ? `<div class="text-lo" style="font-size:0.8rem;margin-top:6px">🏷️ ${p.tags.map((t) => '@' + esc(t.handle || t.display_name)).join(' ')}</div>` : '';
     const text = (p.body || '').trim();
     return `
       <a href="/feed.html" class="card hover" style="text-decoration:none">

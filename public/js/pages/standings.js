@@ -46,7 +46,7 @@ function driverRow(d, idx) {
           <a href="/driver.html?id=${d.user_id}"><img src="${avatarUrl(d)}" onerror="this.src='/images/avatars/default.svg'" alt=""></a>
           <div>
             <a href="/driver.html?id=${d.user_id}" class="dc-name">${esc(d.display_name)}</a>
-            <div class="dc-sub">@${esc(d.username)}${num}</div>
+            <div class="dc-sub">${d.handle ? `@${esc(d.handle)}` : ''}${num}</div>
             ${reserve}
             ${botPlayed}
           </div>

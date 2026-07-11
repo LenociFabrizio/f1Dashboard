@@ -139,8 +139,94 @@ async function runMigrations() {
     await db.run('ALTER TABLE password_resets ADD COLUMN token_plain TEXT');
   }
 
+  // Handle di gioco PRIMARIO (nome pubblico "@handle").
+  const giCols = await db.all('PRAGMA table_info(game_identities)');
+  if (giCols.length && !giCols.some((c) => c.name === 'is_primary')) {
+    await db.run('ALTER TABLE game_identities ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0');
+  }
+  // Assicura un primario per chi ha handle ma nessuno ancora marcato (il più vecchio).
+  await db.run(
+    `UPDATE game_identities SET is_primary = 1
+      WHERE id IN (
+        SELECT MIN(g.id) FROM game_identities g
+         WHERE NOT EXISTS (
+           SELECT 1 FROM game_identities p WHERE p.user_id = g.user_id AND p.is_primary = 1
+         )
+         GROUP BY g.user_id
+      )`
+  );
+
+  // Rimozione definitiva della colonna users.username (con backfill del nome pubblico).
+  await dropUsernameColumnOnce();
+
   await ensureOfficialCircuits();
   await ensureFullCalendarOnce();
+}
+
+/**
+ * Elimina la colonna `users.username` (storica) dai DB esistenti.
+ * - Prima esegue il backfill: chi non ha alcun handle eredita lo username come
+ *   handle di gioco PRIMARIO, così non perde il nome pubblico "@handle".
+ * - Poi ricostruisce la tabella `users` senza `username` (SQLite non consente
+ *   DROP COLUMN su una colonna con vincolo UNIQUE inline). Gli `id` sono
+ *   preservati: le FK delle tabelle figlie restano valide.
+ * Idempotente: se la colonna non esiste più, non fa nulla.
+ */
+async function dropUsernameColumnOnce() {
+  const cols = await db.all('PRAGMA table_info(users)');
+  if (!cols.some((c) => c.name === 'username')) return; // già rimossa
+
+  // 1) Backfill: username → handle primario per chi non ha handle.
+  await db.run(
+    `INSERT INTO game_identities (user_id, platform, handle, source, is_primary)
+     SELECT u.id, '', u.username, 'profile', 1
+       FROM users u
+      WHERE u.username IS NOT NULL AND TRIM(u.username) <> ''
+        AND NOT EXISTS (SELECT 1 FROM game_identities g WHERE g.user_id = u.id)`
+  );
+
+  // 2) Rebuild della tabella users senza `username`.
+  const copyCols = [
+    'id', 'display_name', 'first_name', 'last_name', 'email', 'password_hash', 'avatar',
+    'nationality', 'favorite_number', 'team_id', 'favorite_driver', 'reserve_driver',
+    'biography', 'assist_abs', 'assist_tc', 'assist_gearbox', 'role', 'provider',
+    'provider_id', 'is_active', 'created_at', 'updated_at',
+  ].filter((c) => cols.some((x) => x.name === c));
+  const colList = copyCols.join(', ');
+
+  await db.exec(`
+    PRAGMA foreign_keys=OFF;
+    CREATE TABLE users_new (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      display_name      TEXT    NOT NULL,
+      first_name        TEXT    DEFAULT '',
+      last_name         TEXT    DEFAULT '',
+      email             TEXT    UNIQUE,
+      password_hash     TEXT,
+      avatar            TEXT    DEFAULT '/images/avatars/default.svg',
+      nationality       TEXT    DEFAULT 'IT',
+      favorite_number   INTEGER,
+      team_id           INTEGER,
+      favorite_driver   TEXT,
+      reserve_driver    TEXT,
+      biography         TEXT    DEFAULT '',
+      assist_abs        INTEGER NOT NULL DEFAULT 0,
+      assist_tc         TEXT    NOT NULL DEFAULT 'off',
+      assist_gearbox    TEXT    NOT NULL DEFAULT 'auto',
+      role              TEXT    NOT NULL DEFAULT 'pilota',
+      provider          TEXT    DEFAULT 'local',
+      provider_id       TEXT,
+      is_active         INTEGER NOT NULL DEFAULT 1,
+      created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
+    );
+    INSERT INTO users_new (${colList}) SELECT ${colList} FROM users;
+    DROP TABLE users;
+    ALTER TABLE users_new RENAME TO users;
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+    PRAGMA foreign_keys=ON;
+  `);
 }
 
 /**

@@ -94,6 +94,29 @@
 .nav-user img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 .nav-user .nu-name { font-size: 0.85rem; font-weight: var(--fw-semibold); color: var(--text-hi); }
 
+/* Campanella notifiche (admin) */
+.nav-bell {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg-100);
+  border: 1px solid var(--border);
+  font-size: 1.05rem; text-decoration: none;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.nav-bell:hover { border-color: var(--border-strong); background: var(--bg-150); }
+.nav-bell .bell-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--danger, #e10600); color: #fff;
+  font-size: 0.68rem; font-weight: var(--fw-bold);
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.nav-bell .bell-badge[hidden] { display: none; }
+
 /* Menu utente a tendina */
 .nav-dropdown {
   position: absolute;
@@ -200,6 +223,15 @@
   transition: background var(--t-fast), color var(--t-fast);
 }
 .sidebar a .ic { width: 18px; text-align: center; opacity: 0.8; }
+.sidebar a .side-badge {
+  margin-left: auto;
+  min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--danger, #e10600); color: #fff;
+  font-size: 0.72rem; font-weight: var(--fw-bold);
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+}
+.sidebar a .side-badge[hidden] { display: none; }
 .sidebar a:hover { background: var(--bg-100); color: var(--text-hi); }
 .sidebar a.active {
   background: linear-gradient(90deg, rgba(225, 6, 0, 0.18), rgba(225, 6, 0, 0.02));
