@@ -79,7 +79,7 @@ export const homeData = asyncHandler(async (_req, res) => {
       .prepare(
         `SELECT r.user_id, r.position, r.points, r.dnf, u.display_name, u.avatar, t.color AS team_color, t.name AS team_name
            FROM results r JOIN users u ON u.id=r.user_id
-           LEFT JOIN teams t ON t.id=r.team_id
+           LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
           WHERE r.race_id=? ORDER BY (r.dnf),(r.position IS NULL), r.position LIMIT 5`
       )
       .all(lastRace.id);
