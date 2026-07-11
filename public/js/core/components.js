@@ -19,7 +19,7 @@ const NAV = [
   { href: '/standings.html', label: 'Classifiche' },
   { href: '/races.html', label: 'Calendario' },
   { href: '/stats.html', label: 'Statistiche' },
-  { href: '/collector.html', label: 'Collector PS5' },
+  { href: '/collector.html', label: 'Collector PS5 / Xbox' },
   // Bacheca nascosta (non eliminata): voce di menu disattivata.
   // { href: '/feed.html', label: 'Bacheca' },
   { href: '/dashboard.html', label: 'Dashboard', auth: true },
@@ -152,7 +152,7 @@ export function mountFooter() {
         <a href="/standings.html">Classifiche</a>
         <a href="/races.html">Calendario</a>
         <a href="/stats.html">Statistiche</a>
-        <a href="/collector.html">Collector PS5</a>
+        <a href="/collector.html">Collector PS5 / Xbox</a>
         <a href="/privacy.html">Privacy &amp; Cookie</a>
       </div>
       <small>© ${year} Lega F1 · Progetto amatoriale non affiliato a Formula 1® o EA Sports.</small>
