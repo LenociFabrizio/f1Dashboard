@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "F1 Telemetry Relay",
-    "slug": "f1-android-collector",
+    "slug": "f1-telemetry-collector",
+    "owner": "ziofabri",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -20,6 +21,11 @@
     "plugins": [
       "expo-dev-client",
       "./plugins/withForegroundServiceType"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "240adfa0-d0b0-418e-9ba7-0d01b0456d4b"
+      }
+    }
   }
 }
