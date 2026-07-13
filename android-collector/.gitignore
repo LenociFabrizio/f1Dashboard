@@ -1,0 +1,19 @@
+# Expo / React Native
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native build output (generato da prebuild / EAS)
+android/
+ios/
+
+# Env / secrets
+.env*.local
+
+# Log
+npm-debug.*
+*.log
+
+# macOS
+.DS_Store

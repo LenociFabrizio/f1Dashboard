@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "F1 Telemetry Relay",
+    "slug": "f1-android-collector",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0b0f",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "package": "com.f1league.telemetryrelay",
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_DATA_SYNC",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-dev-client",
+      "./plugins/withForegroundServiceType"
+    ]
+  }
+}

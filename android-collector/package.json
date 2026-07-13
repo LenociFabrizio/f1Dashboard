@@ -1,0 +1,30 @@
+{
+  "name": "f1-android-collector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Collector telemetria F1 25 per Android: riceve i pacchetti UDP e li invia al portale del campionato.",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "build:preview": "eas build -p android --profile preview",
+    "build:dev": "eas build -p android --profile development",
+    "ios": "expo run:ios"
+  },
+  "dependencies": {
+    "@notifee/react-native": "^9.1.8",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "expo": "^52.0.0",
+    "expo-dev-client": "~5.0.20",
+    "expo-keep-awake": "~14.0.3",
+    "expo-status-bar": "~2.0.1",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
+    "react-native-udp": "^4.1.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2"
+  }
+}
