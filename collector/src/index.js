@@ -19,6 +19,7 @@ import { SessionAggregator } from './session/aggregator.js';
 import { BufferStore } from './store/buffer-store.js';
 import { Uploader } from './net/uploader.js';
 import { LiveServer } from './live/server.js';
+import { MODES, promptMode, resolveToken } from './modes.js';
 
 const VERSION = '0.1.0';
 const log = (...a) => console.log(new Date().toISOString(), ...a);
@@ -34,31 +35,47 @@ function localIPv4s() {
   return out;
 }
 
-function main() {
+async function main() {
   const cfg = loadConfig();
   log(`F1 Telemetry Collector v${VERSION}`);
   log(`Config: ${cfg.configPath}`);
+
+  // Modalità scelta dall'utente (o da COLLECTOR_MODE): decide token e cattura.
+  const modeKey = await promptMode(cfg);
+  const mode = MODES[modeKey];
+  const token = resolveToken(modeKey, cfg);
+
+  log(`🏁 Modalità: ${mode.label} → ${mode.dest}`);
+
+  // Il token della modalità è obbligatorio: senza, l'invio finirebbe nel ramo
+  // sbagliato (o verrebbe rifiutato). Meglio fermarsi subito con un messaggio chiaro.
+  if (!token) {
+    const which = mode.tokenKind === 'personal' ? 'personalToken' : 'collectorToken';
+    log(`❌ Token mancante per questa modalità: imposta "server.${which}" in config.json`);
+    log('   (per le modalità personali è il token del tuo profilo "I miei tempi").');
+    process.exit(1);
+  }
 
   const store = new BufferStore(cfg.buffer.dir);
   const uploader = new Uploader({
     store,
     ingestUrl: cfg.server.ingestUrl,
-    token: cfg.server.collectorToken,
+    token,
   });
   const aggregator = new SessionAggregator({ collectorVersion: VERSION });
   const listener = new UdpListener(cfg.udp);
 
-  // Filtro tipi di sessione da catturare
-  const capture = new Set(cfg.captureSessionTypes || []);
+  // Filtro tipi di sessione da catturare (deciso dalla modalità).
+  const capture = new Set(mode.capture || []);
 
   // --- eventi aggregatore ---
   aggregator.on('session-start', ({ sessionUID }) => log(`▶  Sessione avviata (UID ${sessionUID})`));
   aggregator.on('session-complete', ({ reason, payload }) => {
     if (capture.size && !capture.has(payload.sessionType)) {
-      log(`⏭  Sessione ${payload.sessionType} ignorata (non in captureSessionTypes)`);
+      log(`⏭  Sessione ${payload.sessionType} ignorata (fuori dalla modalità "${mode.label}")`);
       return;
     }
-    store.enqueue(payload);
+    store.enqueue(payload, { token });
     log(`✅ Sessione completata (${payload.sessionType}, ${reason}): ${payload.classification.length} piloti → in coda [${store.size}]`);
     uploader.drain();
   });
@@ -125,4 +142,7 @@ function main() {
   process.on('SIGTERM', shutdown);
 }
 
-main();
+main().catch((err) => {
+  log(`❌ Errore fatale: ${err.message}`);
+  process.exit(1);
+});

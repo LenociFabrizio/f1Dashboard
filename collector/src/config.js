@@ -15,7 +15,10 @@ export const ROOT_DIR = path.resolve(__dirname, '..');
 
 const DEFAULTS = {
   udp: { port: 20777, host: '0.0.0.0' },
-  server: { ingestUrl: '', collectorToken: '' },
+  // collectorToken = token CONDIVISO della lega (ramo 'league', staging admin).
+  // personalToken  = token PERSONALE dell'utente (ramo 'personal', "I miei tempi").
+  // La modalità scelta all'avvio decide quale dei due viene usato (vedi modes.js).
+  server: { ingestUrl: '', collectorToken: '', personalToken: '' },
   live: { enabled: true, port: 4600 },
   buffer: { dir: './data/queue' },
   // Tipi di sessione che vengono catturati e inviati (gli altri sono ignorati).
@@ -57,6 +60,7 @@ export function loadConfig(file) {
     server: {
       ingestUrl: process.env.COLLECTOR_INGEST_URL || cfg.server.ingestUrl,
       collectorToken: process.env.COLLECTOR_TOKEN || cfg.server.collectorToken,
+      personalToken: process.env.COLLECTOR_PERSONAL_TOKEN || cfg.server.personalToken,
     },
   });
 

@@ -53,7 +53,7 @@ Nessuna configurazione lato utente. Vedi **[GUIDA-PS5.md](GUIDA-PS5.md)**.
 ```bash
 cd collector
 cp config.example.json config.json   # Windows: copy config.example.json config.json
-# modifica config.json: ingestUrl del sito + collectorToken
+# modifica config.json: ingestUrl del sito + i token (vedi sotto)
 npm start
 ```
 
@@ -64,15 +64,33 @@ npm start
   "udp": { "port": 20777, "host": "0.0.0.0" },
   "server": {
     "ingestUrl": "https://<tuo-sito>.vercel.app/api/ingest/sessions",
-    "collectorToken": "<lo stesso COLLECTOR_TOKEN impostato sul sito>"
+    "collectorToken": "<COLLECTOR_TOKEN della lega, impostato sul sito>",
+    "personalToken": "<token personale del tuo profilo \"I miei tempi\">"
   },
   "live": { "enabled": true, "port": 4600 },
-  "buffer": { "dir": "./data/queue" },
-  "captureSessionTypes": ["race", "sprint", "qualifying"]
+  "buffer": { "dir": "./data/queue" }
 }
 ```
 
-Override rapidi via ambiente: `COLLECTOR_INGEST_URL`, `COLLECTOR_TOKEN`, `COLLECTOR_UDP_PORT`.
+Override rapidi via ambiente: `COLLECTOR_INGEST_URL`, `COLLECTOR_TOKEN`,
+`COLLECTOR_PERSONAL_TOKEN`, `COLLECTOR_UDP_PORT`, `COLLECTOR_MODE`.
+
+### Scelta della modalità (all'avvio)
+
+Ad ogni avvio il collector chiede **che tipo di sessione** stai per registrare:
+
+| # | Modalità | Token usato | Cosa cattura | Dove finisce |
+|---|----------|-------------|--------------|--------------|
+| 1 | Gara amichevole | `personalToken` | gara | "I miei tempi" (solo tempi giro) |
+| 2 | Tempo sul giro | `personalToken` | prova a tempo | "I miei tempi" (solo tempi giro) |
+| 3 | Gara per il campionato | `collectorToken` | **qualifica + gara** | staging admin (risultati + qualifiche) |
+
+- Le modalità 1 e 2 richiedono `personalToken`; la 3 richiede `collectorToken`.
+  Se il token della modalità scelta manca, il collector si ferma con un messaggio.
+- Per il **campionato**, qualifica e gara sono due sessioni distinte: partono come
+  due invii separati che l'admin unisce nella stessa gara sul sito.
+- Per saltare il prompt (uso headless) imposta `COLLECTOR_MODE` a
+  `amichevole`, `time_trial` o `campionato`.
 
 Con `live.enabled` la classifica in tempo reale è su `http://localhost:4600`.
 

@@ -57,14 +57,18 @@ export class Uploader extends EventEmitter {
     this.draining = true;
     try {
       for (const file of this.store.list()) {
-        const payload = this.store.read(file);
-        if (!payload) {
+        const entry = this.store.readEntry(file);
+        if (!entry || !entry.payload) {
           this.emit('warn', `file di coda corrotto, rimosso: ${file}`);
           this.store.remove(file);
           continue;
         }
+        const { payload } = entry;
+        // Token specifico della sessione (dalla modalità attiva alla cattura);
+        // il token del run resta come fallback per i file legacy.
+        const token = entry.token || this.token;
         try {
-          const res = await this.send(payload);
+          const res = await this.send(payload, token);
           this.store.remove(file);
           this.backoff = 0;
           this.emit('sent', { sessionUID: payload.sessionUID, response: res });
@@ -80,8 +84,12 @@ export class Uploader extends EventEmitter {
     }
   }
 
-  /** POST del payload all'endpoint di ingest. Rigetta su status non-2xx. */
-  async send(payload) {
+  /**
+   * POST del payload all'endpoint di ingest. Rigetta su status non-2xx.
+   * @param {object} payload
+   * @param {string} [token]  token da usare (default: quello del run)
+   */
+  async send(payload, token = this.token) {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
     try {
@@ -89,7 +97,7 @@ export class Uploader extends EventEmitter {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
