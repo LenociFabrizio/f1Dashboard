@@ -689,3 +689,75 @@ table.data.compact .input { margin: 0; }
 .bot-reserve, .bot-played { font-size: 0.75rem; margin-top: 2px; }
 .bot-played { color: var(--f1-red); font-weight: var(--fw-semibold); cursor: help; }
 .bot-reserve { color: var(--text-lo); cursor: help; }
+
+/* =============================================================
+   Traiettorie: mappa 2D interattiva + confronto (core/trace-map.js)
+   ============================================================= */
+.trace-card { padding: var(--sp-3); }
+.trace-toolbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  flex-wrap: wrap; margin-bottom: var(--sp-3);
+}
+.trace-compare { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.trace-compare.hidden { display: none; }
+.trace-pick { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.trace-sectors { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+
+/* Segmented control (Confronto / Tutti) */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; }
+.seg-btn {
+  padding: 6px 14px; font-size: 0.85rem; font-weight: var(--fw-semibold);
+  background: transparent; color: var(--text-lo); border: 0; cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.seg-btn.active { background: var(--f1-red); color: #fff; }
+.seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Palcoscenico canvas */
+.trace-stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 10;
+  background: var(--bg-050); border-radius: var(--r-md);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.trace-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.trace-canvas.grabbing { cursor: grabbing; }
+
+/* Tooltip distanza locale (segue il puntatore) */
+.trace-tip {
+  position: absolute; transform: translate(-50%, -140%);
+  background: var(--bg-200); color: var(--text-hi);
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  padding: 2px 8px; font-size: 0.78rem; font-variant-numeric: tabular-nums;
+  pointer-events: none; white-space: nowrap; z-index: 2;
+}
+.trace-tip.hidden, .trace-badge.hidden { display: none; }
+
+/* Badge "Δ max" in alto a destra */
+.trace-badge {
+  position: absolute; top: 10px; right: 10px;
+  background: color-mix(in srgb, var(--f1-red) 22%, transparent);
+  color: var(--f1-red-light); border: 1px solid color-mix(in srgb, var(--f1-red) 45%, transparent);
+  border-radius: var(--r-pill); padding: 3px 10px; font-size: 0.78rem;
+  font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; z-index: 2;
+}
+
+/* Legenda */
+.trace-legend { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.trace-leg {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-width: 180px; padding: 6px 12px;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: transparent; color: inherit; cursor: pointer;
+  transition: opacity var(--t-fast), border-color var(--t-fast);
+}
+.trace-leg.static { cursor: default; }
+.trace-leg:not(.active):not(.static) { opacity: 0.4; }
+.trace-leg .mono { margin-left: auto; }
+.trace-leg .dot, .trace-pick .dot {
+  width: 12px; height: 12px; border-radius: 50%; flex: none; display: inline-block;
+}
+.trace-hint { margin-top: var(--sp-2); }
+@media (max-width: 560px) {
+  .trace-sectors { margin-left: 0; }
+  .trace-leg { min-width: 0; flex: 1 1 auto; }
+}

@@ -5,6 +5,7 @@ import api from '../core/api.js';
 import { mountChrome, avatarUrl } from '../core/components.js';
 import { $, $$, esc, loader, toast, fmtDate, flagEmoji, qs, assistBadges, celebrate, medalReveal } from '../core/ui.js';
 import { setupUrlForRace } from '../core/f1data.js';
+import { mountTraceMap } from '../core/trace-map.js';
 import auth from '../core/auth.js';
 
 mountChrome();
@@ -181,102 +182,20 @@ async function loadLaps() {
   }
 }
 
-/* ---------------- Traiettorie (linea di gara del giro veloce) ---------------- */
-// La mappa è disegnata dai punti reali (Motion packet): niente asset esterni.
-// Piano orizzontale = (x, z); l'asse verticale SVG è invertito (z verso l'alto).
-function renderMap(drivers) {
-  const withPts = (drivers || []).filter((d) => Array.isArray(d.points) && d.points.length > 1);
-  if (!withPts.length) {
-    return '<div class="empty"><div class="em-ic">🗺️</div>Nessuna traiettoria disponibile (importa la gara con il collector aggiornato).</div>';
-  }
-
-  // Bounding box su TUTTI i punti (così le linee sono in scala comune)
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (const d of withPts) {
-    for (const p of d.points) {
-      if (p[0] < minX) minX = p[0];
-      if (p[0] > maxX) maxX = p[0];
-      if (p[1] < minZ) minZ = p[1];
-      if (p[1] > maxZ) maxZ = p[1];
-    }
-  }
-  const w = Math.max(1, maxX - minX), h = Math.max(1, maxZ - minZ);
-  const pad = Math.max(w, h) * 0.05;
-  const vbW = (w + pad * 2).toFixed(1), vbH = (h + pad * 2).toFixed(1);
-  const tx = (x) => (x - minX + pad).toFixed(1);
-  const ty = (z) => (maxZ - z + pad).toFixed(1); // inverte l'asse verticale
-
-  // Sagoma del circuito (vista dall'alto): usiamo la traccia più completa come
-  // "asfalto", disegnata sotto le traiettorie colorate.
-  const ref = withPts.reduce((a, b) => (b.points.length > a.points.length ? b : a), withPts[0]);
-  const refPts = ref.points.map((p) => `${tx(p[0])},${ty(p[1])}`).join(' ');
-  const trackBand = `
-    <polyline points="${refPts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="26"
-      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <polyline points="${refPts}" fill="none" stroke="rgba(175,185,205,0.20)" stroke-width="15"
-      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
-  // Linea di partenza/traguardo sul primo punto della traccia di riferimento.
-  const sf = ref.points[0];
-  const startMark = sf
-    ? `<circle cx="${tx(sf[0])}" cy="${ty(sf[1])}" r="7" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`
-    : '';
-
-  const polylines = withPts
-    .map((d) => {
-      const pts = d.points.map((p) => `${tx(p[0])},${ty(p[1])}`).join(' ');
-      const color = d.team_color || '#e10600';
-      return `<polyline data-uid="${d.user_id}" points="${pts}" fill="none" stroke="${color}"
-        stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
-        vector-effect="non-scaling-stroke" style="opacity:.95"/>`;
-    })
-    .join('');
-
-  const legend = withPts
-    .map((d) => {
-      const color = d.team_color || '#e10600';
-      return `<button type="button" class="trace-leg active" data-uid="${d.user_id}"
-        style="display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:transparent;color:inherit;cursor:pointer">
-        <span class="dot" style="background:${color}"></span>
-        <span class="text-hi">${esc(d.display_name)}</span>
-        <span class="mono text-lo" style="margin-left:auto">${fmtLap(d.best_lap_time_ms)}</span>
-      </button>`;
-    })
-    .join('');
-
-  return `
-    <div class="card" style="padding:12px">
-      <div style="width:100%;aspect-ratio:16/10;background:rgba(255,255,255,0.03);border-radius:var(--r-md);overflow:hidden">
-        <svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
-          ${trackBand}
-          ${startMark}
-          ${polylines}
-        </svg>
-      </div>
-      <div class="trace-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">${legend}</div>
-      <div class="hint" style="margin-top:8px">Vista dall'alto del circuito (ricostruita dai dati di gioco) con la <b>traiettoria del giro veloce</b> di ogni pilota · il cerchio bianco è il traguardo · clicca un nome per mostrare/nascondere</div>
-    </div>`;
-}
-
-function wireMap(box) {
-  box.querySelectorAll('.trace-leg').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const on = btn.classList.toggle('active');
-      const line = box.querySelector(`polyline[data-uid="${btn.dataset.uid}"]`);
-      if (line) line.style.display = on ? '' : 'none';
-      btn.style.opacity = on ? '' : '.4';
-    });
-  });
-}
-
+/* ---------------- Traiettorie (confronto racing line) ---------------- */
+// Mappa 2D interattiva del circuito, ricostruita dai punti reali (Motion packet).
+// Rendering e interazione (confronto, heatmap differenza, zoom/pan, tooltip,
+// settori) vivono in core/trace-map.js.
 let mapLoaded = false;
+let traceMap = null;
 async function loadMap() {
   if (mapLoaded) return;
   mapLoaded = true;
   const box = $('#map-box');
   try {
     const drivers = await api.get(`/races/${raceId}/traces`, {}, { auth: false });
-    box.innerHTML = renderMap(drivers);
-    wireMap(box);
+    if (traceMap) traceMap.destroy();
+    traceMap = mountTraceMap(box, drivers);
   } catch (e) {
     mapLoaded = false;
     box.innerHTML = `<div class="empty">Errore nel caricamento delle traiettorie: ${esc(e.message)}</div>`;
