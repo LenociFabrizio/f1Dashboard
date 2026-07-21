@@ -57,6 +57,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
 
   const sessionType = normalizeSessionType(meta.sessionType);
   const isQualifying = sessionType === 'qualifying';
+  const player = state.playerCarIndex ?? null;
 
   // --- Identità piloti: unione ACCUMULATA nel tempo (merge di tutti i
   //     pacchetti Participants ricevuti) con fallback all'ultimo pacchetto
@@ -92,6 +93,8 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
       // 0 = nomi online nascosti: `name` è inaffidabile (spesso "Player").
       // Lo passiamo al sito così l'admin sa quando non fidarsi del nickname.
       nameReliable: p.showOnlineNames === undefined ? true : !!p.showOnlineNames,
+      // Vettura del giocatore che registra: segnalata al sito per il match.
+      isPlayer: i === player,
     };
   });
 
@@ -148,6 +151,7 @@ export function buildPayload(state, { collectorVersion = '' } = {}) {
     packetFormat: state.packetFormat ?? null,
     collectorVersion,
     sessionType,
+    playerCarIndex: player,
     trackId: meta.trackId ?? null,
     trackLength: meta.trackLength ?? null,
     totalLaps: meta.totalLaps ?? null,

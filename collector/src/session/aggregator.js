@@ -39,6 +39,7 @@ export class SessionAggregator extends EventEmitter {
       meta: null,            // ultimo pacchetto Session
       participants: null,    // ultimo pacchetto Participants (grezzo, per la live view)
       participantsByCar: {}, // carIdx -> identità accumulata nel tempo (merge)
+      playerCarIndex: null,  // vettura del giocatore locale (chi registra)
       lapData: null,         // ultimo pacchetto LapData (per la live view)
       classification: null,  // Final Classification
       fastestLapCarIndex: null,
@@ -63,6 +64,12 @@ export class SessionAggregator extends EventEmitter {
       this._reset(uid, header);
     }
     const s = this.state;
+
+    // Vettura del giocatore locale (presente in ogni header): serve a non
+    // perdere mai i propri dati, anche se lo slot ha nome vuoto/inaffidabile.
+    if (header.playerCarIndex != null && header.playerCarIndex !== 255) {
+      s.playerCarIndex = header.playerCarIndex;
+    }
 
     switch (header.packetId) {
       case 0: // Motion → traiettoria (linea di gara)
@@ -107,7 +114,10 @@ export class SessionAggregator extends EventEmitter {
     const map = this.state.participantsByCar;
     for (let i = 0; i < arr.length; i++) {
       const p = arr[i];
-      if (!isRealParticipant(p)) continue;
+      // Il giocatore locale (chi registra) va SEMPRE conservato, anche se lo
+      // slot non supera il filtro (es. nome vuoto): non deve mai sparire.
+      const isPlayer = i === this.state.playerCarIndex;
+      if (!isRealParticipant(p) && !isPlayer) continue;
       const prev = map[i];
       const name = p.name && String(p.name).trim() ? p.name : (prev?.name || p.name);
       map[i] = { ...p, name };

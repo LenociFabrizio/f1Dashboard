@@ -299,6 +299,31 @@ test('robustezza lobby: slot non contigui (car 0 e car 3) esportati con carIndex
   assert.equal(byCar[3], 'Delta');
 });
 
+test('il giocatore locale (playerCarIndex) è sempre incluso, anche con nome vuoto', () => {
+  const agg = new SessionAggregator();
+  let done = null;
+  agg.on('session-complete', (e) => { done = e; });
+
+  // car 0 = giocatore locale (header.playerCarIndex=0) con NOME VUOTO.
+  agg.ingest(parsePacket(participantsPacket([
+    { name: '', platform: 1, raceNumber: 44, teamId: 0, showNames: true },
+    { name: 'Rival', platform: 1, raceNumber: 7, teamId: 1, showNames: true },
+  ], 2)));
+  agg.ingest(parsePacket(sessionPacket(15)));
+  agg.ingest(parsePacket(finalClassificationPacket([
+    { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3600, penS: 0, numStints: 1, stintsVisual: [16] },
+    { position: 2, numLaps: 50, grid: 2, points: 18, pits: 1, resultStatus: 3, bestLapMs: 81500, totalRaceTimeS: 3605, penS: 0, numStints: 1, stintsVisual: [16] },
+  ])));
+
+  assert.ok(done, 'session-complete emesso');
+  const p = done.payload;
+  assert.equal(p.playerCarIndex, 0);
+  const me = p.participants.find((x) => x.carIndex === 0);
+  assert.ok(me, 'giocatore locale presente anche senza nome');
+  assert.equal(me.isPlayer, true);
+  assert.equal(p.participants.length, 2, 'entrambe le vetture esportate');
+});
+
 test('Motion → traiettoria: il giro veloce (car 1) finisce in payload.lapTraces', () => {
   const agg = new SessionAggregator({ collectorVersion: 'test' });
   let done = null;

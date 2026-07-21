@@ -104,6 +104,8 @@ export async function resolveIdentities(participants = []) {
       raceNumber: p.raceNumber ?? null,
       teamId: p.teamId ?? null,
       aiControlled: !!p.aiControlled,
+      isPlayer: !!p.isPlayer,
+      nameReliable: p.nameReliable !== false,
       userId: u ? u.id : null,
       userDisplay: u ? u.display_name : null,
       matchedBy,

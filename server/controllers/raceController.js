@@ -277,14 +277,24 @@ export const uploadScreenshot = asyncHandler(async (req, res) => {
  * @returns {Promise<number>} numero di righe salvate
  */
 export async function persistQualifying(raceId, entries = []) {
-  const stmts = [{ sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [raceId] }];
-  let saved = 0;
+  // Dedup per pilota: lo stesso user_id su più slot (riconnessione a una vettura
+  // diversa, o bot di riserva mappato al titolare) violerebbe UNIQUE(race_id,
+  // user_id). Tieni la posizione migliore (più bassa).
+  const byUser = new Map();
   for (const q of entries) {
     if (!q.user_id || !q.position) continue;
+    const uid = Number(q.user_id);
+    const prev = byUser.get(uid);
+    if (!prev || Number(q.position) < Number(prev.position)) byUser.set(uid, q);
+  }
+
+  const stmts = [{ sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [raceId] }];
+  let saved = 0;
+  for (const q of byUser.values()) {
     stmts.push({
       sql: `INSERT INTO qualifying (race_id, user_id, position, best_time, gap)
             VALUES (?, ?, ?, ?, ?)`,
-      args: [raceId, q.user_id, q.position, q.best_time || null, q.gap || null],
+      args: [raceId, Number(q.user_id), Number(q.position), q.best_time || null, q.gap || null],
     });
     saved += 1;
   }

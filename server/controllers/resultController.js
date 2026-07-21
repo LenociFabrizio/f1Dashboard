@@ -51,6 +51,19 @@ export async function persistResults(raceId, rows, opts = {}) {
 
   const stmts = [{ sql: 'DELETE FROM results WHERE race_id = ?', args: [raceId] }];
 
+  // Dedup per pilota: lo stesso user_id su più slot (riconnessione a una vettura
+  // diversa, o bot di riserva mappato al titolare) violerebbe UNIQUE(race_id,
+  // user_id). Tieni il miglior risultato (posizione valida più bassa; i DNF in coda).
+  const bestByUser = new Map();
+  for (const r of rows) {
+    if (!r.user_id) continue;
+    const uid = Number(r.user_id);
+    const rank = r.dnf ? Infinity : (r.position ? Number(r.position) : Infinity);
+    const prev = bestByUser.get(uid);
+    if (!prev || rank < prev.rank) bestByUser.set(uid, { row: r, rank });
+  }
+  const dedupRows = [...bestByUser.values()].map((x) => x.row);
+
   // Fallback team: se una riga non porta team_id, si usa la scuderia attuale
   // del pilota. Evita risultati con team_id NULL (che sparirebbero dalla
   // classifica costruttori).
@@ -58,7 +71,7 @@ export async function persistResults(raceId, rows, opts = {}) {
     (await db.prepare('SELECT id, team_id FROM users').all()).map((u) => [u.id, u.team_id])
   );
 
-  for (const r of rows) {
+  for (const r of dedupRows) {
     if (!r.user_id) continue;
     const dnf = r.dnf ? 1 : 0;
     const fastest = r.fastest_lap ? 1 : 0;

@@ -129,6 +129,7 @@ function participantRow(p) {
     <tr data-car="${p.carIndex}">
       <td>
         <span class="text-hi">${esc(p.name || `Car ${p.carIndex}`)}</span>
+        ${p.isPlayer ? ' <span class="badge" style="background:#2596c922;color:#7cc4e8;border:1px solid #2596c955" title="Vettura di chi ha registrato con il collector">🎮 Tu</span>' : ''}
         ${warn ? ' <span title="Nome online oscurato nel gioco: verifica l\'abbinamento">⚠️</span>' : ''}
         <div class="dc-sub text-dim">${esc(p.platform || '—')}${p.raceNumber != null ? ` · #${p.raceNumber}` : ''}</div>
       </td>
