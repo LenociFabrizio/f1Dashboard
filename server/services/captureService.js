@@ -24,6 +24,16 @@ import { resultStatusToDnf, msToLapTime, msToRaceTime, msToGap } from '../utils/
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 /**
+ * Categoria canonica di una sessione ai fini dell'import: 'race' | 'qualifying'.
+ * Il collector emette 'race' | 'qualifying' | 'practice' | 'time_trial' (sprint
+ * rientra in 'race', vedi collector/src/parser/enums.js). Solo la qualifica ha
+ * un ramo dedicato: tutto il resto è trattato come gara.
+ */
+export function sessionKind(type) {
+  return String(type || '').trim().toLowerCase() === 'qualifying' ? 'qualifying' : 'race';
+}
+
+/**
  * Risolve i partecipanti di una sessione in utenti del sito.
  * Precedenza: (platform + handle) esatto → handle unico su qualsiasi
  * piattaforma. I bot (aiControlled) non vengono mappati automaticamente.
@@ -134,14 +144,17 @@ export async function saveAliases(mappings = []) {
  * @param {Array<object>} resolved  output di resolveIdentities (+ eventuali override)
  * @returns {{ resultRows:Array, qualifyingRows:Array, skipped:Array }}
  */
-export function buildRows(payload, resolved) {
+export function buildRows(payload, resolved, opts = {}) {
   const userByCar = new Map(resolved.map((p) => [p.carIndex, p]));
   const classification = payload.classification || [];
   const qualifying = payload.qualifying || [];
 
-  // Pole: chi ha chiuso la qualifica in P1 (mappato a utente)
+  // Pole: override esplicito (griglia di qualifica già salvata sul DB) oppure,
+  // in mancanza, chi ha chiuso la qualifica in P1 nel payload (sessione combinata).
   const poleEntry = qualifying.find((q) => Number(q.position) === 1);
-  const poleUserId = poleEntry ? userByCar.get(poleEntry.carIndex)?.userId ?? null : null;
+  const poleUserId = opts.poleUserId !== undefined
+    ? opts.poleUserId
+    : (poleEntry ? userByCar.get(poleEntry.carIndex)?.userId ?? null : null);
 
   // Giro veloce: usa l'indice dichiarato dal collector, altrimenti il miglior
   // bestLapMs valido tra i classificati.
@@ -311,8 +324,38 @@ export async function commitCapture(capture, opts) {
   if (!race) throw new HttpError(404, 'Gara di destinazione non trovata');
 
   const payload = parsePayload(capture);
+  const kind = sessionKind(capture.session_type || payload.sessionType);
   const resolved = await resolveWithOverrides(payload.participants || [], opts.mappings || []);
-  const { resultRows, qualifyingRows, skipped } = buildRows(payload, resolved);
+
+  // Telemetria (indipendente dal tipo): tempi sul giro + traiettoria del giro veloce.
+  const lapRows = buildLapTimes(payload, resolved);
+  const traceRows = buildLapTraces(payload, resolved);
+
+  // ------------------------------------------------------------------
+  //  RAMO QUALIFICA: scrive SOLO la griglia + telemetria di qualifica.
+  //  Non tocca i risultati di gara, non marca la gara come conclusa.
+  // ------------------------------------------------------------------
+  if (kind === 'qualifying') {
+    const { qualifyingRows } = buildRows(payload, resolved);
+    if (!qualifyingRows.length) {
+      throw new HttpError(400, 'Nessun tempo di qualifica mappato: impossibile importare. Associa gli handle e riprova.');
+    }
+    const qualifying = await persistQualifying(raceId, qualifyingRows);
+    await persistLapTimes(raceId, lapRows, 'qualifying');
+    await persistLapTraces(raceId, traceRows, 'qualifying');
+    await markImported(capture.id, raceId);
+    return { sessionType: 'qualifying', results: [], qualifying, lapTimes: lapRows.length, traces: traceRows.length, skipped: [] };
+  }
+
+  // ------------------------------------------------------------------
+  //  RAMO GARA (default): scrive SOLO risultati + telemetria di gara.
+  //  Non tocca la griglia di qualifica.
+  // ------------------------------------------------------------------
+  // Pole: ricavata dalla griglia di qualifica già salvata (P1), se presente.
+  const poleRow = await db
+    .prepare('SELECT user_id FROM qualifying WHERE race_id = ? AND position = 1')
+    .get(raceId);
+  const { resultRows, skipped } = buildRows(payload, resolved, { poleUserId: poleRow ? poleRow.user_id : null });
 
   if (!resultRows.length) {
     throw new HttpError(400, 'Nessun pilota mappato: impossibile importare. Associa gli handle e riprova.');
@@ -323,54 +366,52 @@ export async function commitCapture(capture, opts) {
     comment: opts.comment,
     mvpUserId: opts.mvpUserId,
   });
-  const qualifying = await persistQualifying(raceId, qualifyingRows);
+  await persistLapTimes(raceId, lapRows, 'race');
+  await persistLapTraces(raceId, traceRows, 'race');
 
-  // Tempi sul giro + settori (cronologia telemetria)
-  const lapRows = buildLapTimes(payload, resolved);
-  await persistLapTimes(raceId, lapRows);
-
-  // Traiettorie (linea di gara del giro veloce)
-  const traceRows = buildLapTraces(payload, resolved);
-  await persistLapTraces(raceId, traceRows);
-
-  // Completa i metadati della gara dai dati di sessione (campi già presenti
-  // sul sito): meteo, giri, distanza. Solo per sessioni di gara/sprint.
+  // Completa i metadati della gara dai dati di sessione: meteo, giri, distanza.
   await updateRaceMetaFromPayload(raceId, payload);
+  await markImported(capture.id, raceId);
 
-  await db
+  return { sessionType: 'race', results, qualifying: 0, lapTimes: lapRows.length, traces: traceRows.length, skipped };
+}
+
+/** Marca una sessione catturata come importata nella gara indicata. */
+function markImported(captureId, raceId) {
+  return db
     .prepare("UPDATE captured_sessions SET status = 'imported', race_id = ?, imported_at = datetime('now') WHERE id = ?")
-    .run(raceId, capture.id);
-
-  return { results, qualifying, lapTimes: lapRows.length, traces: traceRows.length, skipped };
+    .run(raceId, captureId);
 }
 
 /**
- * Sostituisce i tempi sul giro di una gara (cronologia telemetria) in un
- * unico batch. Cancella sempre i precedenti (re-import idempotente).
+ * Sostituisce i tempi sul giro di una SESSIONE (gara o qualifica) in un unico
+ * batch. Cancella solo i precedenti dello stesso tipo (re-import idempotente):
+ * i giri dell'altra sessione dello stesso GP restano intatti.
  */
-async function persistLapTimes(raceId, rows) {
-  const stmts = [{ sql: 'DELETE FROM lap_times WHERE race_id = ?', args: [raceId] }];
+async function persistLapTimes(raceId, rows, sessionType = 'race') {
+  const stmts = [{ sql: 'DELETE FROM lap_times WHERE race_id = ? AND session_type = ?', args: [raceId, sessionType] }];
   for (const r of rows) {
     stmts.push({
-      sql: `INSERT INTO lap_times (race_id, user_id, lap, lap_time_ms, sector1_ms, sector2_ms, sector3_ms, valid)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [raceId, r.user_id, r.lap, r.lap_time_ms, r.sector1_ms, r.sector2_ms, r.sector3_ms, r.valid],
+      sql: `INSERT INTO lap_times (race_id, user_id, session_type, lap, lap_time_ms, sector1_ms, sector2_ms, sector3_ms, valid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [raceId, r.user_id, sessionType, r.lap, r.lap_time_ms, r.sector1_ms, r.sector2_ms, r.sector3_ms, r.valid],
     });
   }
   await db.raw.batch(stmts, 'write');
 }
 
 /**
- * Sostituisce le traiettorie di una gara in un unico batch. Cancella sempre le
- * precedenti (re-import idempotente): resta al più una riga per pilota.
+ * Sostituisce le traiettorie di una SESSIONE (gara o qualifica) in un unico
+ * batch. Cancella solo le precedenti dello stesso tipo (re-import idempotente):
+ * resta al più una riga per pilota-sessione; l'altra sessione resta intatta.
  */
-async function persistLapTraces(raceId, rows) {
-  const stmts = [{ sql: 'DELETE FROM lap_traces WHERE race_id = ?', args: [raceId] }];
+async function persistLapTraces(raceId, rows, sessionType = 'race') {
+  const stmts = [{ sql: 'DELETE FROM lap_traces WHERE race_id = ? AND session_type = ?', args: [raceId, sessionType] }];
   for (const r of rows) {
     stmts.push({
-      sql: `INSERT INTO lap_traces (race_id, user_id, lap, best_lap_time_ms, points)
-            VALUES (?, ?, ?, ?, ?)`,
-      args: [raceId, r.user_id, r.lap, r.best_lap_time_ms, r.points],
+      sql: `INSERT INTO lap_traces (race_id, user_id, session_type, lap, best_lap_time_ms, points)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [raceId, r.user_id, sessionType, r.lap, r.best_lap_time_ms, r.points],
     });
   }
   await db.raw.batch(stmts, 'write');

@@ -139,6 +139,9 @@ async function openDetail(root, id) {
   const unmapped = humanParticipants.filter((p) => !p.userId).length;
   const unreliable = participants.some((p) => p.nameReliable === false);
   const alreadyImported = capture.status === 'imported';
+  // Qualifica e gara si importano in modo indipendente: la UI e il commit si
+  // adattano al tipo di sessione (vedi captureService.sessionKind lato server).
+  const isQuali = capture.session_type === 'qualifying';
 
   root.innerHTML =
     sectionHead(
@@ -166,15 +169,19 @@ async function openDetail(root, id) {
           ${suggestedCircuitId ? '<div class="hint">Circuito suggerito dalla telemetria (verifica).</div>' : ''}
         </div>
         <div class="summary" style="font-size:.9rem;line-height:1.9;margin:6px 0 14px">
-          <div>Meteo rilevato: <strong>${esc(weather || '—')}</strong></div>
-          <div>Giri: <strong>${totalLaps ?? '—'}</strong></div>
-          <div>Risultati pronti: <strong>${resultRows.length}</strong>${skipped.length ? ` · <span style="color:#eab308">${skipped.length} non mappati (esclusi)</span>` : ''}</div>
-          <div>Qualifica: <strong>${qualifyingRows.length}</strong> tempi</div>
+          <div>Tipo sessione: <strong>${SESSION_LABEL[capture.session_type] || capture.session_type || '—'}</strong></div>
+          ${isQuali ? '' : `<div>Meteo rilevato: <strong>${esc(weather || '—')}</strong></div>
+          <div>Giri: <strong>${totalLaps ?? '—'}</strong></div>`}
+          ${isQuali
+            ? `<div>Tempi di qualifica pronti: <strong>${qualifyingRows.length}</strong></div>`
+            : `<div>Risultati pronti: <strong>${resultRows.length}</strong>${skipped.length ? ` · <span style="color:#eab308">${skipped.length} non mappati (esclusi)</span>` : ''}</div>`}
         </div>
-        <label class="checkbox" style="margin-bottom:8px"><input type="checkbox" id="opt-completed" checked> Segna la gara come <strong>conclusa</strong></label><br>
+        ${isQuali ? '' : `<label class="checkbox" style="margin-bottom:8px"><input type="checkbox" id="opt-completed" checked> Segna la gara come <strong>conclusa</strong></label><br>`}
         <label class="checkbox" style="margin-bottom:14px"><input type="checkbox" id="opt-aliases" checked> Ricorda gli abbinamenti (alias) per le prossime gare</label>
-        <button class="btn primary block" id="do-commit">${alreadyImported ? 'Reimporta nella gara' : 'Importa nella gara'}</button>
-        <div class="hint" style="margin-top:8px">L'import sostituisce i risultati della gara scelta e ricalcola le classifiche.</div>
+        <button class="btn primary block" id="do-commit" data-quali="${isQuali ? 1 : 0}">${alreadyImported ? (isQuali ? 'Reimporta qualifica' : 'Reimporta nella gara') : (isQuali ? 'Importa qualifica' : 'Importa nella gara')}</button>
+        <div class="hint" style="margin-top:8px">${isQuali
+          ? "L'import sostituisce solo la griglia di qualifica di questa gara: i risultati restano intatti."
+          : "L'import sostituisce solo i risultati di questa gara (la qualifica resta intatta) e ricalcola le classifiche."}</div>
       </div>
     </div>`;
 
@@ -200,30 +207,38 @@ async function commit(root, id) {
   const mappings = collectMappings(root);
   if (!mappings.length) { toast.warning('Mappa almeno un pilota.'); return; }
 
+  const btn = $('#do-commit', root);
+  const isQuali = btn.dataset.quali === '1';
+  const completedEl = $('#opt-completed', root); // assente per le qualifiche
+
+  // Avviso di sovrascrittura solo per la gara già conclusa: importare la
+  // qualifica non tocca i risultati, quindi non serve avvisare.
   const target = races.find((r) => r.id === raceId);
-  if (target && target.status === 'completed') {
+  if (!isQuali && target && target.status === 'completed') {
     const ok = await confirmDialog({
       title: 'Sovrascrivere i risultati?',
-      message: `La gara "${target.name}" è già conclusa. L'import sostituirà i risultati esistenti.`,
+      message: `La gara "${target.name}" è già conclusa. L'import sostituirà i risultati esistenti (la qualifica resta intatta).`,
       danger: true, confirmText: 'Sovrascrivi e importa',
     });
     if (!ok) return;
   }
 
-  const btn = $('#do-commit', root);
   btn.disabled = true; btn.innerHTML = '<span class="spinner sm"></span> Import…';
   try {
     const res = await api.post(`/admin/captures/${id}/commit`, {
       race_id: raceId,
       mappings,
       save_aliases: $('#opt-aliases', root).checked,
-      mark_completed: $('#opt-completed', root).checked,
+      mark_completed: completedEl ? completedEl.checked : true,
     });
-    toast.success(`Importati ${res.imported} risultati. Classifiche aggiornate!`, { title: 'Fatto' });
+    const summary = res.sessionType === 'qualifying'
+      ? `${res.qualifying} tempi di qualifica importati.`
+      : `${res.imported} risultati importati. Classifiche aggiornate!`;
+    toast.success(summary, { title: 'Fatto' });
     await load(root);
   } catch (err) {
     toast.error(err.message || 'Import fallito.');
-    btn.disabled = false; btn.textContent = 'Importa nella gara';
+    btn.disabled = false; btn.textContent = isQuali ? 'Importa qualifica' : 'Importa nella gara';
   }
 }
 

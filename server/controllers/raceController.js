@@ -84,9 +84,10 @@ export const getRace = asyncHandler(async (req, res) => {
   res.json(race);
 });
 
-/** GET /api/races/:id/laps — tempi sul giro + settori (telemetria), per pilota */
+/** GET /api/races/:id/laps?session=race|qualifying — tempi sul giro + settori (telemetria), per pilota */
 export const getRaceLaps = asyncHandler(async (req, res) => {
   const raceId = Number(req.params.id);
+  const sessionType = req.query.session === 'qualifying' ? 'qualifying' : 'race';
   const rows = await db
     .prepare(
       `SELECT lt.user_id, lt.lap, lt.lap_time_ms, lt.sector1_ms, lt.sector2_ms, lt.sector3_ms, lt.valid,
@@ -95,10 +96,10 @@ export const getRaceLaps = asyncHandler(async (req, res) => {
          JOIN users u ON u.id = lt.user_id
          ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
-        WHERE lt.race_id = ?
+        WHERE lt.race_id = ? AND lt.session_type = ?
         ORDER BY u.display_name COLLATE NOCASE, lt.lap`
     )
-    .all(raceId);
+    .all(raceId, sessionType);
 
   const byUser = new Map();
   for (const r of rows) {
@@ -124,9 +125,10 @@ export const getRaceLaps = asyncHandler(async (req, res) => {
   res.json(Array.from(byUser.values()));
 });
 
-/** GET /api/races/:id/traces — traiettorie (linea di gara del giro veloce), per pilota */
+/** GET /api/races/:id/traces?session=race|qualifying — traiettorie (giro veloce), per pilota */
 export const getRaceTraces = asyncHandler(async (req, res) => {
   const raceId = Number(req.params.id);
+  const sessionType = req.query.session === 'qualifying' ? 'qualifying' : 'race';
   const rows = await db
     .prepare(
       `SELECT lt.user_id, lt.lap, lt.best_lap_time_ms, lt.points,
@@ -135,10 +137,10 @@ export const getRaceTraces = asyncHandler(async (req, res) => {
          JOIN users u ON u.id = lt.user_id
          ${PRIMARY_HANDLE_JOIN}
          LEFT JOIN teams t ON t.id = u.team_id
-        WHERE lt.race_id = ?
+        WHERE lt.race_id = ? AND lt.session_type = ?
         ORDER BY lt.best_lap_time_ms ASC`
     )
-    .all(raceId);
+    .all(raceId, sessionType);
 
   const traces = rows.map((r) => {
     let points = [];

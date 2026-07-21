@@ -119,10 +119,16 @@ export const commitCaptureToRace = asyncHandler(async (req, res) => {
     mvpUserId: req.body.mvp_user_id,
   });
 
+  const isQuali = result.sessionType === 'qualifying';
   res.json({
-    message: 'Sessione importata: risultati e classifiche aggiornati',
+    message: isQuali
+      ? 'Qualifica importata: griglia di partenza aggiornata'
+      : 'Sessione importata: risultati e classifiche aggiornati',
+    sessionType: result.sessionType,
     imported: result.results.length,
     qualifying: result.qualifying,
+    lapTimes: result.lapTimes,
+    traces: result.traces,
     skipped: result.skipped,
     results: result.results,
   });

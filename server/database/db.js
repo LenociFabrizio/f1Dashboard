@@ -159,8 +159,75 @@ async function runMigrations() {
   // Rimozione definitiva della colonna users.username (con backfill del nome pubblico).
   await dropUsernameColumnOnce();
 
+  // Tipo di sessione ('race' | 'qualifying') su tempi/traiettorie: consente a
+  // gara e qualifica dello stesso GP di coesistere senza sovrascriversi.
+  await addSessionTypeToLapTables();
+
   await ensureOfficialCircuits();
   await ensureFullCalendarOnce();
+}
+
+/**
+ * Aggiunge la colonna `session_type` a `lap_times` e `lap_traces` sui DB
+ * esistenti e ne aggiorna i vincoli UNIQUE (che devono includere il tipo di
+ * sessione). SQLite non consente di modificare un UNIQUE inline: si ricostruisce
+ * la tabella. I dati preesistenti sono giri/traiettorie di GARA → `session_type='race'`.
+ * Idempotente: se la colonna esiste già, non fa nulla.
+ */
+async function addSessionTypeToLapTables() {
+  const ltCols = await db.all('PRAGMA table_info(lap_times)');
+  if (ltCols.length && !ltCols.some((c) => c.name === 'session_type')) {
+    await db.exec(`
+      PRAGMA foreign_keys=OFF;
+      CREATE TABLE lap_times_new (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        race_id       INTEGER NOT NULL,
+        user_id       INTEGER NOT NULL,
+        session_type  TEXT    NOT NULL DEFAULT 'race',
+        lap           INTEGER NOT NULL,
+        lap_time_ms   INTEGER,
+        sector1_ms    INTEGER,
+        sector2_ms    INTEGER,
+        sector3_ms    INTEGER,
+        valid         INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE (race_id, user_id, session_type, lap)
+      );
+      INSERT INTO lap_times_new (id, race_id, user_id, session_type, lap, lap_time_ms, sector1_ms, sector2_ms, sector3_ms, valid)
+        SELECT id, race_id, user_id, 'race', lap, lap_time_ms, sector1_ms, sector2_ms, sector3_ms, valid FROM lap_times;
+      DROP TABLE lap_times;
+      ALTER TABLE lap_times_new RENAME TO lap_times;
+      CREATE INDEX IF NOT EXISTS idx_lap_times_race ON lap_times(race_id);
+      PRAGMA foreign_keys=ON;
+    `);
+  }
+
+  const trCols = await db.all('PRAGMA table_info(lap_traces)');
+  if (trCols.length && !trCols.some((c) => c.name === 'session_type')) {
+    await db.exec(`
+      PRAGMA foreign_keys=OFF;
+      CREATE TABLE lap_traces_new (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        race_id           INTEGER NOT NULL,
+        user_id           INTEGER NOT NULL,
+        session_type      TEXT NOT NULL DEFAULT 'race',
+        lap               INTEGER,
+        best_lap_time_ms  INTEGER,
+        points            TEXT NOT NULL,
+        created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE (race_id, user_id, session_type)
+      );
+      INSERT INTO lap_traces_new (id, race_id, user_id, session_type, lap, best_lap_time_ms, points, created_at)
+        SELECT id, race_id, user_id, 'race', lap, best_lap_time_ms, points, created_at FROM lap_traces;
+      DROP TABLE lap_traces;
+      ALTER TABLE lap_traces_new RENAME TO lap_traces;
+      CREATE INDEX IF NOT EXISTS idx_lap_traces_race ON lap_traces(race_id);
+      PRAGMA foreign_keys=ON;
+    `);
+  }
 }
 
 /**

@@ -292,14 +292,17 @@ CREATE TABLE IF NOT EXISTS captured_sessions (
 
 -- ------------------------------------------------------------
 --  TEMPI SUL GIRO (cronologia per-giro dalla telemetria)
---  Un record per pilota-giro, con tempo giro e tempi dei 3 settori
+--  Un record per pilota-giro-sessione, con tempo giro e tempi dei 3 settori
 --  (millisecondi) e validità. Popolati dall'import telemetria (Session
---  History, pacchetto UDP 11). Sostituiti a ogni re-import della gara.
+--  History, pacchetto UDP 11). Sostituiti a ogni re-import della sessione.
+--  `session_type` ('race' | 'qualifying') tiene separati i giri di gara e di
+--  qualifica dello stesso GP: le due sessioni coesistono senza sovrascriversi.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lap_times (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   race_id       INTEGER NOT NULL,
   user_id       INTEGER NOT NULL,
+  session_type  TEXT    NOT NULL DEFAULT 'race', -- 'race' | 'qualifying'
   lap           INTEGER NOT NULL,          -- numero del giro (1-based)
   lap_time_ms   INTEGER,                    -- tempo sul giro (ms)
   sector1_ms    INTEGER,                    -- settore 1 (ms)
@@ -308,26 +311,29 @@ CREATE TABLE IF NOT EXISTS lap_times (
   valid         INTEGER NOT NULL DEFAULT 1, -- 1 = giro valido
   FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE (race_id, user_id, lap)
+  UNIQUE (race_id, user_id, session_type, lap)
 );
 
 -- ------------------------------------------------------------
 --  TRAIETTORIE (linea di gara dal Motion packet, UDP 0)
---  Un record per pilota-gara: la traiettoria del SOLO giro veloce, come
+--  Un record per pilota-sessione: la traiettoria del SOLO giro veloce, come
 --  elenco di punti [x, z] (metri, piano orizzontale) decimati (~6 m).
---  Popolate dall'import telemetria; sostituite a ogni re-import della gara.
+--  Popolate dall'import telemetria; sostituite a ogni re-import della sessione.
+--  `session_type` ('race' | 'qualifying') tiene separate le linee di gara e di
+--  qualifica dello stesso GP.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lap_traces (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
   race_id           INTEGER NOT NULL,
   user_id           INTEGER NOT NULL,
+  session_type      TEXT NOT NULL DEFAULT 'race', -- 'race' | 'qualifying'
   lap               INTEGER,                    -- giro veloce di riferimento
   best_lap_time_ms  INTEGER,                    -- tempo di quel giro (ms)
   points            TEXT NOT NULL,              -- JSON: [[x,z], ...] (metri, decimati ~6m)
   created_at        TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE (race_id, user_id)                     -- un solo (miglior) giro per pilota
+  UNIQUE (race_id, user_id, session_type)       -- un solo (miglior) giro per pilota-sessione
 );
 CREATE INDEX IF NOT EXISTS idx_lap_traces_race ON lap_traces(race_id);
 
