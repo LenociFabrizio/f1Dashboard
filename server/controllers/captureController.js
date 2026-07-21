@@ -114,6 +114,9 @@ export const commitCaptureToRace = asyncHandler(async (req, res) => {
   const result = await commitCapture(capture, {
     raceId: Number(req.body.race_id),
     mappings,
+    // Fallback manuale: piloti (registrati) non rilevati dal collector.
+    manualResults: Array.isArray(req.body.manual_results) ? req.body.manual_results : [],
+    manualQualifying: Array.isArray(req.body.manual_qualifying) ? req.body.manual_qualifying : [],
     markCompleted: req.body.mark_completed !== false,
     comment: req.body.comment,
     mvpUserId: req.body.mvp_user_id,

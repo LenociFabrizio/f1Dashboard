@@ -98,6 +98,26 @@ function refreshUserSelects(root) {
   });
 }
 
+/** Opzioni tendina per l'aggiunta manuale: tutti gli utenti del sito. */
+function manualUserOptions() {
+  let html = `<option value="">— scegli pilota —</option>`;
+  for (const u of state.users) html += `<option value="${u.id}">${esc(u.display_name || u.handle)}</option>`;
+  return html;
+}
+
+/** Riga per aggiungere a mano un pilota (registrato) non rilevato dal collector. */
+function manualRow(isQuali) {
+  const extra = isQuali
+    ? `<input type="text" class="input sm m-time" placeholder="1:23.456" style="width:120px" title="Miglior tempo (opzionale)">`
+    : `<label class="checkbox" style="white-space:nowrap;font-size:.85rem"><input type="checkbox" class="m-dnf"> DNF</label>`;
+  return `<div class="manual-row flex items-center gap-2" style="margin-bottom:6px;flex-wrap:wrap">
+    <select class="select sm m-user" style="min-width:160px">${manualUserOptions()}</select>
+    <input type="number" class="input sm m-pos" min="1" max="30" placeholder="Pos" style="width:72px" title="Posizione finale">
+    ${extra}
+    <button class="btn ghost sm m-del" type="button" title="Rimuovi">✕</button>
+  </div>`;
+}
+
 function participantRow(p) {
   const warn = p.nameReliable === false;
   const tag = p.userId && p.matchedBy
@@ -160,6 +180,14 @@ async function openDetail(root, id) {
           <thead><tr><th>Pilota (gioco)</th><th></th><th>Utente del sito</th></tr></thead>
           <tbody id="parts-body">${participants.map(participantRow).join('')}</tbody>
         </table></div>
+        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+          <div class="flex items-center justify-between" style="margin-bottom:6px">
+            <strong style="font-size:.9rem">Piloti non rilevati</strong>
+            <button class="btn ghost sm" id="add-manual" type="button">+ Aggiungi</button>
+          </div>
+          <div class="hint" style="margin-bottom:8px">Aggiungi a mano i piloti (registrati) che il collector non ha rilevato: scegli l'utente e la posizione ${isQuali ? 'in qualifica' : 'finale'}.</div>
+          <div id="manual-body"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -192,6 +220,30 @@ async function openDetail(root, id) {
   // tendine, e riaggiorna a ogni cambio di selezione.
   refreshUserSelects(root);
   $$('#parts-body .p-user', root).forEach((s) => s.addEventListener('change', () => refreshUserSelects(root)));
+
+  // Aggiunta manuale di piloti non rilevati.
+  $('#add-manual', root).addEventListener('click', () => {
+    const holder = $('#manual-body', root);
+    holder.insertAdjacentHTML('beforeend', manualRow(isQuali));
+    const row = holder.lastElementChild;
+    row.querySelector('.m-del').addEventListener('click', () => row.remove());
+  });
+}
+
+/** Raccoglie le righe manuali (piloti non rilevati) come result/qualifying rows. */
+function collectManual(root, isQuali) {
+  return $$('#manual-body .manual-row', root)
+    .map((row) => {
+      const user_id = Number(row.querySelector('.m-user').value) || null;
+      const position = Number(row.querySelector('.m-pos').value) || null;
+      if (!user_id || !position) return null;
+      if (isQuali) {
+        const best_time = row.querySelector('.m-time')?.value.trim() || null;
+        return { user_id, position, best_time };
+      }
+      return { user_id, position, dnf: row.querySelector('.m-dnf')?.checked ? 1 : 0 };
+    })
+    .filter(Boolean);
 }
 
 /** Raccoglie i mapping carIndex → user_id dalle select. */
@@ -204,12 +256,14 @@ function collectMappings(root) {
 async function commit(root, id) {
   const raceId = Number($('#race-target', root).value);
   if (!raceId) { toast.warning('Scegli la gara di destinazione.'); return; }
-  const mappings = collectMappings(root);
-  if (!mappings.length) { toast.warning('Mappa almeno un pilota.'); return; }
 
   const btn = $('#do-commit', root);
   const isQuali = btn.dataset.quali === '1';
   const completedEl = $('#opt-completed', root); // assente per le qualifiche
+
+  const mappings = collectMappings(root);
+  const manual = collectManual(root, isQuali);
+  if (!mappings.length && !manual.length) { toast.warning('Mappa almeno un pilota o aggiungine uno manualmente.'); return; }
 
   // Avviso di sovrascrittura solo per la gara già conclusa: importare la
   // qualifica non tocca i risultati, quindi non serve avvisare.
@@ -228,6 +282,8 @@ async function commit(root, id) {
     const res = await api.post(`/admin/captures/${id}/commit`, {
       race_id: raceId,
       mappings,
+      manual_results: isQuali ? [] : manual,
+      manual_qualifying: isQuali ? manual : [],
       save_aliases: $('#opt-aliases', root).checked,
       mark_completed: completedEl ? completedEl.checked : true,
     });

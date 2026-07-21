@@ -16,7 +16,7 @@
  * ------------------------------------------------------------
  */
 import { EventEmitter } from 'node:events';
-import { buildPayload } from './builder.js';
+import { buildPayload, isRealParticipant } from './builder.js';
 
 // Traiettoria (giro veloce): parametri di campionamento/limite.
 const TRACE_MIN_DIST_SQ = 36;   // (~6 m)² tra punti consecutivi: decimazione distanza-based
@@ -37,7 +37,8 @@ export class SessionAggregator extends EventEmitter {
       sessionUID: sessionUid,
       packetFormat: header.packetFormat,
       meta: null,            // ultimo pacchetto Session
-      participants: null,    // ultimo pacchetto Participants
+      participants: null,    // ultimo pacchetto Participants (grezzo, per la live view)
+      participantsByCar: {}, // carIdx -> identità accumulata nel tempo (merge)
       lapData: null,         // ultimo pacchetto LapData (per la live view)
       classification: null,  // Final Classification
       fastestLapCarIndex: null,
@@ -74,8 +75,9 @@ export class SessionAggregator extends EventEmitter {
         s.lapData = packet;
         this.emit('lap-data', packet);
         break;
-      case 4: // Participants
+      case 4: // Participants: tieni l'ultimo (live view) e ACCUMULA nel tempo
         s.participants = packet;
+        this._mergeParticipants(packet);
         break;
       case 3: // Event
         this._onEvent(packet);
@@ -89,6 +91,26 @@ export class SessionAggregator extends EventEmitter {
         break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Accumula i partecipanti nel tempo (merge per carIndex): ogni pacchetto
+   * Participants aggiorna solo gli slot "reali", senza mai rimuovere quelli
+   * già visti. Così, se l'ultimo Participants prima della fine gara è
+   * incompleto (numActiveCars basso, piloti ai box/riconnessi), le identità
+   * raccolte in precedenza NON vengono perse. Conserva anche il nome migliore
+   * già visto (una versione "a nomi nascosti" non sovrascrive un nome buono).
+   */
+  _mergeParticipants(packet) {
+    const arr = packet.participants || [];
+    const map = this.state.participantsByCar;
+    for (let i = 0; i < arr.length; i++) {
+      const p = arr[i];
+      if (!isRealParticipant(p)) continue;
+      const prev = map[i];
+      const name = p.name && String(p.name).trim() ? p.name : (prev?.name || p.name);
+      map[i] = { ...p, name };
     }
   }
 
@@ -125,9 +147,11 @@ export class SessionAggregator extends EventEmitter {
     const s = this.state;
     if (!s.lapData || !packet.cars) return; // senza LapData non sappiamo il giro
     const lapCars = s.lapData.cars || [];
-    const numActive = s.participants?.numActiveCars ?? packet.cars.length;
 
-    for (let i = 0; i < packet.cars.length && i < numActive; i++) {
+    // Itera tutte le vetture: gli slot vuoti/inattivi sono già saltati dai
+    // controlli sotto (nessun LapData o giro corrente). Non ci limitiamo a
+    // numActiveCars, che in lobby online può sottostimare le vetture presenti.
+    for (let i = 0; i < packet.cars.length; i++) {
       const pos = packet.cars[i];
       const ld = lapCars[i];
       if (!pos || !ld) continue;

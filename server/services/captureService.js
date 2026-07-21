@@ -242,6 +242,27 @@ export function buildRows(payload, resolved, opts = {}) {
 }
 
 /**
+ * Unisce righe manuali (aggiunte dall'admin per piloti registrati non rilevati
+ * dal collector) alle righe costruite dalla telemetria, deduplicando per
+ * user_id: una riga manuale ha la precedenza su quella catturata dello stesso
+ * pilota. Ogni riga manuale deve avere almeno { user_id, position }.
+ * @param {Array<object>} rows righe da telemetria
+ * @param {Array<object>} manual righe manuali [{ user_id, position, ... }]
+ * @returns {Array<object>}
+ */
+export function mergeManualRows(rows, manual) {
+  if (!Array.isArray(manual) || !manual.length) return rows;
+  const byUser = new Map();
+  for (const r of rows) if (r.user_id) byUser.set(Number(r.user_id), r);
+  for (const m of manual) {
+    if (!m || !m.user_id || !m.position) continue;
+    const uid = Number(m.user_id);
+    byUser.set(uid, { ...byUser.get(uid), ...m, user_id: uid, position: Number(m.position) });
+  }
+  return [...byUser.values()];
+}
+
+/**
  * Costruisce le righe lap_times (tempo giro + settori) dal payload,
  * mappando carIndex -> utente tramite i partecipanti risolti.
  * @returns {Array<{user_id,lap,lap_time_ms,sector1_ms,sector2_ms,sector3_ms,valid}>}
@@ -337,10 +358,12 @@ export async function commitCapture(capture, opts) {
   // ------------------------------------------------------------------
   if (kind === 'qualifying') {
     const { qualifyingRows } = buildRows(payload, resolved);
-    if (!qualifyingRows.length) {
-      throw new HttpError(400, 'Nessun tempo di qualifica mappato: impossibile importare. Associa gli handle e riprova.');
+    // Fallback manuale: tempi di qualifica di piloti (registrati) non rilevati.
+    const rows = mergeManualRows(qualifyingRows, opts.manualQualifying);
+    if (!rows.length) {
+      throw new HttpError(400, 'Nessun tempo di qualifica mappato: impossibile importare. Associa gli handle o aggiungi i piloti mancanti.');
     }
-    const qualifying = await persistQualifying(raceId, qualifyingRows);
+    const qualifying = await persistQualifying(raceId, rows);
     await persistLapTimes(raceId, lapRows, 'qualifying');
     await persistLapTraces(raceId, traceRows, 'qualifying');
     await markImported(capture.id, raceId);
@@ -357,11 +380,13 @@ export async function commitCapture(capture, opts) {
     .get(raceId);
   const { resultRows, skipped } = buildRows(payload, resolved, { poleUserId: poleRow ? poleRow.user_id : null });
 
-  if (!resultRows.length) {
-    throw new HttpError(400, 'Nessun pilota mappato: impossibile importare. Associa gli handle e riprova.');
+  // Fallback manuale: risultati di piloti (registrati) non rilevati dal collector.
+  const rows = mergeManualRows(resultRows, opts.manualResults);
+  if (!rows.length) {
+    throw new HttpError(400, 'Nessun pilota mappato: impossibile importare. Associa gli handle o aggiungi i piloti mancanti.');
   }
 
-  const results = await persistResults(raceId, resultRows, {
+  const results = await persistResults(raceId, rows, {
     markCompleted: opts.markCompleted !== false,
     comment: opts.comment,
     mvpUserId: opts.mvpUserId,

@@ -244,6 +244,61 @@ test('sessione senza classifica NON viene finalizzata', () => {
   assert.equal(done, null);
 });
 
+test('robustezza lobby: l\'ultimo Participants incompleto non perde piloti (fix 17/20)', () => {
+  const agg = new SessionAggregator();
+  let done = null;
+  agg.on('session-complete', (e) => { done = e; });
+
+  // Primo Participants: 2 vetture presenti.
+  agg.ingest(parsePacket(participantsPacket([
+    { name: 'MaxP_TM', platform: 1, raceNumber: 1, teamId: 2, showNames: true },
+    { name: 'CharlesLec', platform: 1, raceNumber: 16, teamId: 1, showNames: true },
+  ], 2)));
+  agg.ingest(parsePacket(sessionPacket(15)));
+  // Ultimo Participants prima della fine: incompleto (solo car 0, numActive=1).
+  agg.ingest(parsePacket(participantsPacket([
+    { name: 'MaxP_TM', platform: 1, raceNumber: 1, teamId: 2, showNames: true },
+  ], 1)));
+  // Ma la classifica finale contiene entrambe le vetture.
+  agg.ingest(parsePacket(finalClassificationPacket([
+    { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81200, totalRaceTimeS: 3600.0, penS: 0, numStints: 1, stintsVisual: [16] },
+    { position: 2, numLaps: 50, grid: 2, points: 18, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3605.5, penS: 0, numStints: 1, stintsVisual: [16] },
+  ])));
+
+  assert.ok(done, 'session-complete emesso');
+  const p = done.payload;
+  assert.equal(p.classification.length, 2, 'entrambe le vetture classificate');
+  assert.equal(p.participants.length, 2, 'entrambi i piloti presenti nonostante l\'ultimo Participants incompleto');
+  assert.deepEqual(p.participants.map((x) => x.name).sort(), ['CharlesLec', 'MaxP_TM']);
+});
+
+test('robustezza lobby: slot non contigui (car 0 e car 3) esportati con carIndex reale', () => {
+  const agg = new SessionAggregator();
+  let done = null;
+  agg.on('session-complete', (e) => { done = e; });
+
+  agg.ingest(parsePacket(participantsPacket([
+    { name: 'Alfa', platform: 1, raceNumber: 1, teamId: 2, showNames: true },
+    null, null,
+    { name: 'Delta', platform: 1, raceNumber: 4, teamId: 3, showNames: true },
+  ], 2)));
+  agg.ingest(parsePacket(sessionPacket(15)));
+  agg.ingest(parsePacket(finalClassificationPacket([
+    { position: 1, numLaps: 50, grid: 1, points: 25, pits: 1, resultStatus: 3, bestLapMs: 81200, totalRaceTimeS: 3600.0, penS: 0, numStints: 1, stintsVisual: [16] },
+    null, null,
+    { position: 2, numLaps: 50, grid: 4, points: 18, pits: 1, resultStatus: 3, bestLapMs: 81000, totalRaceTimeS: 3605.5, penS: 0, numStints: 1, stintsVisual: [16] },
+  ])));
+
+  assert.ok(done, 'session-complete emesso');
+  const p = done.payload;
+  assert.equal(p.classification.length, 2);
+  assert.deepEqual(p.classification.map((c) => c.carIndex).sort((a, b) => a - b), [0, 3], 'carIndex effettivi preservati');
+  assert.equal(p.participants.length, 2);
+  const byCar = Object.fromEntries(p.participants.map((x) => [x.carIndex, x.name]));
+  assert.equal(byCar[0], 'Alfa');
+  assert.equal(byCar[3], 'Delta');
+});
+
 test('Motion → traiettoria: il giro veloce (car 1) finisce in payload.lapTraces', () => {
   const agg = new SessionAggregator({ collectorVersion: 'test' });
   let done = null;
