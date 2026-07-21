@@ -14,6 +14,7 @@ const router = Router();
 // Il proprio profilo (prima di /:id per evitare conflitti)
 router.put('/me', requireAuth, users.updateMe);
 router.post('/me/avatar', requireAuth, upload.single('avatar'), users.uploadAvatar);
+router.post('/me/assists-confirm', requireAuth, users.confirmMyAssists);
 router.delete('/me', requireAuth, users.deleteMe);
 
 // Handle di gioco F1 25 (per l'import automatico della telemetria + nome pubblico "@handle")

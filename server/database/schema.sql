@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS users (
   assist_abs        INTEGER NOT NULL DEFAULT 0,       -- 0 = off, 1 = on
   assist_tc         TEXT    NOT NULL DEFAULT 'off',   -- 'off' | 'medium' | 'full'
   assist_gearbox    TEXT    NOT NULL DEFAULT 'auto',  -- 'auto' | 'manual'
+  -- Ultima conferma settimanale degli aiuti (promemoria del lunedì). NULL = mai.
+  assists_confirmed_at TEXT,
   role              TEXT    NOT NULL DEFAULT 'pilota',  -- 'admin' | 'pilota'
   -- Predisposizione OAuth
   provider          TEXT    DEFAULT 'local', -- 'local' | 'psn' | 'ea'

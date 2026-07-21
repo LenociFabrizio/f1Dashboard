@@ -300,20 +300,56 @@ export function mountTraceMap(container, driversRaw) {
     hideTip();
     draw();
   };
-  let dragging = false, lastX = 0, lastY = 0, moved = false;
-  const onDown = (e) => { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; canvas.classList.add('grabbing'); };
+  // Pan (1 dito / mouse) + pinch-zoom (2 dita) via Pointer Events: stesso
+  // codice su desktop e mobile. touch-action:none (CSS) impedisce al browser
+  // di intercettare il gesto (scroll/zoom pagina) sopra il canvas.
+  const pointers = new Map(); // pointerId -> {x, y}
+  let pinchPrev = null;       // { dist, cx, cy }
+  const centroid = () => {
+    const p = [...pointers.values()];
+    return { dist: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), cx: (p[0].x + p[1].x) / 2, cy: (p[0].y + p[1].y) / 2 };
+  };
+  const onDown = (e) => {
+    canvas.setPointerCapture?.(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) pinchPrev = centroid();
+    canvas.classList.add('grabbing');
+    hideTip();
+  };
   const onMove = (e) => {
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    if (dragging) {
-      state.panX += e.clientX - lastX; state.panY += e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY; moved = true;
-      hideTip(); draw(); return;
+    if (!pointers.has(e.pointerId)) {
+      // hover (solo mouse): tooltip con la distanza locale tra le linee
+      if (e.pointerType === 'mouse' && pointers.size === 0) showTipAt(e.clientX - rect.left, e.clientY - rect.top);
+      return;
     }
-    showTipAt(mx, my);
+    const prev = pointers.get(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      // Pinch: mantieni fermo il punto-mondo sotto il centro del gesto.
+      const cur = centroid();
+      if (pinchPrev && pinchPrev.dist > 0) {
+        const [wx, wz] = toWorld(pinchPrev.cx - rect.left, pinchPrev.cy - rect.top);
+        state.zoom = clamp(state.zoom * (cur.dist / pinchPrev.dist), 1, 40);
+        const sc = scale();
+        state.panX = (cur.cx - rect.left) - cw / 2 - (wx - wcx) * sc;
+        state.panY = (cur.cy - rect.top) - ch / 2 + (wz - wcz) * sc;
+      }
+      pinchPrev = cur;
+      hideTip(); draw();
+    } else {
+      // Pan con un dito / mouse.
+      state.panX += e.clientX - prev.x;
+      state.panY += e.clientY - prev.y;
+      hideTip(); draw();
+    }
   };
-  const onUp = () => { dragging = false; canvas.classList.remove('grabbing'); };
-  const onLeave = () => { dragging = false; canvas.classList.remove('grabbing'); hideTip(); };
+  const onUp = (e) => {
+    pointers.delete(e.pointerId);
+    canvas.releasePointerCapture?.(e.pointerId);
+    if (pointers.size < 2) pinchPrev = null;
+    if (pointers.size === 0) canvas.classList.remove('grabbing');
+  };
 
   function hideTip() { tip.classList.add('hidden'); state.hover = null; }
   function showTipAt(mx, my) {
@@ -339,9 +375,10 @@ export function mountTraceMap(container, driversRaw) {
 
   canvas.addEventListener('wheel', onWheel, { passive: false });
   canvas.addEventListener('pointerdown', onDown);
-  window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointerleave', onLeave);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onUp);
+  canvas.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hideTip(); });
 
   container.querySelectorAll('.seg-btn').forEach((b) => b.addEventListener('click', () => {
     if (b.disabled) return;
@@ -366,8 +403,6 @@ export function mountTraceMap(container, driversRaw) {
   return {
     destroy() {
       ro.disconnect();
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
     },
   };
 }

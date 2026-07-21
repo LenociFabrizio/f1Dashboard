@@ -761,3 +761,26 @@ table.data.compact .input { margin: 0; }
   .trace-sectors { margin-left: 0; }
   .trace-leg { min-width: 0; flex: 1 1 auto; }
 }
+
+/* =============================================================
+   Promemoria settimanale aiuti di guida (banner globale sotto la navbar)
+   ============================================================= */
+.assists-reminder {
+  background: color-mix(in srgb, var(--f1-red) 12%, var(--bg-100));
+  border-bottom: 1px solid color-mix(in srgb, var(--f1-red) 35%, transparent);
+}
+.assists-reminder .ar-inner {
+  display: flex; align-items: center; gap: var(--sp-3); padding: 10px 0;
+}
+.assists-reminder .ar-ic { font-size: 1.2rem; flex: none; }
+.assists-reminder .ar-text { flex: 1 1 auto; font-size: 0.9rem; color: var(--text-mid); line-height: 1.4; }
+.assists-reminder .ar-actions { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+.assists-reminder .ar-close {
+  background: transparent; border: 0; color: var(--text-lo);
+  font-size: 1rem; line-height: 1; padding: 4px; cursor: pointer;
+}
+.assists-reminder .ar-close:hover { color: var(--text-hi); }
+@media (max-width: 640px) {
+  .assists-reminder .ar-inner { flex-wrap: wrap; }
+  .assists-reminder .ar-actions { width: 100%; justify-content: flex-end; }
+}

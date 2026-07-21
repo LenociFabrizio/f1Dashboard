@@ -107,6 +107,24 @@ export const updateMe = asyncHandler(async (req, res) => {
     `UPDATE users SET ${setClause}, updated_at = datetime('now') WHERE id = @id`
   ).run({ ...updates, id: req.user.id });
 
+  // Salvare gli aiuti equivale a confermarli per la settimana corrente
+  // (spegne il promemoria del lunedì fino al prossimo lunedì).
+  if (['assist_abs', 'assist_tc', 'assist_gearbox'].some((k) => k in updates)) {
+    await touchAssistsConfirmed(req.user.id);
+  }
+
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  res.json(sanitizeUser(user));
+});
+
+/** Segna gli aiuti come "confermati ora" (usato dal promemoria e dal salvataggio). */
+function touchAssistsConfirmed(userId) {
+  return db.prepare("UPDATE users SET assists_confirmed_at = datetime('now') WHERE id = ?").run(userId);
+}
+
+/** POST /api/users/me/assists-confirm — l'utente conferma che gli aiuti sono aggiornati */
+export const confirmMyAssists = asyncHandler(async (req, res) => {
+  await touchAssistsConfirmed(req.user.id);
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   res.json(sanitizeUser(user));
 });

@@ -159,6 +159,13 @@ async function runMigrations() {
   // Rimozione definitiva della colonna users.username (con backfill del nome pubblico).
   await dropUsernameColumnOnce();
 
+  // Conferma settimanale degli aiuti (promemoria del lunedì). Aggiunta DOPO
+  // l'eventuale rebuild di `users` sopra, così non viene persa.
+  const uCols2 = await db.all('PRAGMA table_info(users)');
+  if (uCols2.length && !uCols2.some((c) => c.name === 'assists_confirmed_at')) {
+    await db.run('ALTER TABLE users ADD COLUMN assists_confirmed_at TEXT');
+  }
+
   // Tipo di sessione ('race' | 'qualifying') su tempi/traiettorie: consente a
   // gara e qualifica dello stesso GP di coesistere senza sovrascriversi.
   await addSessionTypeToLapTables();

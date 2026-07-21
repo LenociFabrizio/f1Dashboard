@@ -164,5 +164,63 @@ export function mountFooter() {
 /** Monta navbar + footer + reveal. Chiamata unica per pagina pubblica. */
 export function mountChrome() {
   mountNavbar();
+  mountAssistsReminder();
   mountFooter();
+}
+
+/** Inizio settimana (lunedì 00:00 locale) come Date. */
+function startOfWeekMonday(d = new Date()) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = (x.getDay() + 6) % 7; // 0 = lunedì … 6 = domenica
+  x.setDate(x.getDate() - day);
+  return x;
+}
+
+/**
+ * Promemoria settimanale (dal lunedì) per rivedere gli AIUTI DI GUIDA usati nel
+ * campionato. Compare su PC e mobile in cima a ogni pagina finché l'utente non
+ * conferma; la conferma — o il salvataggio degli aiuti nelle impostazioni —
+ * lo nasconde fino al lunedì successivo. Nessuna notifica push: è un banner
+ * in-app, quindi cross-dispositivo per definizione.
+ */
+export function mountAssistsReminder() {
+  const user = auth.user;
+  if (!auth.isLogged() || !user) return;
+  if ($('#assists-reminder')) return; // evita duplicati
+
+  // Confermato in questa settimana? (assists_confirmed_at può essere ISO o
+  // 'YYYY-MM-DD HH:MM:SS' UTC: normalizziamo per il parsing.)
+  const raw = user.assists_confirmed_at;
+  const confirmed = raw ? new Date(String(raw).includes('T') ? raw : raw.replace(' ', 'T') + 'Z') : null;
+  const monday = startOfWeekMonday();
+  if (confirmed && !isNaN(confirmed) && confirmed >= monday) return;
+
+  const onSettings = location.pathname.endsWith('/profile.html');
+  const bar = el('div', { class: 'assists-reminder', id: 'assists-reminder' });
+  bar.innerHTML = `
+    <div class="container ar-inner">
+      <span class="ar-ic" aria-hidden="true">🎛️</span>
+      <span class="ar-text">Nuova settimana di campionato: ricordati di <strong>aggiornare gli aiuti di guida</strong> che stai usando (li modifichi nelle impostazioni del profilo).</span>
+      <span class="ar-actions">
+        ${onSettings ? '' : '<a class="btn outline sm" href="/profile.html#assists-form">Aggiorna aiuti</a>'}
+        <button class="btn primary sm" id="ar-confirm">Sono aggiornati</button>
+        <button class="ar-close" id="ar-dismiss" aria-label="Chiudi promemoria">✕</button>
+      </span>
+    </div>`;
+
+  const navbar = document.querySelector('.navbar');
+  if (navbar) navbar.insertAdjacentElement('afterend', bar); else document.body.prepend(bar);
+
+  const close = () => bar.remove();
+  // Chiudi solo per ora: senza conferma riapparirà al prossimo caricamento.
+  $('#ar-dismiss', bar)?.addEventListener('click', close);
+  $('#ar-confirm', bar)?.addEventListener('click', async () => {
+    try {
+      await api.post('/users/me/assists-confirm');
+      const u = auth.user;
+      if (u) { u.assists_confirmed_at = new Date().toISOString(); auth.user = u; }
+    } catch { /* non blocca la UI */ }
+    close();
+  });
 }
