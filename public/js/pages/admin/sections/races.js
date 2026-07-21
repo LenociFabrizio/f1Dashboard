@@ -76,7 +76,9 @@ function row(r) {
       <td style="text-align:right;white-space:nowrap">
         <a class="btn ghost sm" href="#results?race=${r.id}">Risultati</a>
         <button class="btn ghost sm" data-edit="${r.id}">Modifica</button>
-        ${r.status === 'completed' ? `<button class="btn ghost sm" data-clear="${r.id}" style="color:var(--warning,#e0955e)">Svuota</button>` : ''}
+        ${r.qualifying_count > 0 ? `<button class="btn ghost sm" data-clearq="${r.id}" style="color:var(--warning,#e0955e)">Elimina quali</button>` : ''}
+        ${r.results_count > 0 ? `<button class="btn ghost sm" data-clearr="${r.id}" style="color:var(--warning,#e0955e)">Elimina gara</button>` : ''}
+        ${r.results_count > 0 && r.qualifying_count > 0 ? `<button class="btn ghost sm" data-clear="${r.id}" style="color:var(--warning,#e0955e)">Svuota tutto</button>` : ''}
         <button class="btn ghost sm" data-del="${r.id}" style="color:var(--danger)">Elimina</button>
       </td>
     </tr>`;
@@ -143,16 +145,33 @@ async function render(root) {
     if (ok) { toast.success('Gara aggiornata.'); render(root); }
   }));
 
-  root.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', async () => {
-    const r = races.find((x) => x.id === Number(b.dataset.clear));
-    if (!(await confirmDialog({
-      title: 'Svuotare i dati della gara?',
-      message: `Risultati, qualifiche, tempi sul giro e traiettorie di "${r.name}" verranno rimossi e la gara tornerà "in programma". Il GP resta nel calendario. Operazione irreversibile.`,
-      danger: true, confirmText: 'Svuota dati',
-    }))) return;
-    try { await api.post(`/races/${r.id}/clear`); toast.success('Dati della gara svuotati.'); render(root); }
-    catch (e) { toast.error(e.message); }
-  }));
+  // Eliminazione granulare: qualifica / gara / tutto. Le tre operazioni toccano
+  // dati disgiunti lato server, quindi non entrano mai in conflitto.
+  const wireClear = (attr, scope, dialog, okMsg) =>
+    root.querySelectorAll(`[${attr}]`).forEach((b) => b.addEventListener('click', async () => {
+      const r = races.find((x) => x.id === Number(b.getAttribute(attr)));
+      if (!(await confirmDialog(dialog(r)))) return;
+      try { await api.post(`/races/${r.id}/clear`, { scope }); toast.success(okMsg); render(root); }
+      catch (e) { toast.error(e.message); }
+    }));
+
+  wireClear('data-clearq', 'qualifying', (r) => ({
+    title: 'Eliminare la qualifica?',
+    message: `La griglia di qualifica e i relativi tempi/traiettorie di "${r.name}" verranno rimossi. I risultati di gara restano intatti. Operazione irreversibile.`,
+    danger: true, confirmText: 'Elimina qualifica',
+  }), 'Qualifica eliminata.');
+
+  wireClear('data-clearr', 'race', (r) => ({
+    title: 'Eliminare i risultati di gara?',
+    message: `I risultati di gara e i relativi tempi/traiettorie di "${r.name}" verranno rimossi e la gara tornerà "in programma". La qualifica resta intatta. Operazione irreversibile.`,
+    danger: true, confirmText: 'Elimina gara',
+  }), 'Risultati di gara eliminati.');
+
+  wireClear('data-clear', 'all', (r) => ({
+    title: 'Svuotare tutti i dati della gara?',
+    message: `Risultati, qualifiche, tempi sul giro e traiettorie di "${r.name}" verranno rimossi e la gara tornerà "in programma". Il GP resta nel calendario. Operazione irreversibile.`,
+    danger: true, confirmText: 'Svuota tutto',
+  }), 'Dati della gara svuotati.');
 
   root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     const r = races.find((x) => x.id === Number(b.dataset.del));

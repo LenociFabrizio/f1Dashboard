@@ -13,7 +13,9 @@ import { persistUpload } from '../middleware/upload.js';
 const RACE_SELECT = `
   SELECT ra.*, c.name AS circuit_name, c.country, c.country_code, c.city,
          c.length_km, c.image AS circuit_image,
-         mvp.display_name AS mvp_name, mvp.avatar AS mvp_avatar
+         mvp.display_name AS mvp_name, mvp.avatar AS mvp_avatar,
+         (SELECT COUNT(*) FROM results r WHERE r.race_id = ra.id)    AS results_count,
+         (SELECT COUNT(*) FROM qualifying q WHERE q.race_id = ra.id) AS qualifying_count
     FROM races ra
     JOIN circuits c ON c.id = ra.circuit_id
     LEFT JOIN users mvp ON mvp.id = ra.mvp_user_id`;
@@ -208,22 +210,54 @@ export const deleteRace = asyncHandler(async (req, res) => {
   res.json({ message: 'Gara eliminata' });
 });
 
-/** POST /api/races/:id/clear (admin) — svuota i dati della gara mantenendola in calendario */
+/**
+ * POST /api/races/:id/clear (admin) — svuota i dati della gara mantenendola in calendario.
+ * Body: { scope?: 'all' | 'race' | 'qualifying' }  (default 'all')
+ *   - 'qualifying' → elimina SOLO la griglia di qualifica + telemetria quali.
+ *                    Risultati di gara e stato della gara restano intatti.
+ *   - 'race'       → elimina SOLO i risultati di gara + telemetria gara e riporta
+ *                    la gara "in programma". La qualifica resta intatta.
+ *   - 'all'        → svuota tutto (comportamento storico).
+ * Le tre operazioni toccano dati disgiunti: non entrano mai in conflitto tra loro.
+ * Le classifiche/statistiche sono ricalcolate on-demand: nessuna cache da invalidare.
+ */
 export const clearRaceData = asyncHandler(async (req, res) => {
   const id = req.params.id;
   const race = await db.prepare('SELECT id FROM races WHERE id = ?').get(id);
   if (!race) throw new HttpError(404, 'Gara non trovata');
-  await db.raw.batch(
-    [
+
+  const scope = ['all', 'race', 'qualifying'].includes(req.body?.scope) ? req.body.scope : 'all';
+  const resetRace = { sql: "UPDATE races SET status = 'scheduled', mvp_user_id = NULL, comment = '', screenshot = NULL WHERE id = ?", args: [id] };
+
+  const byScope = {
+    qualifying: [
+      { sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [id] },
+      { sql: "DELETE FROM lap_times WHERE race_id = ? AND session_type = 'qualifying'", args: [id] },
+      { sql: "DELETE FROM lap_traces WHERE race_id = ? AND session_type = 'qualifying'", args: [id] },
+    ],
+    race: [
+      { sql: 'DELETE FROM results WHERE race_id = ?', args: [id] },
+      { sql: "DELETE FROM lap_times WHERE race_id = ? AND session_type = 'race'", args: [id] },
+      { sql: "DELETE FROM lap_traces WHERE race_id = ? AND session_type = 'race'", args: [id] },
+      resetRace,
+    ],
+    all: [
       { sql: 'DELETE FROM results WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM qualifying WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM lap_times WHERE race_id = ?', args: [id] },
       { sql: 'DELETE FROM lap_traces WHERE race_id = ?', args: [id] },
-      { sql: "UPDATE races SET status = 'scheduled', mvp_user_id = NULL, comment = '', screenshot = NULL WHERE id = ?", args: [id] },
+      resetRace,
     ],
-    'write'
-  );
-  res.json({ message: 'Dati della gara svuotati' });
+  };
+
+  await db.raw.batch(byScope[scope], 'write');
+
+  const message = {
+    all: 'Dati della gara svuotati',
+    race: 'Risultati di gara eliminati',
+    qualifying: 'Qualifica eliminata',
+  }[scope];
+  res.json({ message, scope });
 });
 
 /** POST /api/races/:id/screenshot (admin) — carica immagine classifica/risultati */
