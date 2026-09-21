@@ -6,13 +6,36 @@
  */
 import db from '../database/db.js';
 import { asyncHandler, HttpError } from '../utils/helpers.js';
-import { calculatePoints } from '../utils/constants.js';
+import { calculatePoints, POINTS_SCHEMES, DEFAULT_POINTS_SCHEME } from '../utils/constants.js';
 
 // ----------------------- STAGIONI -----------------------
+
+/** Normalizza lo schema punti richiesto (fallback: ufficiale). */
+function normalizeScheme(value) {
+  const key = String(value || '').trim();
+  return POINTS_SCHEMES[key] ? key : DEFAULT_POINTS_SCHEME;
+}
 
 /** GET /api/seasons */
 export const listSeasons = asyncHandler(async (_req, res) => {
   res.json(await db.prepare('SELECT * FROM seasons ORDER BY year DESC, id DESC').all());
+});
+
+/**
+ * GET /api/seasons/points-schemes
+ * Elenco degli schemi di punteggio selezionabili (con tabella posizione→punti),
+ * così l'admin UI resta allineata al server senza duplicare le costanti.
+ */
+export const listPointsSchemes = asyncHandler(async (_req, res) => {
+  res.json({
+    default: DEFAULT_POINTS_SCHEME,
+    schemes: Object.entries(POINTS_SCHEMES).map(([key, s]) => ({
+      key,
+      label: s.label,
+      summary: s.summary,
+      table: s.table,
+    })),
+  });
 });
 
 /** GET /api/seasons/active — stagione attiva corrente */
@@ -99,20 +122,21 @@ function officialSort(circuits) {
  */
 export const createSeason = asyncHandler(async (req, res) => {
   const { name, year, game, description, is_active, circuit_mode, circuit_ids, random_count, laps_percentage,
-          points_pole, points_fastest_lap } = req.body;
+          points_scheme, points_pole, points_fastest_lap } = req.body;
   if (!name || !year) throw new HttpError(400, 'Nome e anno obbligatori');
 
   const pct = Math.min(100, Math.max(1, Number(laps_percentage) || 100));
+  const scheme = normalizeScheme(points_scheme);
   const ptsPole = Math.max(0, Number(points_pole) || 0);
   const ptsFl = Math.max(0, Number(points_fastest_lap ?? 1) || 0);
 
   if (is_active) await db.prepare('UPDATE seasons SET is_active = 0').run(); // solo una attiva
   const info = await db
     .prepare(
-      `INSERT INTO seasons (name, year, game, description, is_active, points_pole, points_fastest_lap)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO seasons (name, year, game, description, is_active, points_scheme, points_pole, points_fastest_lap)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(name, year, game || 'F1 25', description || '', is_active ? 1 : 0, ptsPole, ptsFl);
+    .run(name, year, game || 'F1 25', description || '', is_active ? 1 : 0, scheme, ptsPole, ptsFl);
   const seasonId = Number(info.lastInsertRowid);
 
   // Selezione tracciati per il calendario
@@ -154,19 +178,21 @@ export const updateSeason = asyncHandler(async (req, res) => {
   const season = await db.prepare('SELECT * FROM seasons WHERE id = ?').get(id);
   if (!season) throw new HttpError(404, 'Stagione non trovata');
   if (req.body.is_active) await db.prepare('UPDATE seasons SET is_active = 0').run();
-  const fields = ['name', 'year', 'game', 'description', 'is_active', 'points_pole', 'points_fastest_lap'];
+  const fields = ['name', 'year', 'game', 'description', 'is_active', 'points_scheme', 'points_pole', 'points_fastest_lap'];
   const updates = {};
   for (const f of fields) if (req.body[f] !== undefined) updates[f] = req.body[f];
   if (Object.keys(updates).length === 0) throw new HttpError(400, 'Nessun dato da aggiornare');
+  if (updates.points_scheme !== undefined) updates.points_scheme = normalizeScheme(updates.points_scheme);
   const setClause = Object.keys(updates).map((k) => `${k} = @${k}`).join(', ');
   await db.prepare(`UPDATE seasons SET ${setClause} WHERE id = @id`).run({ ...updates, id });
 
-  // Se cambia la regola punti (pole / giro veloce), ricalcola i punti di
-  // tutti i risultati già salvati della stagione, così la classifica resta
+  // Se cambia la regola punti (schema / pole / giro veloce), ricalcola i punti
+  // di tutti i risultati già salvati della stagione, così la classifica resta
   // coerente con la nuova configurazione.
+  const schemeChanged = updates.points_scheme !== undefined && updates.points_scheme !== normalizeScheme(season.points_scheme);
   const poleChanged = updates.points_pole !== undefined && Number(updates.points_pole) !== Number(season.points_pole);
   const flChanged = updates.points_fastest_lap !== undefined && Number(updates.points_fastest_lap) !== Number(season.points_fastest_lap);
-  if (poleChanged || flChanged) {
+  if (schemeChanged || poleChanged || flChanged) {
     await recomputeSeasonPoints(id);
   }
 
@@ -175,10 +201,13 @@ export const updateSeason = asyncHandler(async (req, res) => {
 
 /**
  * Ricalcola i punti di tutti i risultati di una stagione in base alla
- * configurazione punti corrente (pole / giro veloce).
+ * configurazione punti corrente (schema / pole / giro veloce).
  */
 async function recomputeSeasonPoints(seasonId) {
-  const s = await db.prepare('SELECT points_pole, points_fastest_lap FROM seasons WHERE id = ?').get(seasonId);
+  const s = await db
+    .prepare('SELECT points_scheme, points_pole, points_fastest_lap FROM seasons WHERE id = ?')
+    .get(seasonId);
+  const scheme = normalizeScheme(s?.points_scheme);
   const pointsPole = Number(s?.points_pole) || 0;
   const pointsFastestLap = Number(s?.points_fastest_lap ?? 1);
 
@@ -199,6 +228,7 @@ async function recomputeSeasonPoints(seasonId) {
         pole: !!r.pole,
         pointsPole,
         pointsFastestLap,
+        scheme,
       }),
       r.id,
     ],

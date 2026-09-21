@@ -14,7 +14,7 @@
  */
 import db from '../database/db.js';
 import { asyncHandler, HttpError } from '../utils/helpers.js';
-import { calculatePoints } from '../utils/constants.js';
+import { calculatePoints, DEFAULT_POINTS_SCHEME } from '../utils/constants.js';
 
 /**
  * Persiste (sostituendoli interamente) i risultati di una gara in un'unica
@@ -36,8 +36,11 @@ export async function persistResults(raceId, rows, opts = {}) {
     throw new HttpError(400, 'Nessun risultato fornito');
   }
 
-  // Configurazione punti della stagione (pole / giro veloce)
-  const season = await db.prepare('SELECT points_pole, points_fastest_lap FROM seasons WHERE id = ?').get(race.season_id);
+  // Configurazione punti della stagione (schema / pole / giro veloce)
+  const season = await db
+    .prepare('SELECT points_scheme, points_pole, points_fastest_lap FROM seasons WHERE id = ?')
+    .get(race.season_id);
+  const scheme = season?.points_scheme || DEFAULT_POINTS_SCHEME;
   const pointsPole = season ? Number(season.points_pole) || 0 : 0;
   const pointsFastestLap = season ? Number(season.points_fastest_lap ?? 1) : 1;
 
@@ -78,12 +81,12 @@ export async function persistResults(raceId, rows, opts = {}) {
     const pole = r.pole ? 1 : 0;
     const position = dnf ? null : r.position ? Number(r.position) : null;
 
-    // Punti: usa quelli forniti se presenti, altrimenti calcola (con la
-    // configurazione pole/giro veloce della stagione)
+    // Punti: usa quelli forniti se presenti, altrimenti calcola (con lo schema
+    // e la configurazione pole/giro veloce della stagione)
     const points =
       r.points !== undefined && r.points !== null && r.points !== ''
         ? Number(r.points)
-        : calculatePoints(position, !!fastest, !!dnf, { pole: !!pole, pointsPole, pointsFastestLap });
+        : calculatePoints(position, !!fastest, !!dnf, { pole: !!pole, pointsPole, pointsFastestLap, scheme });
 
     stmts.push({
       sql: INSERT_SQL,

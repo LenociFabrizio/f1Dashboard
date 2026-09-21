@@ -105,7 +105,7 @@ function renderEditor(root) {
 
     <!-- RISULTATI -->
     <section id="tab-res">
-      <div class="hint" style="margin-bottom:12px">Spunta i piloti in gara. I punti sono calcolati automaticamente (posizione + giro veloce). Per un DNF, spunta DNF e scrivi il motivo nelle note. Sotto ogni pilota puoi indicare se ha corso il <strong>bot di riserva</strong> al posto del titolare: i punti restano comunque assegnati al titolare.</div>
+      <div class="hint" style="margin-bottom:12px">Spunta i piloti in gara. I punti sono calcolati automaticamente con lo schema punti della stagione (modificabile in <em>Stagioni → Modifica</em>). Per un DNF, spunta DNF e scrivi il motivo nelle note. Sotto ogni pilota puoi indicare se ha corso il <strong>bot di riserva</strong> al posto del titolare: i punti restano comunque assegnati al titolare.</div>
       <div class="table-wrap">
         <table class="data compact">
           <thead><tr>

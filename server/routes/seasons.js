@@ -13,6 +13,7 @@ const router = Router();
 // Stagioni
 router.get('/seasons', s.listSeasons);
 router.get('/seasons/active', s.getActiveSeason);
+router.get('/seasons/points-schemes', s.listPointsSchemes); // prima di /:id
 router.get('/seasons/:id', s.getSeason);
 router.post('/seasons', requireAuth, requireAdmin, s.createSeason);
 router.put('/seasons/:id', requireAuth, requireAdmin, s.updateSeason);

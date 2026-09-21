@@ -5,12 +5,45 @@ import api from '../../../core/api.js';
 import { $, $$, esc, toast, modal, el, confirmDialog } from '../../../core/ui.js';
 import { state, loadRefs, sectionHead, formModal, empty } from '../shared.js';
 
+/* ---- Schemi di punteggio (serviti dal server: unica fonte di verità) ---- */
+const FALLBACK_SCHEMES = [
+  { key: 'official', label: 'Ufficiale F1', summary: '25-18-15-12-10-8-6-4-2-1' },
+  { key: 'linear10', label: 'Lineare top 10', summary: '10-9-8-7-6-5-4-3-2-1' },
+];
+let schemes = null;
+
+async function loadSchemes() {
+  if (schemes) return schemes;
+  try {
+    const res = await api.get('/seasons/points-schemes');
+    schemes = res.schemes?.length ? res.schemes : FALLBACK_SCHEMES;
+  } catch {
+    schemes = FALLBACK_SCHEMES;
+  }
+  return schemes;
+}
+
+const schemeOpts = () => (schemes || FALLBACK_SCHEMES).map((s) => ({
+  value: s.key,
+  label: `${s.label} (${s.summary})`,
+}));
+
+/** Riepilogo leggibile di uno schema (per la tabella). */
+function schemeSummary(key) {
+  const s = (schemes || FALLBACK_SCHEMES).find((x) => x.key === (key || 'official'));
+  return s ? s.summary : '—';
+}
+
 // Campi per la MODIFICA (semplice)
-const EDIT_FIELDS = [
+const editFields = () => [
   { name: 'name', label: 'Nome', required: true, placeholder: 'Es. Campionato 2025' },
   { name: 'year', label: 'Anno', type: 'number', required: true, min: 2020, max: 2099 },
   { name: 'game', label: 'Gioco', value: 'F1 25' },
   { name: 'description', label: 'Descrizione', type: 'textarea', full: true },
+  {
+    name: 'points_scheme', label: 'Schema punti', type: 'select', options: schemeOpts(), full: true,
+    hint: 'Cambiandolo, i punti delle gare già disputate vengono ricalcolati automaticamente.',
+  },
   { name: 'points_pole', label: 'Punti pole position', type: 'number', min: 0, max: 25, placeholder: '0' },
   { name: 'points_fastest_lap', label: 'Punti giro veloce', type: 'number', min: 0, max: 25, placeholder: '1' },
   { name: 'is_active', label: 'Attiva', type: 'checkbox', checkLabel: 'Imposta come stagione attiva', full: true },
@@ -22,6 +55,7 @@ function row(s) {
       <td class="text-hi" style="font-weight:700">${esc(s.name)}</td>
       <td class="num">${s.year}</td>
       <td>${esc(s.game || '—')}</td>
+      <td class="text-lo" style="font-size:.85rem;white-space:nowrap">${esc(schemeSummary(s.points_scheme))}</td>
       <td>${s.is_active ? '<span class="badge green">Attiva</span>' : '<span class="badge gray">Archivio</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn ghost sm" data-edit="${s.id}">Modifica</button>
@@ -52,6 +86,13 @@ function openNewSeason(root) {
     <div style="border-top:1px solid var(--border);margin:6px 0 16px"></div>
     <div class="section-title" style="font-size:1rem">Regole punti</div>
     <div class="form-grid">
+      <div class="field full">
+        <label>Schema punti</label>
+        <select class="select" id="s-scheme">
+          ${schemeOpts().map((o) => `<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('')}
+        </select>
+        <div class="hint">Punti assegnati in base alla posizione d'arrivo (solo i primi 10 vanno a punti).</div>
+      </div>
       <div class="field">
         <label>Punti pole position</label>
         <input class="input" type="number" id="s-pole" min="0" max="25" value="0">
@@ -118,6 +159,7 @@ function openNewSeason(root) {
       game: q('#s-game').value.trim() || 'F1 25',
       description: q('#s-desc').value.trim(),
       is_active: q('#s-active').checked ? 1 : 0,
+      points_scheme: q('#s-scheme').value,
       points_pole: Math.max(0, Number(q('#s-pole').value) || 0),
       points_fastest_lap: Math.max(0, Number(q('#s-fl').value) || 0),
       circuit_mode: mode,
@@ -151,12 +193,13 @@ function openNewSeason(root) {
 
 async function render(root) {
   const list = state.seasons;
+  await loadSchemes();
   root.innerHTML = sectionHead('Stagioni', 'Crea e gestisci i campionati. Solo una può essere attiva.',
     '<button class="btn primary sm" id="new-season">+ Nuova stagione</button>') +
     (list.length ? `
       <div class="table-wrap">
         <table class="data">
-          <thead><tr><th>Nome</th><th class="num">Anno</th><th>Gioco</th><th>Stato</th><th></th></tr></thead>
+          <thead><tr><th>Nome</th><th class="num">Anno</th><th>Gioco</th><th>Schema punti</th><th>Stato</th><th></th></tr></thead>
           <tbody>${list.map(row).join('')}</tbody>
         </table>
       </div>` : empty('📅', 'Nessuna stagione. Creane una per iniziare.'));
@@ -166,7 +209,9 @@ async function render(root) {
   root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => {
     const s = list.find((x) => x.id === Number(b.dataset.edit));
     const ok = await formModal({
-      title: 'Modifica stagione', fields: EDIT_FIELDS, values: s,
+      title: 'Modifica stagione',
+      fields: editFields(),
+      values: { ...s, points_scheme: s.points_scheme || 'official' },
       onSubmit: (v) => api.put(`/seasons/${s.id}`, v),
     });
     if (ok) { toast.success('Stagione aggiornata.'); await loadRefs(); render(root); }
