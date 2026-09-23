@@ -264,20 +264,34 @@ export function mergeManualRows(rows, manual) {
   return [...byUser.values()];
 }
 
+/** A parità di giro, quale riga tenere: prima quella valida, poi la più veloce. */
+function isBetterLap(a, b) {
+  const va = a.valid ? 1 : 0;
+  const vb = b.valid ? 1 : 0;
+  if (va !== vb) return va > vb;
+  return (a.lap_time_ms || Infinity) < (b.lap_time_ms || Infinity);
+}
+
 /**
  * Costruisce le righe lap_times (tempo giro + settori) dal payload,
  * mappando carIndex -> utente tramite i partecipanti risolti.
+ *
+ * Dedup per (pilota, giro): lo stesso user_id può comparire su più carIndex
+ * (riconnessione a una vettura diversa, bot di riserva mappato al titolare, o
+ * override manuale), il che violerebbe UNIQUE(race_id,user_id,session_type,lap).
+ * A parità di giro si tiene la riga migliore (valida, poi più veloce), come già
+ * fa persistResults/persistQualifying con i propri UNIQUE.
  * @returns {Array<{user_id,lap,lap_time_ms,sector1_ms,sector2_ms,sector3_ms,valid}>}
  */
 export function buildLapTimes(payload, resolved) {
   const userByCar = new Map(resolved.map((p) => [p.carIndex, p]));
-  const out = [];
+  const byUserLap = new Map(); // "user_id:lap" -> riga migliore
   for (const h of payload.lapHistory || []) {
     const p = userByCar.get(h.carIndex);
     if (!p || !p.userId) continue;
     for (const l of h.laps || []) {
       if (!l.lap) continue;
-      out.push({
+      const row = {
         user_id: p.userId,
         lap: l.lap,
         lap_time_ms: l.timeMs || null,
@@ -285,10 +299,13 @@ export function buildLapTimes(payload, resolved) {
         sector2_ms: l.s2Ms || null,
         sector3_ms: l.s3Ms || null,
         valid: l.valid ? 1 : 0,
-      });
+      };
+      const key = `${row.user_id}:${row.lap}`;
+      const prev = byUserLap.get(key);
+      if (!prev || isBetterLap(row, prev)) byUserLap.set(key, row);
     }
   }
-  return out;
+  return [...byUserLap.values()];
 }
 
 /**
@@ -299,19 +316,26 @@ export function buildLapTimes(payload, resolved) {
  */
 export function buildLapTraces(payload, resolved) {
   const userByCar = new Map(resolved.map((p) => [p.carIndex, p]));
-  const out = [];
+  // Dedup per pilota: una sola traiettoria per pilota-sessione (UNIQUE
+  // race_id,user_id,session_type). Se lo stesso user_id compare su più
+  // carIndex, si tiene il giro veloce migliore (tempo più basso).
+  const byUser = new Map();
   for (const t of payload.lapTraces || []) {
     const p = userByCar.get(t.carIndex);
     if (!p || !p.userId) continue;
     if (!Array.isArray(t.points) || !t.points.length) continue;
-    out.push({
+    const row = {
       user_id: p.userId,
       lap: t.lap ?? null,
       best_lap_time_ms: t.timeMs ?? null,
       points: JSON.stringify(t.points),
-    });
+    };
+    const prev = byUser.get(row.user_id);
+    if (!prev || (row.best_lap_time_ms || Infinity) < (prev.best_lap_time_ms || Infinity)) {
+      byUser.set(row.user_id, row);
+    }
   }
-  return out;
+  return [...byUser.values()];
 }
 
 /**
