@@ -73,6 +73,7 @@ async function render(root) {
   const list = state.users;
 
   root.innerHTML = sectionHead('Piloti / Utenti', 'Crea account, assegna team e ruoli.',
+    '<button class="btn ghost sm" id="reset-assign">↺ Reset assegnazioni</button>' +
     '<button class="btn primary sm" id="new-user">+ Nuovo pilota</button>') +
     (list.length ? `
       <div class="table-wrap">
@@ -89,6 +90,37 @@ async function render(root) {
       onSubmit: (v) => api.post('/users', v),
     });
     if (ok) { toast.success('Utente creato.'); await loadRefs(); render(root); }
+  });
+
+  root.querySelector('#reset-assign').addEventListener('click', async () => {
+    const done = await formModal({
+      title: 'Reset assegnazioni piloti',
+      submitText: 'Azzera assegnazioni',
+      fields: [
+        { name: 'reset_teams', type: 'checkbox', full: true,
+          checkLabel: 'Azzera anche la scuderia assegnata a ogni pilota',
+          hint: 'Se attivo, ogni pilota resterà senza team e andrà riassegnato.' },
+      ],
+      onRender: (form) => {
+        const note = document.createElement('div');
+        note.style.cssText =
+          'margin:0 0 16px;padding:12px 14px;border-left:3px solid var(--warning);' +
+          'background:rgba(241,196,15,.08);border-radius:6px;font-size:.9rem;line-height:1.5';
+        note.innerHTML =
+          'Verrà rimosso il <strong>pilota di riserva (BOT)</strong> da <strong>tutti</strong> i piloti, ' +
+          'così potrai riassegnarli senza il vincolo «pilota già assegnato». ' +
+          'Le scuderie restano invariate (salvo l\'opzione qui sotto) e le eventuali ' +
+          'richieste di cambio in sospeso verranno annullate. Operazione irreversibile.';
+        form.prepend(note);
+      },
+      onSubmit: (v) => api.post('/users/reset-assignments', { reset_teams: !!v.reset_teams }),
+    });
+    if (done) {
+      const n = typeof done.cleared === 'number' ? done.cleared : null;
+      toast.success(n !== null ? `Assegnazioni azzerate (${n} ${n === 1 ? 'pilota' : 'piloti'}).` : 'Assegnazioni azzerate.');
+      await loadRefs();
+      render(root);
+    }
   });
 
   root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => {

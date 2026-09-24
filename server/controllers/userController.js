@@ -387,6 +387,42 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   res.json(sanitizeUser(user));
 });
 
+/**
+ * POST /api/users/reset-assignments (admin) — azzera le assegnazioni dei piloti.
+ * Svuota il pilota di riserva (BOT) di TUTTI gli utenti così l'admin può
+ * riassegnarli da zero senza incappare nel vincolo "pilota già assegnato".
+ * Con { reset_teams: true } azzera anche la scuderia di ciascun pilota.
+ * Rimuove inoltre le eventuali richieste di cambio ancora in sospeso, che
+ * farebbero riferimento ad assegnazioni ormai superate.
+ */
+export const resetDriverAssignments = asyncHandler(async (req, res) => {
+  const resetTeams = [true, 1, '1', 'true'].includes(req.body?.reset_teams);
+
+  // Quanti piloti avevano una riserva assegnata (per il messaggio di ritorno).
+  const { n } = await db
+    .prepare("SELECT COUNT(*) AS n FROM users WHERE reserve_driver IS NOT NULL AND reserve_driver <> ''")
+    .get();
+
+  const stmts = [
+    {
+      sql: `UPDATE users SET reserve_driver = NULL, updated_at = datetime('now')
+             WHERE reserve_driver IS NOT NULL AND reserve_driver <> ''`,
+      args: [],
+    },
+  ];
+  if (resetTeams) {
+    stmts.push({
+      sql: "UPDATE users SET team_id = NULL, updated_at = datetime('now') WHERE team_id IS NOT NULL",
+      args: [],
+    });
+  }
+  // Le richieste pending puntano ai vecchi team/riserve: ripartiamo puliti.
+  stmts.push({ sql: "DELETE FROM change_requests WHERE status = 'pending'", args: [] });
+
+  await db.raw.batch(stmts, 'write');
+  res.json({ message: 'Assegnazioni piloti azzerate', cleared: n, resetTeams });
+});
+
 /** POST /api/users  (admin) — crea utente/pilota manualmente */
 export const adminCreateUser = asyncHandler(async (req, res) => {
   const { first_name, last_name, email, password, role, team_id, favorite_number, nationality, reserve_driver } =

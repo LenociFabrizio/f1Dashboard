@@ -36,6 +36,7 @@ router.delete('/reset-requests/:rid', requireAuth, requireAdmin, users.revokeRes
 router.get('/:id', users.getUser);
 
 // Admin
+router.post('/reset-assignments', requireAuth, requireAdmin, users.resetDriverAssignments);
 router.post('/', requireAuth, requireAdmin, users.adminCreateUser);
 router.put('/:id', requireAuth, requireAdmin, users.adminUpdateUser);
 router.delete('/:id', requireAuth, requireAdmin, users.adminDeleteUser);
