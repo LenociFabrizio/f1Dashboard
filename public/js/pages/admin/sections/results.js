@@ -31,10 +31,13 @@ function resultRowInput(u) {
          <option value="${esc(bot)}" ${byBot ? 'selected' : ''}>🤖 ${esc(bot)} (bot sostituto)</option>
        </select>`
     : `<div class="dc-sub text-dim" title="Nessun bot di riserva assegnato">nessun bot</div>`;
+  // data-team = scuderia del risultato già salvato: ri-salvando una gara passata
+  // i punti costruttori restano al team con cui il pilota ha corso (anche se nel
+  // frattempo l'ha cambiato). Vuoto = nuovo risultato → il server usa la scuderia attuale.
   return `
-    <tr data-uid="${u.id}" data-team="${u.team_id ?? ''}">
+    <tr data-uid="${u.id}" data-team="${ex.team_id ?? ''}">
       <td><input type="checkbox" class="r-in" ${inGara ? 'checked' : ''}></td>
-      <td><span class="text-hi">${esc(u.display_name || u.handle)}</span><div class="dc-sub">${esc(u.team_name || '—')}</div>${driverSelect}</td>
+      <td><span class="text-hi">${esc(u.display_name || u.handle)}</span><div class="dc-sub">${esc(ex.team_name || u.team_name || '—')}</div>${driverSelect}</td>
       <td><input class="input sm r-grid" type="number" min="1" max="30" value="${ex.grid_position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-pos" type="number" min="1" max="30" value="${ex.position ?? ''}" style="width:56px"></td>
       <td><input class="input sm r-gap" placeholder="+0.000" value="${esc(ex.gap ?? '')}" style="width:90px"></td>

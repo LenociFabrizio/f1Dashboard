@@ -6,7 +6,7 @@
  * ------------------------------------------------------------
  */
 import bcrypt from 'bcryptjs';
-import db from '../database/db.js';
+import db, { FREEZE_RESULT_TEAMS_SQL } from '../database/db.js';
 import { asyncHandler, HttpError, sanitizeUser, fullName, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
 import { ROLES } from '../utils/constants.js';
 import { persistUpload } from '../middleware/upload.js';
@@ -411,6 +411,10 @@ export const resetDriverAssignments = asyncHandler(async (req, res) => {
     },
   ];
   if (resetTeams) {
+    // PRIMA di azzerare le scuderie, fissa sui risultati senza team quella
+    // attuale del pilota: altrimenti quei punti sparirebbero dalla classifica
+    // costruttori (o finirebbero al team riassegnato dopo il reset).
+    stmts.push({ sql: FREEZE_RESULT_TEAMS_SQL, args: [] });
     stmts.push({
       sql: "UPDATE users SET team_id = NULL, updated_at = datetime('now') WHERE team_id IS NOT NULL",
       args: [],

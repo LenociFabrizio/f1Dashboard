@@ -21,13 +21,16 @@ export async function getDriverStandings(seasonId) {
     .prepare(
       `SELECT r.*, ${HANDLE_SELECT}, u.display_name, u.avatar, u.nationality, u.favorite_number,
               u.reserve_driver, ra.round AS race_round, ra.name AS race_name,
-              t.name AS team_name, t.color AS team_color
+              t.name AS team_name, t.color AS team_color,
+              ct.name AS cur_team_name, ct.color AS cur_team_color
          FROM results r
          JOIN races  ra ON ra.id = r.race_id
          JOIN users  u  ON u.id  = r.user_id
          ${PRIMARY_HANDLE_JOIN}
-         LEFT JOIN teams t ON t.id = COALESCE(r.team_id, u.team_id)
-        WHERE ra.season_id = ? AND ra.status = 'completed'`
+         LEFT JOIN teams t  ON t.id  = COALESCE(r.team_id, u.team_id)
+         LEFT JOIN teams ct ON ct.id = u.team_id
+        WHERE ra.season_id = ? AND ra.status = 'completed'
+        ORDER BY ra.round ASC`
     )
     .all(seasonId);
 
@@ -59,6 +62,15 @@ export async function getDriverStandings(seasonId) {
       });
     }
     const s = map.get(row.user_id);
+    // Scuderia mostrata: quella attuale del pilota; se non ne ha (es. dopo un
+    // reset assegnazioni) quella dell'ultima gara disputata (righe per round).
+    if (row.cur_team_name) {
+      s.team_name = row.cur_team_name;
+      s.team_color = row.cur_team_color;
+    } else if (row.team_name) {
+      s.team_name = row.team_name;
+      s.team_color = row.team_color;
+    }
     s.points += row.points;
     s.races += 1;
     s.overtakes += row.overtakes;
@@ -132,11 +144,13 @@ export async function getConstructorStandings(seasonId) {
         poles: 0,
         fastest_laps: 0,
         entries: 0,
+        race_ids: new Set(), // GP disputati (almeno una vettura in gara)
       });
     }
     const s = map.get(row.tid);
     s.points += row.points;
     s.entries += 1;
+    s.race_ids.add(row.race_id);
     if (row.pole) s.poles += 1;
     if (row.fastest_lap) s.fastest_laps += 1;
     if (!row.dnf && row.position) {
@@ -145,13 +159,17 @@ export async function getConstructorStandings(seasonId) {
     }
   }
 
-  let standings = Array.from(map.values()).map((s) => ({
+  // Media/gara = punti del team per GP disputato (non per singola vettura:
+  // altrimenti la media di un team con due piloti risulterebbe dimezzata).
+  let standings = Array.from(map.values()).map(({ race_ids, ...s }) => ({
     ...s,
+    races: race_ids.size,
     points: round(s.points, 1),
-    avg_points: s.entries ? round(s.points / s.entries, 2) : 0,
+    avg_points: race_ids.size ? round(s.points / race_ids.size, 2) : 0,
   }));
 
-  standings.sort((a, b) => b.points - a.points || b.wins - a.wins);
+  // Ordinamento: punti desc, vittorie desc, podi desc (come la classifica piloti)
+  standings.sort((a, b) => b.points - a.points || b.wins - a.wins || b.podiums - a.podiums);
   standings = standings.map((s, i) => ({ position: i + 1, ...s }));
   return standings;
 }

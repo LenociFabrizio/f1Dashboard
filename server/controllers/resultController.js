@@ -67,11 +67,19 @@ export async function persistResults(raceId, rows, opts = {}) {
   }
   const dedupRows = [...bestByUser.values()].map((x) => x.row);
 
-  // Fallback team: se una riga non porta team_id, si usa la scuderia attuale
-  // del pilota. Evita risultati con team_id NULL (che sparirebbero dalla
-  // classifica costruttori).
+  // Fallback team se una riga non porta team_id:
+  //   1) la scuderia già salvata per quel pilota in QUESTA gara (ri-salvataggio
+  //      o re-import telemetria): i punti costruttori restano al team con cui
+  //      ha corso, anche se nel frattempo il pilota ha cambiato scuderia;
+  //   2) altrimenti la scuderia attuale del pilota.
+  // Evita risultati con team_id NULL (che sparirebbero dalla classifica
+  // costruttori) e spostamenti retroattivi di punti tra team.
   const teamByUser = new Map(
     (await db.prepare('SELECT id, team_id FROM users').all()).map((u) => [u.id, u.team_id])
+  );
+  const storedTeamByUser = new Map(
+    (await db.prepare('SELECT user_id, team_id FROM results WHERE race_id = ? AND team_id IS NOT NULL').all(raceId))
+      .map((r) => [r.user_id, r.team_id])
   );
 
   for (const r of dedupRows) {
@@ -93,7 +101,9 @@ export async function persistResults(raceId, rows, opts = {}) {
       args: {
         race_id: raceId,
         user_id: Number(r.user_id),
-        team_id: r.team_id ? Number(r.team_id) : (teamByUser.get(Number(r.user_id)) ?? null),
+        team_id: r.team_id
+          ? Number(r.team_id)
+          : (storedTeamByUser.get(Number(r.user_id)) ?? teamByUser.get(Number(r.user_id)) ?? null),
         grid_position: r.grid_position ? Number(r.grid_position) : null,
         position,
         points,

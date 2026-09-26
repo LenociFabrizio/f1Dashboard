@@ -85,6 +85,19 @@ export const db = {
 };
 
 /**
+ * Fissa sui risultati senza team (team_id NULL, es. inseriti prima del fix su
+ * team_id) la scuderia ATTUALE del pilota. Senza questo, la classifica
+ * costruttori li attribuirebbe "al volo" alla scuderia corrente: un cambio team
+ * o un reset delle assegnazioni sposterebbe (o cancellerebbe) punti già
+ * conquistati. Idempotente: tocca solo righe ancora NULL con un team noto.
+ */
+export const FREEZE_RESULT_TEAMS_SQL = `
+  UPDATE results
+     SET team_id = (SELECT u.team_id FROM users u WHERE u.id = results.user_id)
+   WHERE team_id IS NULL
+     AND EXISTS (SELECT 1 FROM users u WHERE u.id = results.user_id AND u.team_id IS NOT NULL)`;
+
+/**
  * Inizializza lo schema eseguendo schema.sql (idempotente grazie a IF NOT EXISTS).
  * NON è chiamata automaticamente: la invocano server/index.js (dev) e seed.js.
  */
@@ -123,6 +136,8 @@ async function runMigrations() {
   if (!resultCols.some((c) => c.name === 'bot_driver')) {
     await db.run("ALTER TABLE results ADD COLUMN bot_driver TEXT DEFAULT ''");
   }
+  // Risultati legacy senza team: fissa la scuderia (classifica costruttori stabile).
+  await db.run(FREEZE_RESULT_TEAMS_SQL);
 
   const seasonCols = await db.all('PRAGMA table_info(seasons)');
   const hasSeason = (name) => seasonCols.some((c) => c.name === name);
