@@ -1,25 +1,15 @@
 /* =============================================================
    home.js — Vista "Home" della SPA mobile: posizione del pilota,
    scuderia, prossimo GP con countdown live.
-   Dati: ctx.summary (GET /api/dashboard/mobile), ogni blocco può
-   essere null.
+   Dati: riepilogo dallo store (GET /api/dashboard/mobile, chiave
+   'summary'), ogni blocco può essere null.
    ============================================================= */
-import api from '../../core/api.js';
 import { esc, fmtDate, parseDbDate, flagEmoji, countdownParts } from '../../core/ui.js';
-
-/** Punti con al massimo un decimale (i punti possono essere frazionari). */
-const pts = (n) => (n == null || isNaN(n) ? '0' : Number(n).toLocaleString('it-IT', { maximumFractionDigits: 1 }));
-
-/** Colore team solo se esadecimale valido, altrimenti grigio neutro. */
-const teamColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : 'var(--text-dim)');
-
-/** Nome GP compatto per il telefono. */
-const gpName = (n) => String(n || '').replace(/^Gran Premio /i, 'GP ');
-
-const SUMMARY_KEY = 'summary'; // stessa chiave usata dalla shell per il riepilogo
+import { handleAuthError } from '../session.js';
+import { pts, teamColor, gpName, seasonLabel, getSummary, errorBlock } from './_shared.js';
 
 function seasonKicker(season) {
-  const label = season.name || `Stagione ${season.year ?? ''}`;
+  const label = seasonLabel(season);
   const total = season.total_rounds || 0;
   const done = season.completed_rounds || 0;
   // Round corrente = il prossimo da correre, fermo all'ultimo a stagione finita
@@ -65,8 +55,7 @@ function driverCard(s) {
   }
 
   return `
-    <button type="button" class="mx-card mx-home-card mx-home-tap mx-home-driver" data-go="classifica"
-            aria-label="La tua posizione: P${esc(d.position)} su ${esc(d.total)}, ${pts(d.points)} punti. Apri la classifica">
+    <button type="button" class="mx-card mx-home-card mx-home-tap mx-home-driver" data-go="classifica">
       <span class="mx-home-label">La tua posizione</span>
       <span class="mx-home-hero">
         <span class="mx-home-pos ${d.position <= 3 ? 'mx-home-pos--p' + d.position : ''}"><small>P</small>${esc(d.position)}</span>
@@ -75,6 +64,7 @@ function driverCard(s) {
       <span class="mx-home-points"><b class="mx-num">${pts(d.points)}</b> punti</span>
       <span class="mx-home-gaps">${gaps.map((g) => `<span>${g}</span>`).join('')}</span>
       ${lastResultLine(s.last_race)}
+      <span class="sr-only">Apri la classifica</span>
     </button>`;
 }
 
@@ -120,8 +110,7 @@ function nextRaceCard(s) {
       </section>`;
   }
   return `
-    <button type="button" class="mx-card mx-card--accent mx-home-card mx-home-tap mx-home-next" data-go="calendario"
-            aria-label="Prossimo GP: round ${esc(r.round)}, ${esc(r.name)}, ${esc(fmtDate(r.race_date))}. Apri il calendario">
+    <button type="button" class="mx-card mx-card--accent mx-home-card mx-home-tap mx-home-next" data-go="calendario">
       <span class="mx-home-label mx-home-label--red">Prossimo GP · R${esc(r.round)}</span>
       <span class="mx-home-next-head">
         <span class="mx-home-next-flag" aria-hidden="true">${flagEmoji(r.country_code)}</span>
@@ -132,6 +121,7 @@ function nextRaceCard(s) {
         </span>
       </span>
       <span class="mx-home-cd" role="timer" data-cd></span>
+      <span class="sr-only">Apri il calendario</span>
     </button>`;
 }
 
@@ -161,22 +151,17 @@ function startCountdown(box, raceDate) {
 
 function renderError(root, message, retry) {
   root.innerHTML = `
-    <div class="mx-view mx-home">
+    <div class="mx-home">
       <h1 class="mx-title" tabindex="-1">Home</h1>
-      <div class="mx-card mx-empty mx-home-state">
-        <p>Impossibile caricare il riepilogo.</p>
-        <p class="mx-home-muted">${esc(message || '')}</p>
-        <button type="button" class="mx-btn" data-retry>Riprova</button>
-      </div>
     </div>`;
-  root.querySelector('[data-retry]').addEventListener('click', retry);
+  root.firstElementChild.append(errorBlock('Impossibile caricare il riepilogo.', retry, message));
 }
 
 /** Disegna la vista con il riepilogo; restituisce l'id del timer countdown. */
 function draw(root, s, ctx) {
   if (!s?.season) {
     root.innerHTML = `
-      <div class="mx-view mx-home">
+      <div class="mx-home">
         <h1 class="mx-title" tabindex="-1">Home</h1>
         <div class="mx-card mx-empty mx-home-state"><p>Nessuna stagione attiva</p></div>
       </div>`;
@@ -184,7 +169,7 @@ function draw(root, s, ctx) {
   }
 
   root.innerHTML = `
-    <div class="mx-view mx-home">
+    <div class="mx-home">
       <p class="mx-kicker">${seasonKicker(s.season)}</p>
       <h1 class="mx-title" tabindex="-1">Home</h1>
       ${driverCard(s)}
@@ -209,23 +194,23 @@ export default {
 
     const load = async () => {
       root.innerHTML = `
-        <div class="mx-view mx-home" aria-busy="true">
+        <div class="mx-home" aria-busy="true">
           <h1 class="mx-title" tabindex="-1">Home</h1>
           <div class="mx-skeleton mx-home-sk mx-home-sk--lg"></div>
           <div class="mx-skeleton mx-home-sk"></div>
           <div class="mx-skeleton mx-home-sk"></div>
         </div>`;
       try {
-        const fetcher = () => api.get('/dashboard/mobile');
-        const s = ctx.store?.get ? await ctx.store.get(SUMMARY_KEY, fetcher) : await fetcher();
+        // Sempre dallo store: ctx.summary può essere datato, la cache risponde subito
+        const s = await getSummary(ctx);
         if (!state.disposed) state.timer = draw(root, s, ctx);
       } catch (e) {
-        if (!state.disposed) renderError(root, e?.message, load);
+        if (state.disposed || handleAuthError(e)) return;
+        renderError(root, e?.message, load);
       }
     };
 
-    if (ctx.summary) state.timer = draw(root, ctx.summary, ctx);
-    else await load();
+    await load();
 
     return () => {
       state.disposed = true;

@@ -11,18 +11,6 @@
 .mx-std-row,
 .mx-cal-row { box-sizing: border-box; }
 
-/* ---------- Testo solo per screen reader ---------- */
-.mx-std-sr,
-.mx-cal-sr {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 /* =============================================================
    HOME
    ============================================================= */
@@ -387,9 +375,6 @@ a.mx-cal-row:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .mx-std-pts small { font-size: 0.72rem; font-weight: 600; color: var(--text-lo); }
-
-.mx-std-muted,
-.mx-cal-muted { color: var(--text-lo); font-size: 0.9rem; }
 
 .mx-std-sk,
 .mx-cal-sk { height: 52px; border-radius: var(--r-md); }

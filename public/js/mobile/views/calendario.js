@@ -5,9 +5,8 @@
    ============================================================= */
 import api from '../../core/api.js';
 import { esc, fmtDate, flagEmoji } from '../../core/ui.js';
-
-/** Nome GP compatto per il telefono. */
-const gpName = (n) => String(n || '').replace(/^Gran Premio /i, 'GP ');
+import { handleAuthError } from '../session.js';
+import { gpName, seasonLabel, reduceMotion, getSummary, errorBlock } from './_shared.js';
 
 function raceRow(r, isNext) {
   const done = r.status === 'completed';
@@ -18,7 +17,7 @@ function raceRow(r, isNext) {
     + `<span class="mx-cal-date mx-num">${esc(fmtDate(r.race_date))}</span>`;
   const state = isNext
     ? '<span class="mx-cal-badge">Prossima</span>'
-    : done ? '<span class="mx-cal-sr">, conclusa</span>' : '';
+    : done ? '<span class="sr-only">, conclusa</span>' : '';
   return `
     <li>
       <a class="${cls}" href="/race.html?id=${encodeURIComponent(r.id)}"${isNext ? ' aria-current="date" data-next' : ''}>
@@ -42,15 +41,11 @@ export default {
   route: 'calendario',
   title: 'Calendario',
   async render(root, ctx) {
-    const seasonId = ctx.season?.id ?? ctx.summary?.season?.id ?? null;
-    const seasonLabel = ctx.summary?.season
-      ? esc(ctx.summary.season.name || `Stagione ${ctx.summary.season.year ?? ''}`)
-      : '';
     const state = { disposed: false, raf: 0, timeout: 0 };
 
     root.innerHTML = `
-      <div class="mx-view mx-cal">
-        <p class="mx-kicker" data-kicker${seasonLabel ? '' : ' hidden'}>${seasonLabel}</p>
+      <div class="mx-cal">
+        <p class="mx-kicker" data-kicker hidden></p>
         <h1 class="mx-title" tabindex="-1">Calendario</h1>
         <div class="mx-cal-body" aria-live="polite"></div>
       </div>`;
@@ -58,30 +53,33 @@ export default {
     const kicker = root.querySelector('[data-kicker]');
 
     const load = async () => {
-      if (!seasonId) {
-        body.innerHTML = '<div class="mx-card mx-empty"><p>Nessuna stagione attiva</p></div>';
-        return;
-      }
       body.setAttribute('aria-busy', 'true');
       body.innerHTML = skeleton();
+      let label = '';
       let races;
       try {
-        const fetcher = () => api.get('/races', { season_id: seasonId });
-        races = ctx.store?.get ? await ctx.store.get(`races:${seasonId}`, fetcher) : await fetcher();
+        // Stagione dal riepilogo aggiornato (ctx.summary può essere datato)
+        const summary = await getSummary(ctx);
+        label = esc(seasonLabel(summary?.season));
+        const seasonId = summary?.season?.id ?? ctx.season?.id ?? null;
+        if (seasonId != null) {
+          races = await ctx.store.get(`races:${seasonId}`, () => api.get('/races', { season_id: seasonId }));
+        }
       } catch (e) {
-        if (state.disposed) return;
+        if (state.disposed || handleAuthError(e)) return;
         body.removeAttribute('aria-busy');
-        body.innerHTML = `
-          <div class="mx-card mx-empty">
-            <p>Impossibile caricare il calendario.</p>
-            <p class="mx-cal-muted">${esc(e?.message || '')}</p>
-            <button type="button" class="mx-btn" data-retry>Riprova</button>
-          </div>`;
-        body.querySelector('[data-retry]').addEventListener('click', load);
+        body.replaceChildren(errorBlock('Impossibile caricare il calendario.', load, e?.message));
         return;
       }
       if (state.disposed) return;
       body.removeAttribute('aria-busy');
+      kicker.innerHTML = label;
+      kicker.hidden = !label;
+
+      if (races === undefined) {
+        body.innerHTML = '<div class="mx-card mx-empty"><p>Nessuna stagione attiva</p></div>';
+        return;
+      }
 
       const list = (Array.isArray(races) ? races : []).slice().sort((a, b) => (a.round || 0) - (b.round || 0));
       if (!list.length) {
@@ -92,7 +90,7 @@ export default {
       const next = list.find((r) => r.status !== 'completed');
       const done = list.filter((r) => r.status === 'completed').length;
       kicker.hidden = false;
-      kicker.innerHTML = `${seasonLabel ? `${seasonLabel} · ` : ''}<span class="mx-num">${done}/${list.length}</span> concluse`;
+      kicker.innerHTML = `${label ? `${label} · ` : ''}<span class="mx-num">${done}/${list.length}</span> concluse`;
 
       body.innerHTML = `
         <ol class="mx-list mx-cal-list" aria-label="Gare della stagione">
@@ -102,7 +100,7 @@ export default {
       // Porta in vista la prossima gara, dopo che la shell ha dato il focus al titolo
       const target = body.querySelector('[data-next]');
       if (target && next.round > 1) {
-        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        const reduce = reduceMotion();
         state.raf = requestAnimationFrame(() => {
           state.timeout = setTimeout(() => {
             if (state.disposed || !target.isConnected) return;

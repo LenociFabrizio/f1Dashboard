@@ -49,7 +49,7 @@ export default {
     groups.push(group('Informazioni', [{ href: '/privacy.html', label: 'Privacy' }]));
 
     root.innerHTML = `
-      <section class="mx-view mx-set">
+      <div class="mx-set">
         <h1 class="mx-title">Impostazioni</h1>
         <div class="mx-card mx-set-info">
           <span class="mx-set-info-name">${esc(name)}</span>
@@ -57,7 +57,7 @@ export default {
         </div>
         ${groups.join('')}
         <button type="button" class="mx-btn mx-btn--danger mx-set-logout">Esci</button>
-      </section>`;
+      </div>`;
 
     const onClick = (e) => {
       const a = e.target.closest('[data-action]');

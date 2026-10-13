@@ -6,6 +6,8 @@
 import api from '../../core/api.js';
 import { esc, fmtNum } from '../../core/ui.js';
 import { lineChart } from '../../core/charts.js';
+import { handleAuthError } from '../session.js';
+import { gpName, seasonLabel, getSummary, errorBlock } from './_shared.js';
 
 const RED = '#e10600';
 
@@ -30,10 +32,16 @@ function skeleton() {
     <div class="mx-card mx-skeleton mx-stat-sk-chart" aria-hidden="true"></div>`;
 }
 
-function formTile(pos) {
-  if (pos == null) return '<li class="mx-stat-form-tile dnf" aria-label="Ritirato">DNF</li>';
+/** Tile della forma da una voce di history: DNF solo se ritirato, "—" se manca la posizione. */
+function formTile(h) {
+  const race = h.race ? `, ${esc(gpName(h.race))}` : '';
+  const tile = (cls, text, sr) =>
+    `<li class="mx-stat-form-tile${cls ? ` ${cls}` : ''}"><span aria-hidden="true">${text}</span><span class="sr-only">${sr}${race}</span></li>`;
+  if (h.dnf) return tile('dnf', 'DNF', 'Ritirato');
+  const pos = h.position;
+  if (pos == null) return tile('', '—', 'Posizione non disponibile');
   const cls = pos === 1 ? 'p1' : pos === 2 ? 'p2' : pos === 3 ? 'p3' : '';
-  return `<li class="mx-stat-form-tile ${cls}" aria-label="Posizione ${esc(pos)}">P${esc(pos)}</li>`;
+  return tile(cls, `P${esc(pos)}`, `Posizione ${esc(pos)}`);
 }
 
 function content(s) {
@@ -43,7 +51,7 @@ function content(s) {
       <span class="mx-stat-label">${esc(label)}</span>
     </div>`).join('');
 
-  const last5 = Array.isArray(s.last5) ? s.last5 : [];
+  const last5 = (Array.isArray(s.history) ? s.history : []).slice(-5);
   const best = s.best_result
     ? `<p class="mx-stat-note">Miglior risultato: <strong class="mx-num">P${esc(s.best_result.position)}</strong> · ${esc(s.best_result.race || '')}</p>`
     : '';
@@ -52,7 +60,7 @@ function content(s) {
     <div class="mx-stat-grid">${tiles}</div>
     ${best}
     <section class="mx-card" aria-labelledby="mx-stat-form-h">
-      <h2 class="mx-kicker" id="mx-stat-form-h">Forma · ultime ${last5.length} gare</h2>
+      <h2 class="mx-kicker" id="mx-stat-form-h">Forma · ${last5.length === 1 ? 'ultima gara' : `ultime ${last5.length} gare`}</h2>
       <ol class="mx-stat-form">${last5.map(formTile).join('')}</ol>
     </section>
     <section class="mx-card" aria-labelledby="mx-stat-chart-h">
@@ -69,34 +77,19 @@ export default {
     let alive = true;
     let chart = null;
 
-    const userId = ctx.user?.id ?? ctx.summary?.me?.id;
-    const seasonId = ctx.season?.id ?? ctx.summary?.season?.id ?? null;
-    const key = `stats:driver:${userId}:${seasonId}`;
-
     root.innerHTML = `
-      <section class="mx-view mx-stat">
-        <p class="mx-kicker">${esc(ctx.summary?.season?.name || ctx.season?.name || 'Stagione')}</p>
+      <div class="mx-stat">
+        <p class="mx-kicker" data-kicker>Stagione</p>
         <h1 class="mx-title">Statistiche</h1>
         <div class="mx-stat-body" aria-live="polite"></div>
-      </section>`;
+      </div>`;
     const body = root.querySelector('.mx-stat-body');
+    const kicker = root.querySelector('[data-kicker]');
 
     const destroyChart = () => { if (chart) { chart.destroy(); chart = null; } };
 
     const showEmpty = (msg) => {
       body.innerHTML = `<div class="mx-empty"><p>${esc(msg)}</p></div>`;
-    };
-
-    const showError = (err) => {
-      body.innerHTML = `
-        <div class="mx-empty" role="alert">
-          <p>${esc(err?.message || 'Impossibile caricare le statistiche.')}</p>
-          <button type="button" class="mx-btn mx-stat-retry">Riprova</button>
-        </div>`;
-      body.querySelector('.mx-stat-retry').addEventListener('click', () => {
-        ctx.store?.clear?.(key);
-        load();
-      });
     };
 
     const drawChart = (history) => {
@@ -119,19 +112,33 @@ export default {
     };
 
     async function load() {
-      if (!userId) { showEmpty('Accedi per vedere le tue statistiche.'); return; }
-      if (seasonId == null) { showEmpty('Nessuna stagione attiva.'); return; }
       destroyChart();
       body.innerHTML = skeleton();
       try {
-        const fetcher = () => api.get(`/stats/driver/${encodeURIComponent(userId)}`, { season_id: seasonId });
-        const s = ctx.store ? await ctx.store.get(key, fetcher) : await fetcher();
+        // Utente e stagione dal riepilogo aggiornato (ctx.summary può essere datato)
+        const summary = await getSummary(ctx);
         if (!alive) return;
-        if (!s || !s.races) { showEmpty('Nessuna gara disputata in questa stagione'); return; }
+        const season = summary?.season ?? ctx.season ?? null;
+        kicker.textContent = seasonLabel(season) || 'Stagione';
+        const userId = ctx.user?.id ?? summary?.me?.id;
+        if (!userId) { showEmpty('Accedi per vedere le tue statistiche.'); return; }
+        if (season?.id == null) { showEmpty('Nessuna stagione attiva.'); return; }
+
+        const s = await ctx.store.get(`stats:driver:${userId}:${season.id}`,
+          () => api.get(`/stats/driver/${encodeURIComponent(userId)}`, { season_id: season.id }));
+        if (!alive) return;
+        if (!s || !s.races) {
+          // Distingue la stagione senza gare concluse dal pilota che non ha ancora corso
+          showEmpty(season.completed_rounds === 0
+            ? 'La stagione non ha ancora gare concluse.'
+            : 'Non hai ancora disputato gare in questa stagione.');
+          return;
+        }
         body.innerHTML = content(s);
         drawChart(Array.isArray(s.history) ? s.history : []);
       } catch (err) {
-        if (alive) showError(err);
+        if (!alive || handleAuthError(err)) return;
+        body.replaceChildren(errorBlock('Impossibile caricare le statistiche.', load, err?.message));
       }
     }
 

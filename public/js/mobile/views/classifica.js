@@ -6,15 +6,10 @@
 import api from '../../core/api.js';
 import { esc } from '../../core/ui.js';
 import { avatarUrl } from '../../core/components.js';
+import { handleAuthError } from '../session.js';
+import { pts, teamColor, seasonLabel, getSummary, bindAvatarFallback, errorBlock } from './_shared.js';
 
 const TAB_KEY = 'mx:classifica:tab';
-const DEFAULT_AVATAR = '/images/avatars/default.svg';
-
-/** Punti con al massimo un decimale. */
-const pts = (n) => (n == null || isNaN(n) ? '0' : Number(n).toLocaleString('it-IT', { maximumFractionDigits: 1 }));
-
-/** Colore team solo se esadecimale valido, altrimenti grigio neutro. */
-const teamColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : 'var(--text-dim)');
 
 const posClass = (p) => (p >= 1 && p <= 3 ? ` p${p}` : '');
 
@@ -38,7 +33,7 @@ function driverRow(d, meId) {
         <span class="mx-pos${posClass(d.position)}">${esc(d.position)}</span>
         <img class="mx-std-avatar" src="${esc(avatarUrl(d))}" alt="" width="32" height="32" loading="lazy">
         <span class="mx-row-main mx-std-main">
-          <span class="mx-std-name">${esc(d.display_name || d.handle || 'Pilota')}${me ? '<span class="mx-std-sr"> (tu)</span>' : ''}</span>
+          <span class="mx-std-name">${esc(d.display_name || d.handle || 'Pilota')}${me ? '<span class="sr-only"> (tu)</span>' : ''}</span>
           <span class="mx-row-sub mx-std-sub">
             ${d.team_name ? `<span class="mx-team-bar mx-std-dot" style="--team:${teamColor(d.team_color)}" aria-hidden="true"></span>` : ''}
             <span class="mx-std-subtext">${sub || '—'}</span>
@@ -62,7 +57,7 @@ function constructorRow(c, myTeamId) {
         <span class="mx-pos${posClass(c.position)}">${esc(c.position)}</span>
         <span class="mx-team-bar mx-std-bar" style="--team:${teamColor(c.team_color)}" aria-hidden="true"></span>
         <span class="mx-row-main mx-std-main">
-          <span class="mx-std-name">${esc(c.team_name || 'Scuderia')}${me ? '<span class="mx-std-sr"> (la tua scuderia)</span>' : ''}</span>
+          <span class="mx-std-name">${esc(c.team_name || 'Scuderia')}${me ? '<span class="sr-only"> (la tua scuderia)</span>' : ''}</span>
           ${sub ? `<span class="mx-row-sub mx-std-sub"><span class="mx-std-subtext">${sub}</span></span>` : ''}
         </span>
         <span class="mx-num mx-std-pts">${pts(c.points)}<small> pt</small></span>
@@ -79,14 +74,11 @@ export default {
   route: 'classifica',
   title: 'Classifica',
   async render(root, ctx) {
-    const seasonId = ctx.season?.id ?? ctx.summary?.season?.id ?? null;
-    const meId = ctx.user?.id ?? ctx.summary?.me?.id ?? null;
-    const myTeamId = ctx.summary?.team?.team_id ?? null;
     const state = { tab: readTab(), req: 0, disposed: false };
 
     root.innerHTML = `
-      <div class="mx-view mx-std">
-        ${ctx.summary?.season ? `<p class="mx-kicker">${esc(ctx.summary.season.name || `Stagione ${ctx.summary.season.year ?? ''}`)}</p>` : ''}
+      <div class="mx-std">
+        <p class="mx-kicker" data-kicker hidden></p>
         <h1 class="mx-title" tabindex="-1">Classifica</h1>
         <div class="mx-segmented mx-std-seg" role="group" aria-label="Tipo di classifica">
           <button type="button" data-tab="drivers">Piloti</button>
@@ -96,12 +88,12 @@ export default {
       </div>`;
 
     const body = root.querySelector('.mx-std-body');
+    const kicker = root.querySelector('[data-kicker]');
     const buttons = [...root.querySelectorAll('[data-tab]')];
 
-    const fetchList = (tab) => {
+    const fetchList = (tab, seasonId) => {
       const path = tab === 'drivers' ? '/standings/drivers' : '/standings/constructors';
-      const fetcher = () => api.get(path, { season_id: seasonId });
-      return ctx.store?.get ? ctx.store.get(`standings:${tab}:${seasonId}`, fetcher) : fetcher();
+      return ctx.store.get(`standings:${tab}:${seasonId}`, () => api.get(path, { season_id: seasonId }));
     };
 
     const show = async (tab) => {
@@ -113,32 +105,36 @@ export default {
         b.setAttribute('aria-pressed', String(on));
       });
 
-      if (!seasonId) {
-        body.innerHTML = '<div class="mx-card mx-empty"><p>Nessuna stagione attiva</p></div>';
-        return;
-      }
-
       const req = ++state.req;
       body.setAttribute('aria-busy', 'true');
       body.innerHTML = skeleton();
+      let summary;
       let list;
       try {
-        list = await fetchList(tab);
+        // Stagione, utente e scuderia dal riepilogo aggiornato (ctx.summary può essere datato)
+        summary = await getSummary(ctx);
+        const seasonId = summary?.season?.id ?? ctx.season?.id ?? null;
+        if (seasonId != null) list = await fetchList(tab, seasonId);
       } catch (e) {
-        if (state.disposed || req !== state.req) return;
+        if (state.disposed || req !== state.req || handleAuthError(e)) return;
         body.removeAttribute('aria-busy');
-        body.innerHTML = `
-          <div class="mx-card mx-empty">
-            <p>Impossibile caricare la classifica.</p>
-            <p class="mx-std-muted">${esc(e?.message || '')}</p>
-            <button type="button" class="mx-btn" data-retry>Riprova</button>
-          </div>`;
-        body.querySelector('[data-retry]').addEventListener('click', () => show(state.tab));
+        body.replaceChildren(errorBlock('Impossibile caricare la classifica.', () => show(state.tab), e?.message));
         return;
       }
       if (state.disposed || req !== state.req) return;
       body.removeAttribute('aria-busy');
 
+      const label = seasonLabel(summary?.season);
+      kicker.textContent = label;
+      kicker.hidden = !label;
+
+      if (list === undefined) {
+        body.innerHTML = '<div class="mx-card mx-empty"><p>Nessuna stagione attiva</p></div>';
+        return;
+      }
+
+      const meId = ctx.user?.id ?? summary?.me?.id ?? null;
+      const myTeamId = summary?.team?.team_id ?? null;
       list = Array.isArray(list) ? list : [];
       if (!list.length) {
         body.innerHTML = `<div class="mx-card mx-empty"><p>${tab === 'drivers'
@@ -151,13 +147,7 @@ export default {
         <ol class="mx-list mx-std-list" aria-label="${tab === 'drivers' ? 'Classifica piloti' : 'Classifica costruttori'}">
           ${list.map((x) => (tab === 'drivers' ? driverRow(x, meId) : constructorRow(x, myTeamId))).join('')}
         </ol>`;
-
-      // Avatar mancanti → immagine di default (niente handler inline)
-      body.querySelectorAll('img.mx-std-avatar').forEach((img) =>
-        img.addEventListener('error', () => {
-          if (!img.src.endsWith(DEFAULT_AVATAR)) img.src = DEFAULT_AVATAR;
-        }, { once: true })
-      );
+      bindAvatarFallback(body, 'img.mx-std-avatar');
     };
 
     buttons.forEach((b) => b.addEventListener('click', () => {

@@ -5,11 +5,10 @@
 import api from '../../core/api.js';
 import { esc, fmtNum, flagEmoji } from '../../core/ui.js';
 import { avatarUrl } from '../../core/components.js';
+import { handleAuthError } from '../session.js';
+import { teamColor as safeTeamColor, getSummary, bindAvatarFallback, errorBlock } from './_shared.js';
 
 const PLATFORM_LABEL = { steam: 'Steam', playstation: 'PlayStation', xbox: 'Xbox', origin: 'EA / Origin' };
-
-/** Colore team solo se esadecimale valido (finisce in un attributo style). */
-const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : 'var(--bg-300)');
 
 /** Nome del paese in italiano dal codice ISO, se il browser lo supporta. */
 function countryName(code) {
@@ -33,14 +32,14 @@ function content(u, summary) {
   const team = summary?.team;
   const driver = summary?.driver;
   const teamName = u.team_name || team?.team_name;
-  const teamColor = safeColor(u.team_color || team?.team_color);
+  const teamColor = safeTeamColor(u.team_color || team?.team_color, 'var(--bg-300)');
   const nat = typeof u.nationality === 'string' && /^[a-z]{2}$/i.test(u.nationality) ? u.nationality : null;
   const platforms = Array.isArray(u.platforms) ? u.platforms : [];
 
   const teamCard = teamName
     ? `
       <section class="mx-card mx-prof-team" aria-label="Scuderia">
-        <span class="mx-team-bar" style="--team:${teamColor}"></span>
+        <span class="mx-team-bar" style="--team:${teamColor}" aria-hidden="true"></span>
         <div class="mx-prof-team-main">
           <span class="mx-prof-label">Scuderia</span>
           <span class="mx-prof-team-name">${esc(teamName)}</span>
@@ -51,7 +50,7 @@ function content(u, summary) {
             <span class="mx-prof-label">${esc(fmtNum(team.points, Number.isInteger(Number(team.points)) ? 0 : 1))} pt</span>
           </div>` : ''}
       </section>`
-    : `<section class="mx-card mx-prof-team"><span class="mx-prof-label">Scuderia</span><span class="mx-row-sub">Nessuna scuderia assegnata</span></section>`;
+    : `<section class="mx-card mx-prof-team" aria-label="Scuderia"><span class="mx-prof-label">Scuderia</span><span class="mx-row-sub">Nessuna scuderia assegnata</span></section>`;
 
   const standing = driver && driver.position != null
     ? `
@@ -99,44 +98,32 @@ export default {
 
   async render(root, ctx) {
     let alive = true;
-    const userId = ctx.user?.id ?? ctx.summary?.me?.id;
-    const key = `user:${userId}`;
 
     root.innerHTML = `
-      <section class="mx-view mx-prof">
+      <div class="mx-prof">
         <h1 class="mx-title">Profilo</h1>
         <div class="mx-prof-body" aria-live="polite"></div>
-      </section>`;
+      </div>`;
     const body = root.querySelector('.mx-prof-body');
 
-    const showError = (err) => {
-      body.innerHTML = `
-        <div class="mx-empty" role="alert">
-          <p>${esc(err?.message || 'Impossibile caricare il profilo.')}</p>
-          <button type="button" class="mx-btn mx-prof-retry">Riprova</button>
-        </div>`;
-      body.querySelector('.mx-prof-retry').addEventListener('click', () => {
-        ctx.store?.clear?.(key);
-        load();
-      });
-    };
-
     async function load() {
-      if (!userId) {
-        body.innerHTML = '<div class="mx-empty"><p>Accedi per vedere il tuo profilo.</p></div>';
-        return;
-      }
       body.innerHTML = skeleton();
       try {
-        const fetcher = () => api.get(`/users/${encodeURIComponent(userId)}`);
-        const u = ctx.store ? await ctx.store.get(key, fetcher) : await fetcher();
+        // Posizione e scuderia dal riepilogo aggiornato (ctx.summary può essere datato)
+        const summary = await getSummary(ctx);
         if (!alive) return;
-        body.innerHTML = content(u || {}, ctx.summary);
-        // Avatar rotto → default
-        const img = body.querySelector('.mx-prof-avatar');
-        img?.addEventListener('error', () => { img.src = '/images/avatars/default.svg'; }, { once: true });
+        const userId = ctx.user?.id ?? summary?.me?.id;
+        if (!userId) {
+          body.innerHTML = '<div class="mx-empty"><p>Accedi per vedere il tuo profilo.</p></div>';
+          return;
+        }
+        const u = await ctx.store.get(`user:${userId}`, () => api.get(`/users/${encodeURIComponent(userId)}`));
+        if (!alive) return;
+        body.innerHTML = content(u || {}, summary);
+        bindAvatarFallback(body, '.mx-prof-avatar');
       } catch (err) {
-        if (alive) showError(err);
+        if (!alive || handleAuthError(err)) return;
+        body.replaceChildren(errorBlock('Impossibile caricare il profilo.', load, err?.message));
       }
     }
 
