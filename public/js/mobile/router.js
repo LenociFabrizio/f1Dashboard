@@ -159,14 +159,7 @@ export function createRouter({ views, outlet, context, onChange }) {
       window.addEventListener('hashchange', sync);
       sync();
     },
-    stop() {
-      window.removeEventListener('hashchange', sync);
-      runCleanup();
-      token++;
-    },
     navigate,
-    /** Ri-esegue il render della rotta corrente (es. dopo un refresh dati). */
-    reload() { if (current) render(current, { force: true }); },
     get current() { return current; },
   };
 }

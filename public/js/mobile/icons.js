@@ -67,7 +67,4 @@ export function icon(name, size = 22, { label = '', cls = '' } = {}) {
   );
 }
 
-/** Elenco dei nomi disponibili (utile alle viste). */
-export const ICON_NAMES = Object.freeze(Object.keys(PATHS));
-
 export default icon;

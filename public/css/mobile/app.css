@@ -90,15 +90,6 @@ html {
   view-transition-name: mx-view;
 }
 .mx-view[data-enter="top"] { --mx-from: -8px; }
-/* Il contenitore lo crea il router: un .mx-view annidato dentro una vista
-   resta un semplice wrapper (niente doppio padding, animazione o nome VT). */
-.mx-view .mx-view {
-  max-width: none;
-  min-height: 0;
-  padding: 0;
-  animation: none;
-  view-transition-name: none;
-}
 /* Stato di errore globale (senza chrome): niente spazio per la bar */
 .mx-view--solo { padding-bottom: calc(max(var(--safe-b), 8px) + 32px); }
 
@@ -308,7 +299,7 @@ a.mx-row:active, button.mx-row:active { background-color: rgba(255, 255, 255, 0.
 .mx-segmented button {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 10px;
   border-radius: 9px;
   color: var(--text-lo);
@@ -527,7 +518,7 @@ a.mx-row:active, button.mx-row:active { background-color: rgba(255, 255, 255, 0.
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--f1-red), 0 4px 16px rgba(225, 6, 0, 0.35);
+  box-shadow: 0 0 0 2px var(--f1-red), 0 4px 16px rgba(0, 0, 0, 0.45);   /* anello rosso, ombra neutra */
   transition: box-shadow var(--mx-dur) var(--mx-ease);
 }
 .mx-bar-avatar {
@@ -538,7 +529,7 @@ a.mx-row:active, button.mx-row:active { background-color: rgba(255, 255, 255, 0.
   background: var(--bg-150);
 }
 .mx-bar-profile.active .mx-bar-avatar-ring {
-  box-shadow: 0 0 0 2px var(--f1-red-light), 0 0 0 5px rgba(255, 45, 36, 0.18), 0 4px 18px rgba(255, 45, 36, 0.45);
+  box-shadow: 0 0 0 2px var(--f1-red-light), 0 4px 18px rgba(0, 0, 0, 0.5);
 }
 
 /* ---------------- Home indicator ---------------- */
@@ -555,9 +546,11 @@ a.mx-row:active, button.mx-row:active { background-color: rgba(255, 255, 255, 0.
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 8px;
-  touch-action: none;   /* lo swipe verso l'alto non deve scrollare la pagina */
   transition: opacity var(--mx-dur) var(--mx-ease);
 }
+/* Specificità sopra '.mx-body button' (touch-action: manipulation):
+   lo swipe verso l'alto non deve scrollare la pagina né perdere i pointer */
+.mx-body .mx-home-indicator { touch-action: none; }
 .mx-home-indicator-pill {
   display: block;
   width: 134px;

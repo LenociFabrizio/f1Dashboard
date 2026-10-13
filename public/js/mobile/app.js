@@ -11,10 +11,11 @@ import { createRouter } from './router.js';
 import { mountChrome } from './chrome.js';
 import { icon } from './icons.js';
 import VIEWS from './views/index.js';
+import { LOGIN_URL, handleAuthError } from './session.js';
 
-const LOGIN_URL = '/login.html?next=%2Fapp.html';
 const main = $('#mx-main');
 
+// Stessa chiave e stesso fetcher della Home: la cache (TTL 60s) è condivisa
 const loadSummary = () => store.get('summary', () => api.get('/dashboard/mobile'));
 
 /* Utente per il chrome: avatar aggiornato da auth (profilo) o dal riepilogo */
@@ -51,7 +52,7 @@ async function start() {
   try {
     summary = await loadSummary();
   } catch (err) {
-    if (err?.status === 401) { location.replace(LOGIN_URL); return; }
+    if (handleAuthError(err)) return;
     showError(err, () => { store.clear('summary'); start(); });
     loader.hide();
     return;
@@ -69,6 +70,15 @@ async function start() {
     user: chromeUser(summary),
   });
 
+  // A ogni cambio rotta il riepilogo viene richiesto di nuovo (dalla cache
+  // finché valida): ctx.summary resta l'ultimo valore senza bloccare il render
+  const refreshSummary = () => {
+    loadSummary().then(
+      (s) => { summary = s; chrome.setUser(chromeUser(summary)); },
+      (err) => { if (!handleAuthError(err)) console.warn('[app] riepilogo', err); }
+    );
+  };
+
   router = createRouter({
     views: VIEWS,
     outlet: main,
@@ -82,11 +92,9 @@ async function start() {
     onChange: (route) => {
       chrome.setActive(route);
       chrome.setUser(chromeUser(summary)); // l'avatar può cambiare dal profilo
+      refreshSummary();
     },
   });
-
-  // Le viste possono notificare un utente aggiornato (es. nuovo avatar)
-  window.addEventListener('mx:user-updated', () => chrome.setUser(chromeUser(summary)));
 
   router.start();
   loader.hide();

@@ -156,6 +156,7 @@ export function mountChrome({ main, navigate, current, user }) {
     indicator.classList.toggle('is-home', atHome);
     if (atHome) indicator.setAttribute('aria-disabled', 'true');
     else indicator.removeAttribute('aria-disabled');
+    indicator.tabIndex = atHome ? -1 : 0; // già in Home: fuori dal giro del Tab
   }
 
   function setUser(u) {
@@ -163,11 +164,7 @@ export function mountChrome({ main, navigate, current, user }) {
     if (avatar.getAttribute('src') !== src) avatar.src = src;
   }
 
-  return {
-    setActive,
-    setUser,
-    destroy() { island.remove(); bar.remove(); indicator.remove(); },
-  };
+  return { setActive, setUser };
 }
 
 export default mountChrome;
