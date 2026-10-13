@@ -195,6 +195,7 @@ async function runMigrations() {
 
   await ensureOfficialCircuits();
   await ensureFullCalendarOnce();
+  await ensureSeasonScheduleOnce();
 }
 
 /**
@@ -422,6 +423,49 @@ async function ensureFullCalendarOnce() {
     }
   }
   // Marca come eseguito anche se non c'era stagione attiva: si completa dal seed/admin.
+  await db.prepare('INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)').run(MARK, new Date().toISOString());
+}
+
+/**
+ * Converte un orario di Roma (ora legale/solare gestita da Intl) in ISO UTC.
+ * Salvare l'istante con la 'Z' evita ambiguità: le stringhe senza fuso
+ * verrebbero lette come UTC da parseDbDate lato client.
+ */
+function romeToUtcIso(y, m, d, hh, mm = 0) {
+  const guess = Date.UTC(y, m - 1, d, hh, mm);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Rome', hourCycle: 'h23',
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric',
+  }).formatToParts(new Date(guess));
+  const v = Object.fromEntries(parts.map((p) => [p.type, Number(p.value)]));
+  const offset = Date.UTC(v.year, v.month - 1, v.day, v.hour, v.minute) - guess;
+  return new Date(guess - offset).toISOString().replace('.000Z', 'Z');
+}
+
+/**
+ * Date delle gare del "Campionato 26-27", impostate UNA VOLTA (marcatore in
+ * app_meta, così le modifiche successive dall'admin non vengono sovrascritte).
+ * Si corrono due GP ogni lunedì: il primo alle 22:00, il secondo a seguire
+ * (23:00). Ancora: R5-R6 lunedì 28/09/2026; i round precedenti restano invariati.
+ */
+async function ensureSeasonScheduleOnce() {
+  const MARK = 'season_26_27_dates_v1';
+  const done = await db.prepare('SELECT value FROM app_meta WHERE key = ?').get(MARK);
+  if (done) return;
+
+  const season = await db.prepare('SELECT id FROM seasons WHERE name = ?').get('Campionato 26-27');
+  if (season) {
+    const FIRST_ROUND = 5;
+    const races = await db
+      .prepare('SELECT id, round FROM races WHERE season_id = ? AND round >= ? ORDER BY round')
+      .all(season.id, FIRST_ROUND);
+    for (const r of races) {
+      const idx = r.round - FIRST_ROUND;
+      const day = new Date(Date.UTC(2026, 8, 28 + Math.floor(idx / 2) * 7));
+      const iso = romeToUtcIso(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate(), idx % 2 ? 23 : 22);
+      await db.prepare('UPDATE races SET race_date = ? WHERE id = ?').run(iso, r.id);
+    }
+  }
   await db.prepare('INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)').run(MARK, new Date().toISOString());
 }
 
