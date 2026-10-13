@@ -1,0 +1,55 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "public/css/mobile/app.css",
+          "public/css/mobile/views-data.css"
+        ],
+        "createdAt": "2026-10-13T11:25:56.635Z",
+        "reason": "Filetto inset 3px della riga 'sei tu' e della prossima gara: pattern documentato in DESIGN.md (Data Table, riga sei tu)"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "public/app.html"
+        ],
+        "createdAt": "2026-10-13T11:25:56.869Z",
+        "reason": "Bagliore Rosso del bottone primario/avatar: Shadow Vocabulary di DESIGN.md"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "public/app.html",
+          "public/css/mobile/views-data.css"
+        ],
+        "createdAt": "2026-10-13T11:43:19.929Z",
+        "reason": "Puntino live 1.6s documentato in DESIGN.md (Countdown & Live), fermo con prefers-reduced-motion"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "public/app.html"
+        ],
+        "createdAt": "2026-10-13T11:43:20.205Z",
+        "reason": "Barra del loader iniziale documentata in DESIGN.md (Feedback), visibile solo durante il caricamento"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "public/app.html"
+        ],
+        "createdAt": "2026-10-13T11:43:20.472Z",
+        "reason": "Barra accent-top delle card da components.css condiviso, documentata in DESIGN.md (Cards)"
+      }
+    ]
+  }
+}
