@@ -1,0 +1,620 @@
+/* =============================================================
+   app.css — Shell della vista app mobile (app.html).
+   "La Notte di Gara" in versione iOS: vetro scuro, Rosso Corsa
+   come segnale. Qui: token glass e layout, chrome (Dynamic
+   Island, bottom bar, home indicator), transizioni e classi di
+   base condivise dalle viste (mx-*). Gli stili specifici delle
+   viste stanno in views-data.css e views-account.css.
+   ============================================================= */
+
+:root {
+  /* ---- Vetro ---- */
+  --mx-glass: rgba(22, 22, 28, 0.62);
+  --mx-glass-strong: rgba(10, 10, 12, 0.78);
+  --mx-glass-border: rgba(255, 255, 255, 0.10);
+  --mx-blur: saturate(180%) blur(20px);
+  --mx-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* ---- Layout ---- */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --island-h: 44px;
+  --bar-h: 64px;
+  --bar-gap: 12px;
+  --ind-h: 20px;
+  --mx-gutter: 16px;
+  --mx-max: 480px;
+
+  /* ---- Forma e movimento ---- */
+  --mx-radius: 20px;         /* card e liste: angolo iOS */
+  --mx-radius-sm: 12px;      /* bottoni, controlli */
+  --mx-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --mx-dur: 0.28s;
+  --mx-rest: #8a8a99;        /* testo chrome a riposo (= --text-lo) */
+  --mx-z-chrome: 100;
+}
+
+/* ---------------- Documento ---------------- */
+html {
+  scroll-behavior: auto;     /* lo scroll in cima al cambio rotta è istantaneo */
+  background: var(--bg-000);
+}
+.mx-body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.mx-body a,
+.mx-body button,
+.mx-body [role="button"],
+.mx-body input,
+.mx-body select,
+.mx-body label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.mx-body :focus-visible {
+  outline: 2px solid var(--f1-red-light);
+  outline-offset: 2px;
+}
+.mx-body [tabindex="-1"]:focus { outline: none; }
+
+.mx-main { display: block; min-height: 100vh; min-height: 100dvh; }
+
+.mx-noscript { padding: 48px 16px; text-align: center; color: var(--text-mid); }
+
+/* Toast: sotto l'island, centrati e larghi quanto il contenuto */
+.mx-body .toast-stack {
+  top: calc(var(--safe-t) + 8px + var(--island-h) + 12px);
+  left: var(--mx-gutter);
+  right: var(--mx-gutter);
+  margin-inline: auto;
+  max-width: calc(var(--mx-max) - 2 * var(--mx-gutter));
+}
+
+/* ---------------- Contenitore vista ---------------- */
+.mx-view {
+  --mx-from: 8px;
+  display: block;
+  width: 100%;
+  max-width: var(--mx-max);
+  margin-inline: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: calc(var(--safe-t) + 8px + var(--island-h) + 16px);
+  padding-bottom: calc(max(var(--safe-b), 8px) + var(--ind-h) + var(--bar-h) + var(--bar-gap) + 16px);
+  padding-left: max(var(--mx-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--mx-gutter), env(safe-area-inset-right, 0px));
+  animation: mx-enter var(--mx-dur) var(--mx-ease) both;
+  view-transition-name: mx-view;
+}
+.mx-view[data-enter="top"] { --mx-from: -8px; }
+/* Il contenitore lo crea il router: un .mx-view annidato dentro una vista
+   resta un semplice wrapper (niente doppio padding, animazione o nome VT). */
+.mx-view .mx-view {
+  max-width: none;
+  min-height: 0;
+  padding: 0;
+  animation: none;
+  view-transition-name: none;
+}
+/* Stato di errore globale (senza chrome): niente spazio per la bar */
+.mx-view--solo { padding-bottom: calc(max(var(--safe-b), 8px) + 32px); }
+
+@keyframes mx-enter {
+  from { opacity: 0; transform: translate3d(0, var(--mx-from), 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mx-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mx-fade-out { to { opacity: 0; } }
+
+/* View Transitions (miglioramento progressivo): il chrome resta fermo,
+   la vista uscente sfuma, l'entrante usa la propria animazione CSS. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; }
+::view-transition-group(mx-view) { animation: none; }
+::view-transition-old(mx-view) { animation: mx-fade-out 0.16s var(--mx-ease) both; }
+::view-transition-new(mx-view) { animation: none; }
+
+@media (max-width: 359.98px) {
+  :root { --mx-gutter: 12px; }
+}
+
+/* ---------------- Tipografia di vista ---------------- */
+.mx-kicker {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--f1-red-light);
+}
+.mx-title {
+  margin: 0 0 20px;
+  font-size: 2rem;
+  font-weight: var(--fw-black);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--text-hi);
+  overflow-wrap: break-word;
+}
+/* Etichetta di gruppo (stile intestazione lista iOS) */
+.mx-label {
+  margin: 24px 4px 8px;
+  font-size: 0.74rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+}
+.mx-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.mx-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------------- Card ---------------- */
+.mx-card {
+  position: relative;
+  padding: 16px;
+  border-radius: var(--mx-radius);
+  background: var(--mx-glass);
+  border: 1px solid var(--mx-glass-border);
+  box-shadow: var(--mx-highlight);   /* a terra: nessuna ombra profonda */
+  color: var(--text-mid);
+}
+.mx-card--accent {
+  overflow: hidden;
+  border-color: rgba(225, 6, 0, 0.28);
+  background:
+    linear-gradient(160deg, rgba(225, 6, 0, 0.12), transparent 55%),
+    var(--mx-glass);
+}
+.mx-card--accent::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--f1-red), rgba(225, 6, 0, 0));
+}
+
+/* ---------------- Stato vuoto / errore ---------------- */
+.mx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-lo);
+  font-size: 0.92rem;
+}
+.mx-empty p { color: inherit; max-width: 34ch; }
+.mx-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-mid);
+}
+.mx-empty .mx-empty-title {
+  color: var(--text-hi);
+  font-weight: var(--fw-bold);
+  font-size: 1rem;
+}
+.mx-empty .mx-btn { margin-top: 12px; }
+
+/* ---------------- Liste e righe ---------------- */
+.mx-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--mx-radius);
+  background: var(--mx-glass);
+  border: 1px solid var(--mx-glass-border);
+  box-shadow: var(--mx-highlight);
+  overflow: hidden;
+}
+.mx-list > * + * { border-top: 1px solid var(--border); }
+
+.mx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 14px;
+  color: var(--text-mid);
+  text-align: left;
+  text-decoration: none;
+  transition: background-color var(--t-fast);
+}
+a.mx-row, button.mx-row { cursor: pointer; }
+a.mx-row:hover { color: var(--text-mid); }
+a.mx-row:active, button.mx-row:active { background-color: rgba(255, 255, 255, 0.05); }
+.mx-row--me {
+  background-color: rgba(225, 6, 0, 0.08);
+  box-shadow: inset 3px 0 0 var(--f1-red);
+}
+.mx-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  color: var(--text-hi);
+  font-weight: var(--fw-semibold);
+  line-height: 1.3;
+}
+.mx-row-main > *,
+.mx-row-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mx-row-sub {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: var(--fw-normal);
+  color: var(--text-lo);
+}
+
+/* Badge posizione: P1-P3 metallici, il resto grafite */
+.mx-pos {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--bg-200);
+  color: var(--text-hi);
+  font-size: 0.86rem;
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.mx-pos.p1 { background: linear-gradient(180deg, #ffe27a, var(--gold)); color: #4a3800; }
+.mx-pos.p2 { background: linear-gradient(180deg, #eef1f4, var(--silver)); color: #33383d; }
+.mx-pos.p3 { background: linear-gradient(180deg, #e2a15e, var(--bronze)); color: #3a1e00; }
+
+/* Barretta colore scuderia: style="--team:#hex" */
+.mx-team-bar {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--team, var(--bg-300));
+}
+
+/* ---------------- Controlli ---------------- */
+.mx-segmented {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  padding: 3px;
+  border-radius: var(--mx-radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mx-glass-border);
+}
+.mx-segmented button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--text-lo);
+  font-size: 0.86rem;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+.mx-segmented button.active {
+  background: var(--f1-red);
+  color: #fff;
+}
+
+.mx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--mx-radius-sm);
+  border: 1px solid var(--mx-glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--mx-highlight);
+  color: var(--text-hi);
+  font-size: 0.92rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+}
+.mx-btn:hover { color: var(--text-hi); }
+.mx-btn:disabled, .mx-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.mx-btn--primary {
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--f1-red-light), var(--f1-red));
+  box-shadow: 0 4px 16px rgba(225, 6, 0, 0.35);
+}
+.mx-btn--danger {
+  border-color: rgba(231, 76, 60, 0.4);
+  background: rgba(231, 76, 60, 0.14);
+  color: #ff7b76;
+}
+.mx-btn--danger:hover { color: #ff7b76; }
+.mx-btn--block { display: flex; width: 100%; }
+
+/* Skeleton */
+.mx-skeleton {
+  display: block;
+  min-height: 1em;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--bg-150) 25%, var(--bg-200) 37%, var(--bg-150) 63%);
+  background-size: 400% 100%;
+  animation: mx-shimmer 1.4s ease infinite;
+}
+@keyframes mx-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* =============================================================
+   CHROME
+   ============================================================= */
+.mx-island,
+.mx-bar {
+  -webkit-backdrop-filter: var(--mx-blur);
+  backdrop-filter: var(--mx-blur);
+  box-shadow: var(--sh-lg), var(--mx-highlight);
+}
+
+/* ---------------- Dynamic Island ---------------- */
+.mx-island {
+  position: fixed;
+  z-index: var(--mx-z-chrome);
+  top: calc(var(--safe-t) + 8px);
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: min(92vw, 340px);
+  height: var(--island-h);
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: var(--mx-glass-strong);
+  border: 1px solid var(--mx-glass-border);
+  overflow: hidden;
+  transform-origin: 50% 50%;
+}
+.mx-island.is-pulse { animation: mx-island-pulse var(--mx-dur) var(--mx-ease); }
+@keyframes mx-island-pulse {
+  0%, 100% { transform: scaleX(1); }
+  45% { transform: scaleX(1.04); }
+}
+.mx-island-btn {
+  position: relative;
+  isolation: isolate;
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--mx-rest);
+  transition: color var(--t-fast), background-color var(--t-fast), transform var(--t-fast);
+}
+.mx-island-btn .mx-ic { flex: 0 0 auto; }
+.mx-island-label {
+  font-size: 0.74rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Velatura attiva come pillola interna (l'area di tocco resta piena) */
+.mx-island-btn::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: var(--r-pill);
+  background: rgba(225, 6, 0, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(225, 6, 0, 0.22);
+  opacity: 0;
+  transition: opacity var(--mx-dur) var(--mx-ease);
+}
+.mx-island-btn.active { color: #fff; }
+.mx-island-btn.active::before { opacity: 1; }
+.mx-island-btn:focus-visible { outline-offset: -3px; border-radius: var(--r-pill); }
+.mx-island-sep {
+  flex: 0 0 1px;
+  align-self: center;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------------- Bottom bar ---------------- */
+.mx-bar {
+  position: fixed;
+  z-index: var(--mx-z-chrome);
+  left: var(--mx-gutter);
+  right: var(--mx-gutter);
+  bottom: calc(max(var(--safe-b), 8px) + var(--ind-h));
+  margin-inline: auto;
+  max-width: calc(var(--mx-max) - 2 * var(--mx-gutter));
+  height: var(--bar-h);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  justify-items: center;
+  padding: 0 12px;
+  border-radius: 32px;
+  background: var(--mx-glass);
+  border: 1px solid var(--mx-glass-border);
+}
+
+.mx-bar-item {
+  position: relative;
+  width: 56px;
+  min-width: 56px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 14px;
+  color: var(--mx-rest);
+  transition: color var(--t-fast), transform var(--t-fast);
+}
+.mx-bar-item:hover { color: var(--text-mid); }
+.mx-bar-label {
+  font-size: 0.68rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.mx-bar-item.active { color: #fff; }
+.mx-bar-item::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--f1-red);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity var(--t-fast), transform var(--mx-dur) var(--mx-ease);
+}
+.mx-bar-item.active::after { opacity: 1; transform: none; }
+
+/* Profilo: cerchio che sporge 16px sopra la barra */
+.mx-bar-profile {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-inline: 8px;
+  border-radius: 50%;
+  background: var(--mx-glass-strong);
+  border: 1px solid var(--mx-glass-border);
+  box-shadow: var(--mx-highlight);
+  transform: translateY(-16px);
+  transition: transform var(--t-fast);
+}
+.mx-bar-avatar-ring {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--f1-red), 0 4px 16px rgba(225, 6, 0, 0.35);
+  transition: box-shadow var(--mx-dur) var(--mx-ease);
+}
+.mx-bar-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-150);
+}
+.mx-bar-profile.active .mx-bar-avatar-ring {
+  box-shadow: 0 0 0 2px var(--f1-red-light), 0 0 0 5px rgba(255, 45, 36, 0.18), 0 4px 18px rgba(255, 45, 36, 0.45);
+}
+
+/* ---------------- Home indicator ---------------- */
+.mx-home-indicator {
+  position: fixed;
+  z-index: calc(var(--mx-z-chrome) - 1);   /* la bar vince nella zona sovrapposta */
+  left: 0;
+  right: 0;
+  bottom: max(var(--safe-b), 4px);
+  margin-inline: auto;
+  width: 160px;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  touch-action: none;   /* lo swipe verso l'alto non deve scrollare la pagina */
+  transition: opacity var(--mx-dur) var(--mx-ease);
+}
+.mx-home-indicator-pill {
+  display: block;
+  width: 134px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.55);
+  transition: transform var(--t-fast), background-color var(--t-fast);
+}
+.mx-home-indicator.is-home { opacity: 0.25; cursor: default; }
+.mx-home-indicator:focus-visible { outline-offset: -4px; border-radius: var(--r-pill); }
+
+/* ---------------- Pressione (:active) ---------------- */
+.mx-island-btn:active,
+.mx-bar-item:active,
+.mx-btn:active,
+.mx-segmented button:active { transform: scale(0.96); }
+.mx-bar-profile:active { transform: translateY(-16px) scale(0.96); }
+.mx-home-indicator:not(.is-home):active .mx-home-indicator-pill { transform: scaleX(0.96); }
+
+/* ---------------- Desktop ---------------- */
+@media (hover: hover) and (min-width: 520px) {
+  .mx-island-btn:hover:not(.active) { color: var(--text-mid); }
+}
+
+/* =============================================================
+   Preferenze di accessibilità e fallback
+   ============================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .mx-view { animation: mx-fade-in 0.2s linear both; }
+  .mx-island.is-pulse { animation: none; }
+  .mx-island-btn:active,
+  .mx-bar-item:active,
+  .mx-btn:active,
+  .mx-segmented button:active { transform: none; }
+  .mx-bar-profile:active { transform: translateY(-16px); }
+  .mx-home-indicator:not(.is-home):active .mx-home-indicator-pill { transform: none; }
+  .mx-bar-item::after { transform: none; }
+  ::view-transition-old(mx-view) { animation: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .mx-island,
+  .mx-bar,
+  .mx-bar-profile,
+  .mx-card,
+  .mx-list {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(22, 22, 28, 0.97);
+  }
+  .mx-card--accent {
+    background: linear-gradient(160deg, rgba(225, 6, 0, 0.12), transparent 55%), rgba(22, 22, 28, 0.97);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mx-island,
+  .mx-bar,
+  .mx-bar-profile { background: rgba(16, 16, 20, 0.96); }
+}
