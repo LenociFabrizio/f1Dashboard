@@ -50,7 +50,7 @@ export default {
 
     root.innerHTML = `
       <div class="mx-set">
-        <h1 class="mx-title">Impostazioni</h1>
+        <h1 class="mx-title sr-only">Impostazioni</h1>
         <div class="mx-card mx-set-info">
           <span class="mx-set-info-name">${esc(name)}</span>
           <span class="mx-set-info-ver">Lega F1 app ${esc(APP_VERSION)}</span>

@@ -79,7 +79,7 @@ export default {
     root.innerHTML = `
       <div class="mx-std">
         <p class="mx-kicker" data-kicker hidden></p>
-        <h1 class="mx-title" tabindex="-1">Classifica</h1>
+        <h1 class="mx-title sr-only" tabindex="-1">Classifica</h1>
         <div class="mx-segmented mx-std-seg" role="group" aria-label="Tipo di classifica">
           <button type="button" data-tab="drivers">Piloti</button>
           <button type="button" data-tab="constructors">Costruttori</button>

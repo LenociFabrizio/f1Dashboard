@@ -254,3 +254,24 @@
   min-height: 48px;
   margin-top: var(--sp-2);
 }
+
+/* ---------------- Aiuti alla guida (profilo) ---------------- */
+.mx-prof-assists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.mx-prof-assists .mx-kicker { margin: 0; }
+.mx-prof-assists-hint { margin: -4px 0 var(--sp-1); }
+.mx-prof-assist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mx-prof-assists-save { margin-top: var(--sp-1); }
+.mx-prof-assists-save:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+  color: var(--text-lo);
+  opacity: 1;
+}

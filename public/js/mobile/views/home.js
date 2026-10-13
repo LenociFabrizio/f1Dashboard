@@ -152,7 +152,7 @@ function startCountdown(box, raceDate) {
 function renderError(root, message, retry) {
   root.innerHTML = `
     <div class="mx-home">
-      <h1 class="mx-title" tabindex="-1">Home</h1>
+      <h1 class="mx-title sr-only" tabindex="-1">Home</h1>
     </div>`;
   root.firstElementChild.append(errorBlock('Impossibile caricare il riepilogo.', retry, message));
 }
@@ -162,7 +162,7 @@ function draw(root, s, ctx) {
   if (!s?.season) {
     root.innerHTML = `
       <div class="mx-home">
-        <h1 class="mx-title" tabindex="-1">Home</h1>
+        <h1 class="mx-title sr-only" tabindex="-1">Home</h1>
         <div class="mx-card mx-empty mx-home-state"><p>Nessuna stagione attiva</p></div>
       </div>`;
     return null;
@@ -171,7 +171,7 @@ function draw(root, s, ctx) {
   root.innerHTML = `
     <div class="mx-home">
       <p class="mx-kicker">${seasonKicker(s.season)}</p>
-      <h1 class="mx-title" tabindex="-1">Home</h1>
+      <h1 class="mx-title sr-only" tabindex="-1">Home</h1>
       ${driverCard(s)}
       ${teamCard(s)}
       ${nextRaceCard(s)}
@@ -195,7 +195,7 @@ export default {
     const load = async () => {
       root.innerHTML = `
         <div class="mx-home" aria-busy="true">
-          <h1 class="mx-title" tabindex="-1">Home</h1>
+          <h1 class="mx-title sr-only" tabindex="-1">Home</h1>
           <div class="mx-skeleton mx-home-sk mx-home-sk--lg"></div>
           <div class="mx-skeleton mx-home-sk"></div>
           <div class="mx-skeleton mx-home-sk"></div>

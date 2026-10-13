@@ -131,6 +131,8 @@ html {
   color: var(--text-hi);
   overflow-wrap: break-word;
 }
+/* Titolo solo per screen reader: il kicker prende il suo spazio sotto */
+.mx-kicker:has(+ .mx-title.sr-only) { margin-bottom: 16px; }
 /* Etichetta di gruppo (stile intestazione lista iOS) */
 .mx-label {
   margin: 24px 4px 8px;

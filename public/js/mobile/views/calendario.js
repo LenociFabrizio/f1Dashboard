@@ -46,7 +46,7 @@ export default {
     root.innerHTML = `
       <div class="mx-cal">
         <p class="mx-kicker" data-kicker hidden></p>
-        <h1 class="mx-title" tabindex="-1">Calendario</h1>
+        <h1 class="mx-title sr-only" tabindex="-1">Calendario</h1>
         <div class="mx-cal-body" aria-live="polite"></div>
       </div>`;
     const body = root.querySelector('.mx-cal-body');

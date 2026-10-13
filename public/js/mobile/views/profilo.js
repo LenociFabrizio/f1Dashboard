@@ -1,9 +1,11 @@
 /* =============================================================
-   profilo.js — Vista app mobile: profilo del pilota loggato in
-   sola lettura. La modifica resta sulla pagina classica.
+   profilo.js — Vista app mobile: profilo del pilota loggato.
+   Gli aiuti alla guida si modificano qui; il resto del profilo
+   resta sulla pagina classica.
    ============================================================= */
 import api from '../../core/api.js';
-import { esc, fmtNum, flagEmoji } from '../../core/ui.js';
+import { auth } from '../../core/auth.js';
+import { esc, fmtNum, flagEmoji, toast } from '../../core/ui.js';
 import { avatarUrl } from '../../core/components.js';
 import { handleAuthError } from '../session.js';
 import { teamColor as safeTeamColor, getSummary, bindAvatarFallback, errorBlock } from './_shared.js';
@@ -14,6 +16,85 @@ const PLATFORM_LABEL = { steam: 'Steam', playstation: 'PlayStation', xbox: 'Xbox
 function countryName(code) {
   try { return new Intl.DisplayNames(['it'], { type: 'region' }).of(code.toUpperCase()) || code; }
   catch { return code; }
+}
+
+/* Aiuti alla guida: stessi valori della pagina profilo classica */
+const ASSISTS = [
+  { key: 'assist_abs', label: 'ABS', options: [['0', 'Off'], ['1', 'On']] },
+  { key: 'assist_tc', label: 'Controllo trazione', options: [['off', 'Off'], ['medium', 'Medio'], ['full', 'Pieno']] },
+  { key: 'assist_gearbox', label: 'Cambio', options: [['auto', 'Automatico'], ['manual', 'Manuale']] },
+];
+
+/** Valori correnti normalizzati (stessa logica di profile.js). */
+function assistValues(u) {
+  return {
+    assist_abs: u.assist_abs ? '1' : '0',
+    assist_tc: ['off', 'medium', 'full'].includes(u.assist_tc) ? u.assist_tc : 'off',
+    assist_gearbox: u.assist_gearbox === 'manual' ? 'manual' : 'auto',
+  };
+}
+
+function assistsCard(values) {
+  return `
+    <section class="mx-card mx-prof-assists" aria-labelledby="mx-prof-assists-h">
+      <h2 class="mx-kicker" id="mx-prof-assists-h">Aiuti alla guida</h2>
+      <p class="mx-row-sub mx-prof-assists-hint">Usati in campionato, compaiono accanto al tuo giro veloce.</p>
+      ${ASSISTS.map((a) => `
+        <div class="mx-prof-assist">
+          <span class="mx-prof-label" id="mx-prof-${a.key}">${esc(a.label)}</span>
+          <div class="mx-segmented" role="group" aria-labelledby="mx-prof-${a.key}" data-assist="${a.key}">
+            ${a.options.map(([v, l]) => `<button type="button" data-val="${v}" aria-pressed="${values[a.key] === v}" class="${values[a.key] === v ? 'active' : ''}">${esc(l)}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+      <button type="button" class="mx-btn mx-btn--primary mx-btn--block mx-prof-assists-save" disabled>Salva aiuti</button>
+    </section>`;
+}
+
+/** Collega i segmented degli aiuti e il salvataggio su PUT /users/me. */
+function bindAssists(body, u, ctx, userId) {
+  const card = body.querySelector('.mx-prof-assists');
+  if (!card) return;
+  const saved = assistValues(u);
+  const current = { ...saved };
+  const saveBtn = card.querySelector('.mx-prof-assists-save');
+  const dirty = () => ASSISTS.some((a) => current[a.key] !== saved[a.key]);
+
+  card.querySelectorAll('.mx-segmented[data-assist]').forEach((grp) => {
+    const key = grp.dataset.assist;
+    grp.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-val]');
+      if (!btn) return;
+      current[key] = btn.dataset.val;
+      grp.querySelectorAll('button[data-val]').forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      saveBtn.disabled = !dirty();
+    });
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvataggio…';
+    try {
+      const updated = await api.put('/users/me', {
+        assist_abs: current.assist_abs === '1' ? 1 : 0,
+        assist_tc: current.assist_tc,
+        assist_gearbox: current.assist_gearbox,
+      });
+      Object.assign(saved, current);
+      ctx.store.clear(`user:${userId}`);
+      if (auth.user && updated) auth.user = { ...auth.user, ...updated };
+      toast('Aiuti alla guida salvati.', 'success');
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      toast(err?.message || 'Salvataggio non riuscito.', 'error');
+    } finally {
+      saveBtn.textContent = 'Salva aiuti';
+      saveBtn.disabled = !dirty();
+    }
+  });
 }
 
 function skeleton() {
@@ -88,6 +169,7 @@ function content(u, summary) {
     </div>
     ${standing}
     ${teamCard}
+    ${assistsCard(assistValues(u))}
     ${details}
     <a class="mx-btn mx-prof-edit" href="/profile.html">Modifica profilo</a>`;
 }
@@ -101,7 +183,7 @@ export default {
 
     root.innerHTML = `
       <div class="mx-prof">
-        <h1 class="mx-title">Profilo</h1>
+        <h1 class="mx-title sr-only">Profilo</h1>
         <div class="mx-prof-body" aria-live="polite"></div>
       </div>`;
     const body = root.querySelector('.mx-prof-body');
@@ -121,6 +203,7 @@ export default {
         if (!alive) return;
         body.innerHTML = content(u || {}, summary);
         bindAvatarFallback(body, '.mx-prof-avatar');
+        bindAssists(body, u || {}, ctx, userId);
       } catch (err) {
         if (!alive || handleAuthError(err)) return;
         body.replaceChildren(errorBlock('Impossibile caricare il profilo.', load, err?.message));

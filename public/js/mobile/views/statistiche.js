@@ -80,7 +80,7 @@ export default {
     root.innerHTML = `
       <div class="mx-stat">
         <p class="mx-kicker" data-kicker>Stagione</p>
-        <h1 class="mx-title">Statistiche</h1>
+        <h1 class="mx-title sr-only">Statistiche</h1>
         <div class="mx-stat-body" aria-live="polite"></div>
       </div>`;
     const body = root.querySelector('.mx-stat-body');
