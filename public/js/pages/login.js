@@ -6,13 +6,15 @@ import auth from '../core/auth.js';
 import { $, toast, modal, el, qs } from '../core/ui.js';
 import { mountCookieBanner } from '../core/cookies.js';
 
-// Solo path relativi same-origin (evita open redirect: '//host', '/\host', '/%09/host'…)
+// Solo destinazioni same-origin (evita open redirect: '//host', '/\host', '/%09/host'…).
+// Si restituisce l'URL ASSOLUTO già validato: pathname normalizzati come
+// '/.//evil.com' diventerebbero '//evil.com' se riusati come path relativo.
 const nextUrl = () => {
   const n = qs.get('next');
   if (!n || !n.startsWith('/')) return '/dashboard.html';
   try {
     const u = new URL(n, location.origin);
-    return u.origin === location.origin ? u.pathname + u.search + u.hash : '/dashboard.html';
+    return u.origin === location.origin ? u.href : '/dashboard.html';
   } catch { return '/dashboard.html'; }
 };
 
