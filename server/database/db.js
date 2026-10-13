@@ -446,7 +446,7 @@ function romeToUtcIso(y, m, d, hh, mm = 0) {
  * Date delle gare del "Campionato 26-27", impostate UNA VOLTA (marcatore in
  * app_meta, così le modifiche successive dall'admin non vengono sovrascritte).
  * Si corrono due GP ogni lunedì: il primo alle 22:00, il secondo a seguire
- * (23:00). Ancora: R5-R6 lunedì 28/09/2026; i round precedenti restano invariati.
+ * (23:00). Ancora: R1-R2 lunedì 14/09/2026.
  */
 async function ensureSeasonScheduleOnce() {
   const MARK = 'season_26_27_dates_v1';
@@ -455,13 +455,13 @@ async function ensureSeasonScheduleOnce() {
 
   const season = await db.prepare('SELECT id FROM seasons WHERE name = ?').get('Campionato 26-27');
   if (season) {
-    const FIRST_ROUND = 5;
+    const FIRST_ROUND = 1;
     const races = await db
       .prepare('SELECT id, round FROM races WHERE season_id = ? AND round >= ? ORDER BY round')
       .all(season.id, FIRST_ROUND);
     for (const r of races) {
       const idx = r.round - FIRST_ROUND;
-      const day = new Date(Date.UTC(2026, 8, 28 + Math.floor(idx / 2) * 7));
+      const day = new Date(Date.UTC(2026, 8, 14 + Math.floor(idx / 2) * 7));
       const iso = romeToUtcIso(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate(), idx % 2 ? 23 : 22);
       await db.prepare('UPDATE races SET race_date = ? WHERE id = ?').run(iso, r.id);
     }
