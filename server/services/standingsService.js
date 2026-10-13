@@ -116,22 +116,41 @@ export async function getDriverStandings(seasonId) {
  * @param {number} seasonId
  */
 export async function getConstructorStandings(seasonId) {
-  // Il team del risultato può essere NULL (risultati inseriti prima del fix
-  // su team_id): in tal caso si usa la scuderia attuale del pilota (COALESCE).
+  // Punti costruttori = somma dei punti dei piloti raggruppati per la scuderia
+  // mostrata nella classifica piloti: quella attuale del pilota, oppure (se non
+  // ne ha, es. dopo un reset assegnazioni) quella dell'ultima gara disputata.
+  // Così le due classifiche restano sempre allineate.
   const rows = await db
     .prepare(
-      `SELECT r.*, t.id AS tid, t.name AS team_name, t.color AS team_color, t.logo
+      `SELECT r.*, u.team_id AS cur_team_id, r.team_id AS race_team_id
          FROM results r
          JOIN races ra ON ra.id = r.race_id
          JOIN users u  ON u.id  = r.user_id
-         JOIN teams t  ON t.id  = COALESCE(r.team_id, u.team_id)
-        WHERE ra.season_id = ? AND ra.status = 'completed'`
+        WHERE ra.season_id = ? AND ra.status = 'completed'
+        ORDER BY ra.round ASC`
     )
     .all(seasonId);
+
+  const teamById = new Map(
+    (await db.prepare('SELECT id, name, color, logo FROM teams').all()).map((t) => [t.id, t])
+  );
+
+  // Scuderia di ciascun pilota (righe ordinate per round: vince l'ultima gara)
+  const teamByUser = new Map();
+  for (const row of rows) {
+    const tid = row.cur_team_id ?? row.race_team_id ?? teamByUser.get(row.user_id) ?? null;
+    if (tid !== null) teamByUser.set(row.user_id, tid);
+  }
 
   const map = new Map();
 
   for (const row of rows) {
+    const team = teamById.get(teamByUser.get(row.user_id));
+    if (!team) continue; // pilota mai associato a una scuderia
+    row.tid = team.id;
+    row.team_name = team.name;
+    row.team_color = team.color;
+    row.logo = team.logo;
     if (!map.has(row.tid)) {
       map.set(row.tid, {
         team_id: row.tid,
