@@ -96,6 +96,135 @@
 .mx-stat-sk-form { height: 104px; }
 .mx-stat-sk-chart { height: 248px; }
 
+/* Selettore Personali / Squadra (come Piloti / Costruttori in classifica) */
+.mx-stat-seg { margin-bottom: var(--sp-3); }
+
+/* ---------------- Confronto compagno di squadra ---------------- */
+.mx-cmp-head { border-top: 3px solid var(--team, var(--bg-300)); }
+.mx-cmp-team {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.mx-cmp-team .mx-team-bar { height: 14px; }
+
+.mx-cmp-drivers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.mx-cmp-driver {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+.mx-cmp-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--f1-red);
+  background: var(--bg-200);
+}
+.mx-cmp-driver--mate .mx-cmp-avatar { border-color: var(--text-lo); }
+.mx-cmp-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fw-bold, 700);
+  color: var(--text-hi);
+}
+.mx-cmp-sub { font-size: 0.78rem; color: var(--text-lo); }
+.mx-cmp-vs {
+  font-size: 0.8rem;
+  font-weight: var(--fw-black, 900);
+  letter-spacing: 0.08em;
+  color: var(--text-dim, var(--text-lo));
+}
+
+.mx-cmp-h2h {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.mx-cmp-h2h-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--bg-200);
+}
+.mx-cmp-h2h-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text-lo);
+}
+.mx-cmp-h2h-score b { font-weight: var(--fw-black, 900); color: var(--text-mid); }
+.mx-cmp-h2h-score b.is-best { color: var(--text-hi); }
+
+.mx-cmp-list {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+}
+.mx-cmp-row {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  border-bottom: 1px solid var(--mx-glass-border, var(--border));
+}
+.mx-cmp-row:last-child { border-bottom: 0; }
+.mx-cmp-val {
+  font-size: 1.05rem;
+  font-weight: var(--fw-bold, 700);
+  color: var(--text-mid);
+  font-variant-numeric: tabular-nums;
+}
+.mx-cmp-val--mate { text-align: right; }
+.mx-cmp-val.is-best { color: var(--text-hi); font-weight: var(--fw-black, 900); }
+.mx-cmp-val.is-best:not(.mx-cmp-val--mate) { color: var(--f1-red-light); }
+.mx-cmp-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.mx-cmp-label {
+  font-size: 0.8rem;
+  color: var(--text-lo);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.mx-cmp-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-lo);
+  overflow: hidden;
+}
+.mx-cmp-bar i { display: block; height: 100%; background: var(--f1-red); }
+
+.mx-cmp-pick { margin-bottom: 0; }
+
 /* ===================== PROFILO ===================== */
 .mx-prof-body { display: flex; flex-direction: column; gap: var(--sp-4); }
 

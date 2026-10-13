@@ -255,6 +255,19 @@ export const mobileSummary = asyncHandler(async (req, res) => {
     }
   }
 
+  // Compagni di scuderia attuali (confronto testa a testa nelle statistiche app)
+  if (team) {
+    team.teammates = await db
+      .prepare(
+        `SELECT u.id AS user_id, u.display_name, gph.handle AS handle, u.avatar
+           FROM users u
+           ${PRIMARY_HANDLE_JOIN}
+          WHERE u.team_id = ? AND u.id <> ? AND u.is_active = 1
+          ORDER BY u.display_name`
+      )
+      .all(team.team_id, userId);
+  }
+
   let lastRace = null;
   if (last) {
     const r = await db
