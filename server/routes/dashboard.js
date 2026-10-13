@@ -12,6 +12,7 @@ const router = Router();
 
 router.get('/home', dash.homeData);
 router.get('/me', requireAuth, dash.myDashboard);
+router.get('/mobile', requireAuth, dash.mobileSummary);
 router.get('/admin', requireAuth, requireAdmin, dash.adminDashboard);
 
 export default router;

@@ -6,7 +6,7 @@
  * ------------------------------------------------------------
  */
 import db from '../database/db.js';
-import { asyncHandler, PRIMARY_HANDLE_JOIN } from '../utils/helpers.js';
+import { asyncHandler, PRIMARY_HANDLE_JOIN, round } from '../utils/helpers.js';
 import { getDriverStandings, getConstructorStandings } from '../services/standingsService.js';
 import { getDriverStats } from '../services/statsService.js';
 
@@ -146,5 +146,143 @@ export const adminDashboard = asyncHandler(async (_req, res) => {
     stats: { userCount, adminCount, teamCount, raceCount, completedCount, remaining: raceCount - completedCount },
     nextRace,
     lastRace,
+  });
+});
+
+/**
+ * GET /api/dashboard/mobile — riepilogo compatto del pilota loggato per la
+ * vista app mobile (richiede auth). Ogni blocco può essere null.
+ * I punti scuderia arrivano da getConstructorStandings (somma dei punti dei
+ * piloti per scuderia attuale): qui non si ricalcola nulla per singola gara.
+ */
+export const mobileSummary = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  // Dati pubblici dell'utente (mai email/password_hash)
+  const me = await db
+    .prepare(
+      `SELECT u.id, u.display_name, gph.handle AS handle, u.avatar, u.role, u.team_id,
+              u.nationality, u.favorite_number
+         FROM users u
+         ${PRIMARY_HANDLE_JOIN}
+        WHERE u.id = ?`
+    )
+    .get(userId);
+
+  const season = await activeSeason();
+  if (!season) {
+    return res.json({
+      season: null, me: me || null, driver: null, team: null,
+      next_race: null, last_race: null, leaders: null,
+    });
+  }
+
+  const counts = await db
+    .prepare(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed
+         FROM races WHERE season_id = ?`
+    )
+    .get(season.id);
+
+  const driverStandings = await getDriverStandings(season.id);
+  const constructorStandings = await getConstructorStandings(season.id);
+
+  // Posizione in classifica piloti
+  let driver = null;
+  const idx = driverStandings.findIndex((d) => d.user_id === userId);
+  if (idx >= 0) {
+    const d = driverStandings[idx];
+    driver = {
+      position: d.position,
+      total: driverStandings.length,
+      points: d.points,
+      gap_to_leader: d.gap_to_leader,
+      gap_to_ahead: idx > 0 ? round(driverStandings[idx - 1].points - d.points, 1) : null,
+      wins: d.wins,
+      podiums: d.podiums,
+      races: d.races,
+    };
+  }
+
+  // Scuderia: attuale, altrimenti quella dell'ultima gara completata con team
+  // (stessa logica di teamByUser in getConstructorStandings)
+  let teamId = me?.team_id ?? null;
+  if (teamId === null) {
+    const lastTeam = await db
+      .prepare(
+        `SELECT r.team_id FROM results r
+           JOIN races ra ON ra.id = r.race_id
+          WHERE ra.season_id = ? AND ra.status = 'completed'
+            AND r.user_id = ? AND r.team_id IS NOT NULL
+          ORDER BY ra.round DESC LIMIT 1`
+      )
+      .get(season.id, userId);
+    teamId = lastTeam ? lastTeam.team_id : null;
+  }
+
+  let team = null;
+  if (teamId !== null) {
+    const c = constructorStandings.find((s) => s.team_id === teamId);
+    if (c) {
+      team = {
+        team_id: c.team_id, team_name: c.team_name, team_color: c.team_color, logo: c.logo,
+        position: c.position, total: constructorStandings.length, points: c.points,
+      };
+    } else {
+      // Scuderia non ancora in classifica: solo dati anagrafici
+      const t = await db.prepare('SELECT id, name, color, logo FROM teams WHERE id = ?').get(teamId);
+      if (t) {
+        team = {
+          team_id: t.id, team_name: t.name, team_color: t.color, logo: t.logo,
+          position: null, total: constructorStandings.length, points: 0,
+        };
+      }
+    }
+  }
+
+  const next = await db
+    .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='scheduled' ORDER BY ra.round LIMIT 1`)
+    .get(season.id);
+  const last = await db
+    .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='completed' ORDER BY ra.round DESC LIMIT 1`)
+    .get(season.id);
+
+  let lastRace = null;
+  if (last) {
+    const r = await db
+      .prepare('SELECT position, points, dnf FROM results WHERE race_id = ? AND user_id = ?')
+      .get(last.id, userId);
+    lastRace = {
+      id: last.id, round: last.round, name: last.name, race_date: last.race_date,
+      country_code: last.country_code,
+      my_result: r ? { position: r.position, points: r.points, dnf: !!r.dnf } : null,
+    };
+  }
+
+  const dl = driverStandings[0];
+  const cl = constructorStandings[0];
+  const leaders = dl || cl
+    ? {
+        driver: dl ? { user_id: dl.user_id, display_name: dl.display_name, handle: dl.handle, points: dl.points } : null,
+        team: cl ? { team_id: cl.team_id, team_name: cl.team_name, team_color: cl.team_color, points: cl.points } : null,
+      }
+    : null;
+
+  res.json({
+    season: {
+      id: season.id, name: season.name, year: season.year,
+      total_rounds: counts.total || 0, completed_rounds: counts.completed || 0,
+    },
+    me: me || null,
+    driver,
+    team,
+    next_race: next
+      ? {
+          id: next.id, round: next.round, name: next.name, race_date: next.race_date,
+          circuit_name: next.circuit_name, country: next.country, country_code: next.country_code,
+        }
+      : null,
+    last_race: lastRace,
+    leaders,
   });
 });
