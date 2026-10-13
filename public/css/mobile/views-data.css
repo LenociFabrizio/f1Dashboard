@@ -1,0 +1,495 @@
+/* =============================================================
+   views-data.css — Viste dati della SPA mobile: Home (mx-home-*),
+   Classifica (mx-std-*), Calendario (mx-cal-*).
+   Le classi base (.mx-card, .mx-row, .mx-pos, .mx-segmented, ...)
+   e i token arrivano dalla shell (app.css / variables.css).
+   ============================================================= */
+
+/* Gli elementi a tutta larghezza con padding non devono sforare la card */
+.mx-home-tap,
+.mx-home-leader,
+.mx-std-row,
+.mx-cal-row { box-sizing: border-box; }
+
+/* ---------- Testo solo per screen reader ---------- */
+.mx-std-sr,
+.mx-cal-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================
+   HOME
+   ============================================================= */
+.mx-home > .mx-card + .mx-card,
+.mx-home > .mx-skeleton + .mx-skeleton { margin-top: var(--sp-3); }
+
+/* Card tappabili: reset del bottone, l'aspetto resta quello di .mx-card */
+.mx-home-tap {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+}
+.mx-home-tap:active { transform: scale(0.99); }
+.mx-home-tap:focus-visible,
+.mx-home-leader:focus-visible {
+  outline: 2px solid var(--f1-red-light);
+  outline-offset: 2px;
+}
+
+.mx-home-card { display: flex; flex-direction: column; min-width: 0; }
+
+.mx-home-label {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+}
+.mx-home-label--red { color: var(--f1-red-light); }
+
+.mx-home-muted { color: var(--text-lo); }
+
+/* Dato principale: la posizione del pilota */
+.mx-home-hero {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+.mx-home-pos {
+  font-size: 3.5rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-hi);
+  font-variant-numeric: tabular-nums;
+}
+.mx-home-pos small {
+  font-size: 0.45em;
+  font-weight: 700;
+  margin-right: 0.04em;
+  color: var(--text-mid);
+  vertical-align: 0.15em;
+}
+/* Regola del Podio: oro/argento/bronzo solo per P1-P3 */
+.mx-home-pos--p1 { color: var(--gold); }
+.mx-home-pos--p2 { color: var(--silver); }
+.mx-home-pos--p3 { color: var(--bronze); }
+.mx-home-of {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-lo);
+}
+
+.mx-home-points {
+  margin-top: var(--sp-2);
+  color: var(--text-mid);
+  font-size: 0.95rem;
+}
+.mx-home-points b {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--text-hi);
+  margin-right: 2px;
+}
+
+.mx-home-gaps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin-top: var(--sp-1);
+  font-size: 0.9rem;
+  color: var(--text-lo);
+}
+.mx-home-gaps .mx-num { font-weight: 700; color: var(--text-mid); }
+
+.mx-home-last {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+.mx-home-last-label { color: var(--text-lo); }
+.mx-home-flag { font-size: 1.1rem; line-height: 1; }
+.mx-home-last-val { font-weight: 700; color: var(--text-hi); white-space: nowrap; }
+.mx-home-dnf { color: #ff7b76; }
+
+/* Stati vuoti e leader */
+.mx-home-empty-msg {
+  margin: var(--sp-2) 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-hi);
+}
+.mx-home-leader {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  min-width: 0;
+}
+button.mx-home-leader { cursor: pointer; }
+.mx-home-leader-label {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+}
+.mx-home-leader-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.mx-home-leader-pts { flex: none; font-weight: 700; color: var(--text-hi); }
+.mx-home-leader .mx-team-bar { flex: none; height: 20px; }
+
+/* Card scuderia */
+.mx-home-team-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  min-width: 0;
+}
+.mx-home-team-row .mx-team-bar { flex: none; height: 30px; }
+.mx-home-team-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-hi);
+}
+.mx-home-team-pos {
+  flex: none;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--text-hi);
+}
+.mx-home-team-pos small { font-size: 0.65em; font-weight: 700; color: var(--text-lo); }
+
+/* Card prossima gara */
+.mx-home-next-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  min-width: 0;
+}
+.mx-home-next-flag { flex: none; font-size: 2.4rem; line-height: 1; }
+.mx-home-next-text { display: flex; flex-direction: column; min-width: 0; }
+.mx-home-next-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mx-home-next-sub {
+  margin-top: 2px;
+  font-size: 0.88rem;
+  color: var(--text-lo);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mx-home-cd {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+.mx-home-cd-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2) 0;
+  background: rgba(10, 10, 12, 0.55);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.mx-home-cd-cell b {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text-hi);
+}
+.mx-home-cd-cell span {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+}
+.mx-home-cd-live {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+.mx-home-live-dot {
+  width: 8px; height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--f1-red);
+  animation: mx-home-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mx-home-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.mx-home-state { text-align: center; }
+.mx-home-state p { margin: 0 0 var(--sp-2); }
+
+.mx-home-sk { height: 120px; border-radius: var(--r-lg); }
+.mx-home-sk--lg { height: 190px; }
+
+/* =============================================================
+   CLASSIFICA
+   ============================================================= */
+.mx-std-seg { margin-bottom: var(--sp-3); }
+
+.mx-std-list,
+.mx-cal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mx-std-list > li,
+.mx-cal-list > li { margin: 0; padding: 0; min-width: 0; }
+
+.mx-std-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+a.mx-std-row:focus-visible,
+a.mx-cal-row:focus-visible {
+  outline: 2px solid var(--f1-red-light);
+  outline-offset: -2px;
+}
+.mx-std-row .mx-pos { flex: none; }
+
+.mx-std-avatar {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-200);
+  border: 1px solid var(--border);
+}
+.mx-std-bar { flex: none; height: 28px; }
+
+.mx-std-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mx-std-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.mx-std-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mx-std-dot { flex: none; height: 12px; }
+.mx-std-subtext {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mx-std-bot {
+  align-self: flex-start;
+  max-width: 100%;
+  margin-top: 3px;
+  padding: 1px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: var(--bg-200);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+}
+
+.mx-std-pts {
+  flex: none;
+  margin-left: var(--sp-1);
+  text-align: right;
+  font-weight: 700;
+  color: var(--text-hi);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mx-std-pts small { font-size: 0.72rem; font-weight: 600; color: var(--text-lo); }
+
+.mx-std-muted,
+.mx-cal-muted { color: var(--text-lo); font-size: 0.9rem; }
+
+.mx-std-sk,
+.mx-cal-sk { height: 52px; border-radius: var(--r-md); }
+.mx-std-sk + .mx-std-sk,
+.mx-cal-sk + .mx-cal-sk { margin-top: 6px; }
+
+/* =============================================================
+   CALENDARIO
+   ============================================================= */
+.mx-cal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  scroll-margin: 96px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.mx-cal-round {
+  flex: none;
+  width: 2.4em;
+  font-weight: 700;
+  color: var(--text-lo);
+  font-variant-numeric: tabular-nums;
+}
+.mx-cal-flag {
+  flex: none;
+  width: 1.6em;
+  font-size: 1.4rem;
+  line-height: 1;
+  text-align: center;
+}
+.mx-cal-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mx-cal-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.mx-cal-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.mx-cal-sub {
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.mx-cal-circuit,
+.mx-cal-mvp {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mx-cal-date { flex: none; }
+
+/* Gare concluse: attenuate */
+.mx-cal-row--done { opacity: 0.62; }
+
+/* Prossima gara: velatura e filetto rosso (Regola del Segnale) */
+.mx-cal-row--next {
+  background: rgba(225, 6, 0, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(225, 6, 0, 0.45), inset 3px 0 0 var(--f1-red);
+  border-radius: var(--r-md);
+}
+.mx-cal-row--next .mx-cal-round { color: var(--f1-red-light); }
+.mx-cal-badge {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff7b76;
+  background: rgba(225, 6, 0, 0.15);
+  border: 1px solid rgba(225, 6, 0, 0.4);
+  border-radius: var(--r-pill);
+}
+
+@media (hover: hover) {
+  a.mx-std-row:hover,
+  a.mx-cal-row:hover { background-color: rgba(255, 255, 255, 0.03); }
+  .mx-cal-row--done:hover { opacity: 1; }
+  .mx-cal-row--next:hover { background-color: rgba(225, 6, 0, 0.14); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mx-home-tap { transition: none; }
+  .mx-home-tap:active { transform: none; }
+  .mx-home-live-dot { animation: none; }
+}
