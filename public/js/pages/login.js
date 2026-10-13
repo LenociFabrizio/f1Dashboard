@@ -6,15 +6,20 @@ import auth from '../core/auth.js';
 import { $, toast, modal, el, qs } from '../core/ui.js';
 import { mountCookieBanner } from '../core/cookies.js';
 
-// Se già loggato → dashboard
-if (auth.isLogged()) location.href = '/dashboard.html';
-
-mountCookieBanner();
-
+// Solo path relativi same-origin (evita open redirect: '//host', '/\host', '/%09/host'…)
 const nextUrl = () => {
   const n = qs.get('next');
-  return n && n.startsWith('/') ? n : '/dashboard.html';
+  if (!n || !n.startsWith('/')) return '/dashboard.html';
+  try {
+    const u = new URL(n, location.origin);
+    return u.origin === location.origin ? u.pathname + u.search + u.hash : '/dashboard.html';
+  } catch { return '/dashboard.html'; }
 };
+
+// Se già loggato → destinazione richiesta (next) o dashboard
+if (auth.isLogged()) location.href = nextUrl();
+
+mountCookieBanner();
 
 const form = $('#login-form');
 const submitBtn = $('#submit-btn');
