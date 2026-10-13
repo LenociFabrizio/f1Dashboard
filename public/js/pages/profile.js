@@ -316,7 +316,8 @@ $('#cancel-change-btn').addEventListener('click', async () => {
   if (!user) return;
   mountChrome();
   try {
-    me = await api.get(`/users/${user.id}`, {}, { auth: false });
+    // Con token: email e aiuti alla guida arrivano solo al diretto interessato.
+    me = await api.get(`/users/${user.id}`);
     fillForm(me);
     await loadTeams(me.team_id, me.reserve_driver);
     await loadHandles();

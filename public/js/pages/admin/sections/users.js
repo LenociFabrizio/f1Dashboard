@@ -128,7 +128,8 @@ async function render(root) {
     // Carica il record COMPLETO (la lista non include email/team_id/reserve_driver):
     // senza questo, salvando si azzererebbero email e team.
     let u;
-    try { u = await api.get(`/users/${summary.id}`, {}, { auth: false }); }
+    // Con token: l'endpoint restituisce l'email solo all'interessato o a un admin.
+    try { u = await api.get(`/users/${summary.id}`); }
     catch { u = summary; }
     const ok = await formModal({
       title: `Modifica: ${u.display_name || u.handle || 'pilota'}`,

@@ -6,7 +6,7 @@
  */
 import { Router } from 'express';
 import * as users from '../controllers/userController.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdmin, optionalAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = Router();
@@ -33,7 +33,8 @@ router.get('/reserved', users.listReservedDrivers);
 // Richieste di reset password (admin) — prima di '/:id' per non farsele "catturare".
 router.get('/reset-requests', requireAuth, requireAdmin, users.listResetRequests);
 router.delete('/reset-requests/:rid', requireAuth, requireAdmin, users.revokeResetRequest);
-router.get('/:id', users.getUser);
+// Profilo pubblico: auth opzionale (email solo a se stessi o agli admin)
+router.get('/:id', optionalAuth, users.getUser);
 
 // Admin
 router.post('/reset-assignments', requireAuth, requireAdmin, users.resetDriverAssignments);

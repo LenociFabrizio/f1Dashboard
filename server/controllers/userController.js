@@ -7,7 +7,7 @@
  */
 import bcrypt from 'bcryptjs';
 import db, { FREEZE_RESULT_TEAMS_SQL } from '../database/db.js';
-import { asyncHandler, HttpError, sanitizeUser, fullName, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
+import { asyncHandler, HttpError, sanitizeUser, toPublicUser, fullName, PRIMARY_HANDLE_JOIN, HANDLE_SELECT } from '../utils/helpers.js';
 import { ROLES } from '../utils/constants.js';
 import { persistUpload } from '../middleware/upload.js';
 
@@ -45,7 +45,11 @@ export const listUsers = asyncHandler(async (_req, res) => {
   res.json(users);
 });
 
-/** GET /api/users/:id */
+/**
+ * GET /api/users/:id — profilo pubblico del pilota (whitelist di campi).
+ * Con auth opzionale: se il richiedente è lo stesso utente o un admin
+ * riceve anche email e aiuti alla guida (servono ai form profilo/admin).
+ */
 export const getUser = asyncHandler(async (req, res) => {
   const user = await db
     .prepare(
@@ -61,9 +65,10 @@ export const getUser = asyncHandler(async (req, res) => {
   const platRows = await db
     .prepare("SELECT DISTINCT platform FROM game_identities WHERE user_id = ? AND platform <> '' ORDER BY platform")
     .all(user.id);
-  const safe = sanitizeUser(user);
-  safe.platforms = platRows.map((p) => p.platform);
-  res.json(safe);
+  user.platforms = platRows.map((p) => p.platform);
+  const viewer = req.user;
+  const includePrivate = !!viewer && (viewer.id === user.id || viewer.role === ROLES.ADMIN);
+  res.json(toPublicUser(user, { includePrivate }));
 });
 
 // Campi che l'utente può modificare del proprio profilo

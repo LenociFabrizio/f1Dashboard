@@ -37,6 +37,34 @@ export function sanitizeUser(user) {
   return safe;
 }
 
+/**
+ * Whitelist dei campi utente esponibili PUBBLICAMENTE (profilo pilota).
+ * Approccio a whitelist: ogni nuova colonna di `users` resta privata finché
+ * non viene aggiunta qui esplicitamente. Mai email, credenziali o campi interni.
+ */
+export const PUBLIC_USER_FIELDS = [
+  'id', 'handle', 'display_name', 'first_name', 'last_name', 'avatar',
+  'nationality', 'favorite_number', 'favorite_driver', 'reserve_driver',
+  'biography', 'role', 'team_id', 'team_name', 'team_color', 'team_logo',
+  'platforms', 'created_at',
+];
+
+/** Campi aggiuntivi visibili solo al diretto interessato o a un admin. */
+export const PRIVATE_USER_FIELDS = ['email', 'assist_abs', 'assist_tc', 'assist_gearbox'];
+
+/**
+ * Proietta una riga utente sui soli campi pubblici.
+ * Con { includePrivate: true } aggiunge anche PRIVATE_USER_FIELDS
+ * (da usare solo se il richiedente è lo stesso utente o un admin).
+ */
+export function toPublicUser(row, { includePrivate = false } = {}) {
+  if (!row) return null;
+  const fields = includePrivate ? [...PUBLIC_USER_FIELDS, ...PRIVATE_USER_FIELDS] : PUBLIC_USER_FIELDS;
+  const out = {};
+  for (const f of fields) if (row[f] !== undefined) out[f] = row[f];
+  return out;
+}
+
 /** Compone il nome visualizzato "Nome Cognome" da parti separate. */
 export function fullName(first, last) {
   return [first, last].map((s) => (s || '').trim()).filter(Boolean).join(' ');
