@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T10:55:12.010Z",
+  "title": "Design System: Lega F1",
+  "extensions": {
+    "colorMeta": {
+      "rosso-corsa": {
+        "role": "primary",
+        "displayName": "Rosso Corsa",
+        "canonical": "#e10600",
+        "tonalRamp": [
+          "oklch(15% 0.112 29.5)",
+          "oklch(25% 0.142 29.5)",
+          "oklch(35% 0.173 29.5)",
+          "oklch(48% 0.212 29.5)",
+          "oklch(60% 0.218 29.5)",
+          "oklch(72% 0.182 29.5)",
+          "oklch(84% 0.145 29.5)",
+          "oklch(95% 0.112 29.5)"
+        ]
+      },
+      "rosso-corsa-scuro": {
+        "role": "primary",
+        "displayName": "Rosso Corsa Scuro",
+        "canonical": "#b30500",
+        "tonalRamp": [
+          "oklch(15% 0.094 29.6)",
+          "oklch(25% 0.12 29.6)",
+          "oklch(35% 0.145 29.6)",
+          "oklch(48% 0.178 29.6)",
+          "oklch(60% 0.183 29.6)",
+          "oklch(72% 0.153 29.6)",
+          "oklch(84% 0.122 29.6)",
+          "oklch(95% 0.094 29.6)"
+        ]
+      },
+      "rosso-corsa-acceso": {
+        "role": "primary",
+        "displayName": "Rosso Corsa Acceso",
+        "canonical": "#ff2d24",
+        "tonalRamp": [
+          "oklch(15% 0.116 28.8)",
+          "oklch(25% 0.148 28.8)",
+          "oklch(35% 0.179 28.8)",
+          "oklch(48% 0.22 28.8)",
+          "oklch(60% 0.226 28.8)",
+          "oklch(72% 0.188 28.8)",
+          "oklch(84% 0.151 28.8)",
+          "oklch(95% 0.116 28.8)"
+        ]
+      },
+      "rosso-corsa-tenue": {
+        "role": "primary",
+        "displayName": "Rosso Corsa Tenue",
+        "canonical": "#ff7b76",
+        "tonalRamp": [
+          "oklch(15% 0.078 24)",
+          "oklch(25% 0.099 24)",
+          "oklch(35% 0.12 24)",
+          "oklch(48% 0.147 24)",
+          "oklch(60% 0.151 24)",
+          "oklch(72% 0.126 24)",
+          "oklch(84% 0.101 24)",
+          "oklch(95% 0.078 24)"
+        ]
+      },
+      "asfalto-notte": {
+        "role": "neutral",
+        "displayName": "Asfalto Notte",
+        "canonical": "#0a0a0c",
+        "tonalRamp": [
+          "oklch(15% 0.002 285.9)",
+          "oklch(25% 0.003 285.9)",
+          "oklch(35% 0.003 285.9)",
+          "oklch(48% 0.004 285.9)",
+          "oklch(60% 0.004 285.9)",
+          "oklch(72% 0.003 285.9)",
+          "oklch(84% 0.003 285.9)",
+          "oklch(95% 0.002 285.9)"
+        ]
+      },
+      "asfalto-sezione": {
+        "role": "neutral",
+        "displayName": "Asfalto Sezione",
+        "canonical": "#101014",
+        "tonalRamp": [
+          "oklch(15% 0.004 285.5)",
+          "oklch(25% 0.005 285.5)",
+          "oklch(35% 0.006 285.5)",
+          "oklch(48% 0.007 285.5)",
+          "oklch(60% 0.008 285.5)",
+          "oklch(72% 0.006 285.5)",
+          "oklch(84% 0.005 285.5)",
+          "oklch(95% 0.004 285.5)"
+        ]
+      },
+      "carbonio": {
+        "role": "neutral",
+        "displayName": "Carbonio",
+        "canonical": "#16161c",
+        "tonalRamp": [
+          "oklch(15% 0.006 285.3)",
+          "oklch(25% 0.007 285.3)",
+          "oklch(35% 0.009 285.3)",
+          "oklch(48% 0.011 285.3)",
+          "oklch(60% 0.011 285.3)",
+          "oklch(72% 0.009 285.3)",
+          "oklch(84% 0.007 285.3)",
+          "oklch(95% 0.006 285.3)"
+        ]
+      },
+      "carbonio-elevato": {
+        "role": "neutral",
+        "displayName": "Carbonio Elevato",
+        "canonical": "#1d1d25",
+        "tonalRamp": [
+          "oklch(15% 0.007 285.2)",
+          "oklch(25% 0.009 285.2)",
+          "oklch(35% 0.011 285.2)",
+          "oklch(48% 0.014 285.2)",
+          "oklch(60% 0.014 285.2)",
+          "oklch(72% 0.012 285.2)",
+          "oklch(84% 0.01 285.2)",
+          "oklch(95% 0.007 285.2)"
+        ]
+      },
+      "grafite": {
+        "role": "neutral",
+        "displayName": "Grafite",
+        "canonical": "#26262f",
+        "tonalRamp": [
+          "oklch(15% 0.008 285.2)",
+          "oklch(25% 0.01 285.2)",
+          "oklch(35% 0.012 285.2)",
+          "oklch(48% 0.015 285.2)",
+          "oklch(60% 0.015 285.2)",
+          "oklch(72% 0.013 285.2)",
+          "oklch(84% 0.01 285.2)",
+          "oklch(95% 0.008 285.2)"
+        ]
+      },
+      "grafite-chiara": {
+        "role": "neutral",
+        "displayName": "Grafite Chiara",
+        "canonical": "#33333f",
+        "tonalRamp": [
+          "oklch(15% 0.01 285.2)",
+          "oklch(25% 0.013 285.2)",
+          "oklch(35% 0.016 285.2)",
+          "oklch(48% 0.019 285.2)",
+          "oklch(60% 0.02 285.2)",
+          "oklch(72% 0.016 285.2)",
+          "oklch(84% 0.013 285.2)",
+          "oklch(95% 0.01 285.2)"
+        ]
+      },
+      "bianco-fari": {
+        "role": "neutral",
+        "displayName": "Bianco Fari",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(25% 0 89.9)",
+          "oklch(35% 0 89.9)",
+          "oklch(48% 0 89.9)",
+          "oklch(60% 0 89.9)",
+          "oklch(72% 0 89.9)",
+          "oklch(84% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "argento-testo": {
+        "role": "neutral",
+        "displayName": "Argento Testo",
+        "canonical": "#c7c7d1",
+        "tonalRamp": [
+          "oklch(15% 0.007 286.1)",
+          "oklch(25% 0.008 286.1)",
+          "oklch(35% 0.01 286.1)",
+          "oklch(48% 0.013 286.1)",
+          "oklch(60% 0.013 286.1)",
+          "oklch(72% 0.011 286.1)",
+          "oklch(84% 0.009 286.1)",
+          "oklch(95% 0.007 286.1)"
+        ]
+      },
+      "grigio-pitlane": {
+        "role": "neutral",
+        "displayName": "Grigio Pitlane",
+        "canonical": "#8a8a99",
+        "tonalRamp": [
+          "oklch(15% 0.011 285.8)",
+          "oklch(25% 0.014 285.8)",
+          "oklch(35% 0.016 285.8)",
+          "oklch(48% 0.02 285.8)",
+          "oklch(60% 0.021 285.8)",
+          "oklch(72% 0.017 285.8)",
+          "oklch(84% 0.014 285.8)",
+          "oklch(95% 0.011 285.8)"
+        ]
+      },
+      "grigio-spento": {
+        "role": "neutral",
+        "displayName": "Grigio Spento",
+        "canonical": "#5c5c6b",
+        "tonalRamp": [
+          "oklch(15% 0.011 285.5)",
+          "oklch(25% 0.015 285.5)",
+          "oklch(35% 0.018 285.5)",
+          "oklch(48% 0.022 285.5)",
+          "oklch(60% 0.022 285.5)",
+          "oklch(72% 0.019 285.5)",
+          "oklch(84% 0.015 285.5)",
+          "oklch(95% 0.011 285.5)"
+        ]
+      },
+      "verde-pista-libera": {
+        "role": "status",
+        "displayName": "Verde Pista Libera",
+        "canonical": "#2ecc71",
+        "tonalRamp": [
+          "oklch(15% 0.087 152.3)",
+          "oklch(25% 0.111 152.3)",
+          "oklch(35% 0.134 152.3)",
+          "oklch(48% 0.165 152.3)",
+          "oklch(60% 0.169 152.3)",
+          "oklch(72% 0.141 152.3)",
+          "oklch(84% 0.113 152.3)",
+          "oklch(95% 0.087 152.3)"
+        ]
+      },
+      "giallo-bandiera": {
+        "role": "status",
+        "displayName": "Giallo Bandiera",
+        "canonical": "#f1c40f",
+        "tonalRamp": [
+          "oklch(15% 0.081 91.8)",
+          "oklch(25% 0.103 91.8)",
+          "oklch(35% 0.125 91.8)",
+          "oklch(48% 0.154 91.8)",
+          "oklch(60% 0.158 91.8)",
+          "oklch(72% 0.132 91.8)",
+          "oklch(84% 0.105 91.8)",
+          "oklch(95% 0.081 91.8)"
+        ]
+      },
+      "rosso-errore": {
+        "role": "status",
+        "displayName": "Rosso Errore",
+        "canonical": "#e74c3c",
+        "tonalRamp": [
+          "oklch(15% 0.093 29.4)",
+          "oklch(25% 0.118 29.4)",
+          "oklch(35% 0.144 29.4)",
+          "oklch(48% 0.176 29.4)",
+          "oklch(60% 0.181 29.4)",
+          "oklch(72% 0.151 29.4)",
+          "oklch(84% 0.121 29.4)",
+          "oklch(95% 0.093 29.4)"
+        ]
+      },
+      "blu-telemetria": {
+        "role": "secondary",
+        "displayName": "Blu Telemetria",
+        "canonical": "#3aa0ff",
+        "tonalRamp": [
+          "oklch(15% 0.08 250.4)",
+          "oklch(25% 0.102 250.4)",
+          "oklch(35% 0.124 250.4)",
+          "oklch(48% 0.152 250.4)",
+          "oklch(60% 0.157 250.4)",
+          "oklch(72% 0.131 250.4)",
+          "oklch(84% 0.104 250.4)",
+          "oklch(95% 0.08 250.4)"
+        ]
+      },
+      "oro-podio": {
+        "role": "tertiary",
+        "displayName": "Oro Podio",
+        "canonical": "#ffd54a",
+        "tonalRamp": [
+          "oklch(15% 0.075 91.7)",
+          "oklch(25% 0.096 91.7)",
+          "oklch(35% 0.116 91.7)",
+          "oklch(48% 0.143 91.7)",
+          "oklch(60% 0.147 91.7)",
+          "oklch(72% 0.122 91.7)",
+          "oklch(84% 0.098 91.7)",
+          "oklch(95% 0.075 91.7)"
+        ]
+      },
+      "argento-podio": {
+        "role": "tertiary",
+        "displayName": "Argento Podio",
+        "canonical": "#d5d9de",
+        "tonalRamp": [
+          "oklch(15% 0.004 253.9)",
+          "oklch(25% 0.005 253.9)",
+          "oklch(35% 0.006 253.9)",
+          "oklch(48% 0.007 253.9)",
+          "oklch(60% 0.008 253.9)",
+          "oklch(72% 0.006 253.9)",
+          "oklch(84% 0.005 253.9)",
+          "oklch(95% 0.004 253.9)"
+        ]
+      },
+      "bronzo-podio": {
+        "role": "tertiary",
+        "displayName": "Bronzo Podio",
+        "canonical": "#cd7f32",
+        "tonalRamp": [
+          "oklch(15% 0.063 61.3)",
+          "oklch(25% 0.08 61.3)",
+          "oklch(35% 0.097 61.3)",
+          "oklch(48% 0.12 61.3)",
+          "oklch(60% 0.123 61.3)",
+          "oklch(72% 0.102 61.3)",
+          "oklch(84% 0.082 61.3)",
+          "oklch(95% 0.063 61.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Titolo della hero e delle pagine (h1)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Titoli di sezione (h2)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Intestazioni di card e modali (h3)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Testo corrente in Argento Testo."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Etichette maiuscole: intestazioni di colonna, stat label, badge."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Valori numerici grandi con cifre tabulari: stat card, countdown, hero strip."
+      }
+    },
+    "shadows": [
+      {
+        "name": "contatto",
+        "value": "0 1px 3px rgba(0,0,0,0.4)",
+        "purpose": "Elementi piccoli appoggiati."
+      },
+      {
+        "name": "sollevato",
+        "value": "0 6px 20px rgba(0,0,0,0.45)",
+        "purpose": "Navbar dopo lo scroll."
+      },
+      {
+        "name": "sospeso",
+        "value": "0 18px 50px rgba(0,0,0,0.55)",
+        "purpose": "Modali, dropdown, toast, pannelli laterali, card al passaggio."
+      },
+      {
+        "name": "bagliore-rosso",
+        "value": "0 8px 30px rgba(225,6,0,0.45)",
+        "purpose": "Marchio in navbar; versione contenuta sul bottone primario."
+      },
+      {
+        "name": "focus-input",
+        "value": "0 0 0 3px rgba(225,6,0,0.18)",
+        "purpose": "Anello di focus dei campi."
+      },
+      {
+        "name": "vetro",
+        "value": "background: rgba(22,22,28,0.72); backdrop-filter: blur(14px)",
+        "purpose": "Navbar e superfici .glass."
+      }
+    ],
+    "motion": [
+      {
+        "name": "t-fast",
+        "value": "0.15s ease",
+        "purpose": "Colori, bordi, hover dei bottoni."
+      },
+      {
+        "name": "t-med",
+        "value": "0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Sollevamento card, dropdown, pannelli, modali."
+      },
+      {
+        "name": "t-slow",
+        "value": "0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Uscita del loader."
+      },
+      {
+        "name": "fade-up",
+        "value": "0.55s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Comparsa di blocchi, reveal on scroll e stagger (passo 60ms)."
+      },
+      {
+        "name": "pulse-dot",
+        "value": "1.6s infinite",
+        "purpose": "Puntino live."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "telefono",
+        "value": "560px"
+      },
+      {
+        "name": "mobile",
+        "value": "720px"
+      },
+      {
+        "name": "auth",
+        "value": "860px"
+      },
+      {
+        "name": "tablet",
+        "value": "960px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bottone primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Azione principale: gradiente Rosso Corsa con bagliore.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Vedi la classifica</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: 6px; font-family: 'Titillium Web', system-ui, sans-serif; font-weight: 700; font-size: 0.92rem; letter-spacing: 0.02em; line-height: 1; white-space: nowrap; border: 1px solid transparent; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; } .ds-btn:active { transform: translateY(1px) scale(0.99); } .ds-btn:focus-visible { outline: 2px solid #ff2d24; outline-offset: 2px; } .ds-btn-primary { background: linear-gradient(180deg, #ff2d24, #e10600); color: #fff; box-shadow: 0 4px 16px rgba(225,6,0,0.35); } .ds-btn-primary:hover { box-shadow: 0 6px 26px rgba(225,6,0,0.55); transform: translateY(-1px); }"
+    },
+    {
+      "name": "Bottone ghost",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Azione secondaria su fondo Carbonio.",
+      "html": "<button class=\"ds-btn-ghost\">Calendario</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; padding: 11px 20px; border-radius: 6px; font-family: 'Titillium Web', system-ui, sans-serif; font-weight: 700; font-size: 0.92rem; letter-spacing: 0.02em; line-height: 1; background: #16161c; color: #fff; border: 1px solid rgba(255,255,255,0.14); cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-ghost:hover { background: #1d1d25; border-color: #e10600; } .ds-btn-ghost:focus-visible { outline: 2px solid #ff2d24; outline-offset: 2px; }"
+    },
+    {
+      "name": "Bottone outline",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Azione terziaria trasparente (es. 'Completa' nelle intestazioni).",
+      "html": "<button class=\"ds-btn-outline\">Completa</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; padding: 7px 13px; border-radius: 6px; font-family: 'Titillium Web', system-ui, sans-serif; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.02em; line-height: 1; background: transparent; color: #c7c7d1; border: 1px solid rgba(255,255,255,0.14); cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease; } .ds-btn-outline:hover { border-color: #e10600; color: #fff; } .ds-btn-outline:focus-visible { outline: 2px solid #ff2d24; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo di testo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo con etichetta; focus con bordo e anello Rosso Corsa.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">Email <b>*</b></span><input class=\"ds-input\" placeholder=\"pilota@lega.it\"></label>",
+      "css": ".ds-field { display: block; font-family: 'Titillium Web', system-ui, sans-serif; max-width: 320px; } .ds-label { display: block; font-size: 0.82rem; font-weight: 600; color: #c7c7d1; margin-bottom: 7px; } .ds-label b { color: #e10600; } .ds-input { width: 100%; box-sizing: border-box; padding: 11px 13px; background: #101014; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; color: #fff; font: inherit; font-size: 0.95rem; transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; } .ds-input::placeholder { color: #5c5c6b; } .ds-input:focus { outline: none; border-color: #e10600; box-shadow: 0 0 0 3px rgba(225,6,0,0.18); background: #16161c; }"
+    },
+    {
+      "name": "Navbar",
+      "kind": "nav",
+      "refersTo": "navbar",
+      "description": "Barra in vetro con marchio inclinato e link attivo sottolineato in rosso.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-brand\"><span class=\"ds-mark\">F1</span>LEGA<span class=\"ds-acc\">F1</span></a><div class=\"ds-links\"><a class=\"ds-active\">Classifiche</a><a>Calendario</a><a>Statistiche</a></div></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 24px; height: 66px; padding: 0 24px; background: rgba(22,22,28,0.72); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.08); font-family: 'Titillium Web', system-ui, sans-serif; } .ds-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 1.25rem; color: #fff; letter-spacing: -0.02em; } .ds-mark { width: 40px; height: 26px; display: grid; place-items: center; background: #e10600; color: #fff; font-style: italic; font-size: 0.95rem; border-radius: 4px; transform: skewX(-8deg); box-shadow: 0 8px 30px rgba(225,6,0,0.45); } .ds-acc { color: #e10600; } .ds-links { display: flex; gap: 4px; margin-left: auto; } .ds-links a { position: relative; padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 0.92rem; color: #c7c7d1; cursor: pointer; transition: color 0.15s ease, background 0.15s ease; } .ds-links a:hover { color: #fff; background: rgba(255,255,255,0.05); } .ds-links a.ds-active { color: #fff; } .ds-links a.ds-active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px; background: #e10600; border-radius: 2px; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pillola maiuscola, neutra o con velatura di colore.",
+      "html": "<span class=\"ds-badge\">Riserva</span> <span class=\"ds-badge ds-red\">Admin</span> <span class=\"ds-badge ds-gold\">Pole</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-family: 'Titillium Web', system-ui, sans-serif; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid rgba(255,255,255,0.14); color: #c7c7d1; background: #16161c; } .ds-red { background: rgba(225,6,0,0.15); border-color: rgba(225,6,0,0.4); color: #ff7b76; } .ds-gold { background: rgba(255,213,74,0.14); border-color: rgba(255,213,74,0.4); color: #ffd54a; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenitore Carbonio a 16px, variante accent-top con barra rossa sfumata.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-head\"><h3>Prossimo Gran Premio</h3><a>Tutte le gare →</a></div><p>GP di Monza · domenica 21:00</p></div>",
+      "css": ".ds-card { position: relative; max-width: 380px; background: #16161c; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 24px; font-family: 'Titillium Web', system-ui, sans-serif; color: #c7c7d1; transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), border-color 0.28s, box-shadow 0.28s; } .ds-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #e10600, transparent); border-radius: 16px 16px 0 0; } .ds-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.14); box-shadow: 0 18px 50px rgba(0,0,0,0.55); } .ds-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; } .ds-card-head h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #fff; } .ds-card-head a { font-size: 0.82rem; color: #8a8a99; cursor: pointer; } .ds-card-head a:hover { color: #ff2d24; }"
+    },
+    {
+      "name": "Riga di classifica",
+      "kind": "custom",
+      "refersTo": "position-p1",
+      "description": "Tabella dati con badge posizione metallico, cella pilota e riga 'sei tu'.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>#</th><th>Pilota</th><th class=\"ds-num\">Punti</th></tr></thead><tbody><tr><td><span class=\"ds-pos ds-p1\">1</span></td><td><b>Pilota A</b><small>@handle_a · Scuderia A</small></td><td class=\"ds-num ds-pts\">186</td></tr><tr class=\"ds-me\"><td><span class=\"ds-pos ds-p2\">2</span></td><td><b>Tu</b><small>@tuo_handle · Scuderia B</small></td><td class=\"ds-num ds-pts\">171</td></tr><tr><td><span class=\"ds-pos\">4</span></td><td><b>Pilota C</b><small>@handle_c · Scuderia C</small></td><td class=\"ds-num ds-pts\">142</td></tr></tbody></table>",
+      "css": ".ds-table { width: 100%; max-width: 460px; border-collapse: collapse; background: #16161c; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; font-family: 'Titillium Web', system-ui, sans-serif; font-size: 0.92rem; color: #c7c7d1; } .ds-table th { text-align: left; padding: 14px 16px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8a8a99; font-weight: 700; background: #101014; border-bottom: 1px solid rgba(255,255,255,0.07); } .ds-table td { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); vertical-align: middle; } .ds-table tbody tr { transition: background 0.15s ease; } .ds-table tbody tr:hover { background: rgba(255,255,255,0.03); } .ds-table tr:last-child td { border-bottom: none; } .ds-table b { display: block; color: #fff; font-weight: 600; } .ds-table small { font-size: 0.78rem; color: #8a8a99; } .ds-num { text-align: right !important; font-variant-numeric: tabular-nums; } .ds-pts { font-weight: 700; color: #fff; } .ds-pos { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; box-sizing: border-box; border-radius: 6px; font-weight: 700; background: #26262f; color: #fff; font-variant-numeric: tabular-nums; } .ds-p1 { background: linear-gradient(180deg, #ffe27a, #ffd54a); color: #4a3800; } .ds-p2 { background: linear-gradient(180deg, #eef1f4, #d5d9de); color: #33383d; } .ds-me { background: rgba(225,6,0,0.08); } .ds-me td:first-child { box-shadow: inset 3px 0 0 #e10600; }"
+    },
+    {
+      "name": "Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Tab con bordo inferiore rosso sulla voce attiva.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-on\">Piloti</button><button class=\"ds-tab\">Costruttori</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.07); font-family: 'Titillium Web', system-ui, sans-serif; } .ds-tab { padding: 11px 18px; font: inherit; font-weight: 600; color: #8a8a99; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease; } .ds-tab:hover { color: #fff; } .ds-tab:focus-visible { outline: 2px solid #ff2d24; outline-offset: 2px; } .ds-tab.ds-on { color: #fff; border-bottom-color: #e10600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Notte di Gara",
+    "overview": "Il portale è un Gran Premio in notturna. Il fondo è asfalto quasi nero, le superfici sono strati di carbonio appena più chiari, e la luce arriva da due sole fonti: il Rosso Corsa, che accende ciò che conta (il CTA, la tab attiva, il pilota che sei tu, il prossimo GP), e il bianco dei fari, riservato a titoli, nomi e punti. Sullo sfondo della pagina due aloni radiali, uno rosso in alto a destra e uno blu in basso a sinistra, fanno da riflesso di luci della pista senza mai diventare decorazione in primo piano.\n\nIl carattere è veloce e deciso: Titillium Web in pesi 700–900, il marchio \"LEGA F1\" in corsivo inclinato, bottoni primari con un gradiente rosso e un bagliore che cresce al passaggio del mouse, card che si sollevano di pochi pixel. La densità è da muretto box quando servono i dati (tabelle compatte, numeri tabulari, colonne secondarie nascoste su telefono) e da evento quando si racconta la stagione (hero, countdown, podio in oro/argento/bronzo).\n\nÈ un'interfaccia scura per scelta, non per tema: non esiste una variante chiara e il sistema non va pensato su fondo bianco.",
+    "keyCharacteristics": [
+      "Fondo scuro stratificato in sei livelli (dall'asfalto `#0a0a0c` alla grafite `#33333f`).",
+      "Un solo accento cromatico, il Rosso Corsa, usato come segnale e non come riempimento.",
+      "Titillium Web ovunque, con pesi forti e numeri tabulari per punti, tempi e posizioni.",
+      "Movimento breve e reattivo: sollevamenti di 1–4px, comparse \"fade-up\", rispetto di `prefers-reduced-motion`.",
+      "Podio con colori metallici dedicati, mai riutilizzati per altro."
+    ],
+    "rules": [
+      {
+        "name": "La Regola del Segnale",
+        "body": "Il Rosso Corsa indica cosa è attivo, cosa è tuo o cosa fare adesso. Non si usa come fondo di grandi superfici: al massimo come velatura trasparente (8–22%) dietro un elemento attivo.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regola del Podio",
+        "body": "Oro, argento e bronzo significano solo P1, P2, P3. Non diventano colori di categoria, grafici o decorazione.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regola dei Numeri Tabulari",
+        "body": "Punti, tempi, posizioni e conteggi usano sempre `font-variant-numeric: tabular-nums`, così le colonne restano allineate come su un tabellone dei tempi.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regola del Corsivo di Marca",
+        "body": "Il corsivo 900 appartiene al marchio \"LEGA F1\" (navbar, loader). Non si usa per enfatizzare il testo corrente.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regola della Classifica Leggibile",
+        "body": "Su telefono una classifica mostra almeno posizione, pilota/team e punti senza scroll orizzontale; tutto il resto è una colonna secondaria che si può nascondere. I nomi non vanno mai a capo lettera per lettera.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regola dei Fari",
+        "body": "Solo ciò che è in primo piano (sovrapposto o al passaggio) riceve un'ombra profonda. A riposo le card stanno a terra, separate da colore e bordo.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usare il Rosso Corsa come segnale di stato attivo, di \"tuo\" o di azione primaria, e i token `--f1-red*` invece di valori esadecimali sparsi.",
+      "Do costruire la profondità con i livelli Asfalto → Carbonio → Carbonio Elevato e i bordi trasparenti, prima di aggiungere un'ombra.",
+      "Do usare cifre tabulari per ogni numero confrontabile (punti, tempi, posizioni, countdown).",
+      "Do progettare prima su telefono: compattare le tabelle, nascondere le colonne secondarie con `.hide-sm`, far scorrere le tab in orizzontale.",
+      "Do mantenere il movimento breve (0.15–0.5s) e neutralizzarlo con `prefers-reduced-motion`, come già fa `animations.css`.",
+      "Do dare a ogni elemento interattivo uno stato di focus visibile (anello di 2px in Rosso Corsa Acceso)."
+    ],
+    "donts": [
+      "Don't introdurre un tema chiaro o superfici bianche: il sistema esiste solo in notturna.",
+      "Don't usare oro, argento e bronzo fuori dal podio.",
+      "Don't riempire grandi superfici di Rosso Corsa pieno: oltre i bottoni e i segmenti attivi, il rosso è una velatura trasparente.",
+      "Don't affiancare a Titillium Web un secondo font: la gerarchia si costruisce con peso, dimensione e maiuscolo spaziato.",
+      "Don't usare il corsivo 900 del marchio per enfatizzare il testo corrente.",
+      "Don't lasciare che i nomi dei piloti vadano a capo lettera per lettera nelle tabelle (`overflow-wrap: anywhere` è vietato lì)."
+    ]
+  }
+}
