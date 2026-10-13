@@ -1,0 +1,256 @@
+/* =============================================================
+   views-account.css — Viste app mobile Statistiche, Profilo e
+   Impostazioni (prefissi mx-stat-*, mx-prof-*, mx-set-*).
+   Le classi base (.mx-card, .mx-btn, .mx-empty, ...) e i token
+   glass (--mx-*) sono forniti dalla shell (app.css).
+   ============================================================= */
+
+/* ---------------- Etichette comuni ---------------- */
+.mx-stat-label,
+.mx-prof-label,
+.mx-set-group-title {
+  font-size: 0.74rem;
+  font-weight: var(--fw-bold, 700);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+  line-height: 1.2;
+}
+
+/* =================== STATISTICHE =================== */
+.mx-stat-body { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.mx-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.mx-stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 92px;
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--mx-glass, var(--glass-bg));
+  border: 1px solid var(--mx-glass-border, var(--border));
+  -webkit-backdrop-filter: blur(var(--mx-blur, var(--glass-blur)));
+  backdrop-filter: blur(var(--mx-blur, var(--glass-blur)));
+  box-shadow: inset 0 1px 0 var(--mx-highlight, rgba(255, 255, 255, 0.06));
+  min-width: 0;
+}
+.mx-stat-tile.mx-skeleton { background: var(--bg-150); }
+
+.mx-stat-value {
+  font-size: 2rem;
+  font-weight: var(--fw-black, 900);
+  line-height: 1;
+  color: var(--text-hi);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mx-stat-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-mid);
+}
+.mx-stat-note strong { color: var(--text-hi); }
+
+/* Forma ultime 5 gare */
+.mx-stat-form {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+.mx-stat-form-tile {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: var(--bg-200);
+  color: var(--text-hi);
+  font-weight: var(--fw-bold, 700);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.mx-stat-form-tile.p1 { background: linear-gradient(135deg, #ffe680, var(--gold)); color: #4a3800; }
+.mx-stat-form-tile.p2 { background: linear-gradient(135deg, #f1f3f5, var(--silver)); color: #2e3237; }
+.mx-stat-form-tile.p3 { background: linear-gradient(135deg, #e3a065, var(--bronze)); color: #3b2008; }
+.mx-stat-form-tile.dnf {
+  background: rgba(231, 76, 60, 0.14);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  color: #ff7b76;
+}
+
+/* Grafico */
+.mx-stat-chart { position: relative; height: 200px; margin-top: var(--sp-3); }
+.mx-stat-chart canvas { max-width: 100%; }
+
+.mx-stat-sk-form { height: 104px; }
+.mx-stat-sk-chart { height: 248px; }
+
+/* ===================== PROFILO ===================== */
+.mx-prof-body { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.mx-prof-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) 0 var(--sp-2);
+}
+.mx-prof-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-150);
+  border: 3px solid var(--f1-red);
+  margin-bottom: var(--sp-2);
+}
+.mx-prof-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: var(--fw-black, 900);
+  line-height: 1.15;
+  color: var(--text-hi);
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.mx-prof-handle { margin: 0; font-weight: 600; color: var(--text-lo); }
+.mx-prof-sk-line { width: 60%; height: 22px; border-radius: var(--r-sm); }
+.mx-prof-sk-card { height: 84px; }
+
+.mx-prof-standing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.mx-prof-standing > div { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.mx-prof-big {
+  font-size: 2rem;
+  font-weight: var(--fw-black, 900);
+  line-height: 1;
+  color: var(--text-hi);
+  font-variant-numeric: tabular-nums;
+}
+
+.mx-prof-team {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 64px;
+}
+.mx-prof-team .mx-team-bar { align-self: stretch; }
+.mx-prof-team-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.mx-prof-team-name {
+  font-weight: var(--fw-bold, 700);
+  color: var(--text-hi);
+  font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-prof-team-pos { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.mx-prof-team-pos .mx-num { font-weight: var(--fw-black, 900); font-size: 1.3rem; color: var(--text-hi); }
+
+.mx-prof-details dl { margin: 0; }
+.mx-prof-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 44px;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.mx-prof-detail:last-child { border-bottom: 0; }
+.mx-prof-detail dd { margin: 0; text-align: right; min-width: 0; }
+.mx-prof-value { color: var(--text-hi); font-weight: 600; }
+.mx-prof-value.mx-num { font-weight: var(--fw-black, 900); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+.mx-prof-chips { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-1); }
+.mx-prof-chip {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg-150);
+  border: 1px solid var(--border-strong);
+  color: var(--text-mid);
+  font-size: 0.74rem;
+  font-weight: var(--fw-bold, 700);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mx-prof-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  text-decoration: none;
+}
+
+/* =================== IMPOSTAZIONI =================== */
+.mx-set { display: flex; flex-direction: column; gap: var(--sp-5); }
+
+.mx-set-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mx-set-info-name {
+  font-weight: var(--fw-bold, 700);
+  font-size: 1.1rem;
+  color: var(--text-hi);
+  overflow-wrap: break-word;
+}
+.mx-set-info-ver { font-size: 0.85rem; color: var(--text-lo); font-variant-numeric: tabular-nums; }
+
+.mx-set-group { display: flex; flex-direction: column; gap: var(--sp-2); }
+.mx-set-group-title { margin: 0 0 0 var(--sp-4); }
+
+/* Card che contiene le righe: niente padding, le righe vanno a filo */
+.mx-card.mx-set-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.mx-set-list > li + li .mx-set-row { border-top: 1px solid var(--border); }
+
+.mx-set-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 52px;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--text-hi);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+}
+.mx-set-row:hover,
+.mx-set-row:active { background: rgba(255, 255, 255, 0.05); }
+.mx-set-row:focus-visible {
+  outline: 2px solid var(--f1-red-light);
+  outline-offset: -2px;
+}
+.mx-set-row-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mx-set-row-label { font-weight: 600; font-size: 1rem; }
+.mx-set-row-sub { font-size: 0.82rem; color: var(--text-lo); }
+.mx-set-chevron { flex: none; color: var(--text-dim); }
+
+.mx-set-logout {
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--sp-2);
+}
