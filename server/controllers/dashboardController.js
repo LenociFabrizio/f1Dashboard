@@ -234,11 +234,14 @@ export const mobileSummary = asyncHandler(async (req, res) => {
 
   let team = null;
   if (teamId !== null) {
-    const c = constructorStandings.find((s) => s.team_id === teamId);
-    if (c) {
+    const ci = constructorStandings.findIndex((s) => s.team_id === teamId);
+    if (ci >= 0) {
+      const c = constructorStandings[ci];
       team = {
         team_id: c.team_id, team_name: c.team_name, team_color: c.team_color, logo: c.logo,
         position: c.position, total: constructorStandings.length, points: c.points,
+        gap_to_leader: round(constructorStandings[0].points - c.points, 1),
+        gap_to_ahead: ci > 0 ? round(constructorStandings[ci - 1].points - c.points, 1) : null,
       };
     } else {
       // Scuderia non ancora in classifica: solo dati anagrafici

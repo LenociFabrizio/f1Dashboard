@@ -30,6 +30,17 @@ function lastResultLine(last) {
     </span>`;
 }
 
+/** Distacchi dal leader e da chi precede (piloti e scuderie, stessa forma). */
+function gapsLine(x, leaderText) {
+  const gaps = [];
+  if (x.gap_to_leader > 0) gaps.push(`<span class="mx-num">−${pts(x.gap_to_leader)}</span> dal leader`);
+  else gaps.push(leaderText);
+  if (x.gap_to_ahead != null && x.position > 1) {
+    gaps.push(`<span class="mx-num">−${pts(x.gap_to_ahead)}</span> da P${esc(x.position - 1)}`);
+  }
+  return `<span class="mx-home-gaps">${gaps.map((g) => `<span>${g}</span>`).join('')}</span>`;
+}
+
 function driverCard(s) {
   const d = s.driver;
   if (!d) {
@@ -47,13 +58,6 @@ function driverCard(s) {
       </section>`;
   }
 
-  const gaps = [];
-  if (d.gap_to_leader > 0) gaps.push(`<span class="mx-num">−${pts(d.gap_to_leader)}</span> dal leader`);
-  else gaps.push('Leader del campionato');
-  if (d.gap_to_ahead != null && d.position > 1) {
-    gaps.push(`<span class="mx-num">−${pts(d.gap_to_ahead)}</span> da P${esc(d.position - 1)}`);
-  }
-
   return `
     <button type="button" class="mx-card mx-home-card mx-home-tap mx-home-driver" data-go="classifica">
       <span class="mx-home-label">La tua posizione</span>
@@ -62,7 +66,7 @@ function driverCard(s) {
         <span class="mx-home-of mx-num">/ ${esc(d.total)}</span>
       </span>
       <span class="mx-home-points"><b class="mx-num">${pts(d.points)}</b> punti</span>
-      <span class="mx-home-gaps">${gaps.map((g) => `<span>${g}</span>`).join('')}</span>
+      ${gapsLine(d, 'Leader del campionato')}
       ${lastResultLine(s.last_race)}
       <span class="sr-only">Apri la classifica</span>
     </button>`;
@@ -97,6 +101,7 @@ function teamCard(s) {
         ${pos}
       </div>
       <div class="mx-home-points"><b class="mx-num">${pts(t.points)}</b> punti</div>
+      ${t.position != null ? gapsLine(t, 'Leader costruttori') : ''}
     </section>`;
 }
 
