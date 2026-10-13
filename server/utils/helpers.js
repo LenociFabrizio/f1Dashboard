@@ -41,16 +41,19 @@ export function sanitizeUser(user) {
  * Whitelist dei campi utente esponibili PUBBLICAMENTE (profilo pilota).
  * Approccio a whitelist: ogni nuova colonna di `users` resta privata finché
  * non viene aggiunta qui esplicitamente. Mai email, credenziali o campi interni.
+ * Gli aiuti alla guida (assist_*) sono pubblici per scelta: GET /api/races/:id
+ * li mostra già come badge accanto al giro veloce.
  */
 export const PUBLIC_USER_FIELDS = [
   'id', 'handle', 'display_name', 'first_name', 'last_name', 'avatar',
   'nationality', 'favorite_number', 'favorite_driver', 'reserve_driver',
   'biography', 'role', 'team_id', 'team_name', 'team_color', 'team_logo',
+  'assist_abs', 'assist_tc', 'assist_gearbox',
   'platforms', 'created_at',
 ];
 
 /** Campi aggiuntivi visibili solo al diretto interessato o a un admin. */
-export const PRIVATE_USER_FIELDS = ['email', 'assist_abs', 'assist_tc', 'assist_gearbox'];
+export const PRIVATE_USER_FIELDS = ['email'];
 
 /**
  * Proietta una riga utente sui soli campi pubblici.

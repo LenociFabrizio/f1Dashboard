@@ -158,18 +158,21 @@ export const adminDashboard = asyncHandler(async (_req, res) => {
 export const mobileSummary = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  // Dati pubblici dell'utente (mai email/password_hash)
-  const me = await db
-    .prepare(
-      `SELECT u.id, u.display_name, gph.handle AS handle, u.avatar, u.role, u.team_id,
-              u.nationality, u.favorite_number
-         FROM users u
-         ${PRIMARY_HANDLE_JOIN}
-        WHERE u.id = ?`
-    )
-    .get(userId);
+  // Query indipendenti in parallelo (su Turso remoto ogni await è un round-trip).
+  // Dati pubblici dell'utente (mai email/password_hash) + stagione attiva.
+  const [me, season] = await Promise.all([
+    db
+      .prepare(
+        `SELECT u.id, u.display_name, gph.handle AS handle, u.avatar, u.role, u.team_id,
+                u.nationality, u.favorite_number
+           FROM users u
+           ${PRIMARY_HANDLE_JOIN}
+          WHERE u.id = ?`
+      )
+      .get(userId),
+    activeSeason(),
+  ]);
 
-  const season = await activeSeason();
   if (!season) {
     return res.json({
       season: null, me: me || null, driver: null, team: null,
@@ -177,15 +180,24 @@ export const mobileSummary = asyncHandler(async (req, res) => {
     });
   }
 
-  const counts = await db
-    .prepare(
-      `SELECT COUNT(*) AS total, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed
-         FROM races WHERE season_id = ?`
-    )
-    .get(season.id);
-
-  const driverStandings = await getDriverStandings(season.id);
-  const constructorStandings = await getConstructorStandings(season.id);
+  // Tutto ciò che dipende solo dalla stagione parte insieme; in sequenza
+  // restano solo fallback scuderia, anagrafica team e my_result (dipendenti).
+  const [counts, driverStandings, constructorStandings, next, last] = await Promise.all([
+    db
+      .prepare(
+        `SELECT COUNT(*) AS total, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed
+           FROM races WHERE season_id = ?`
+      )
+      .get(season.id),
+    getDriverStandings(season.id),
+    getConstructorStandings(season.id),
+    db
+      .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='scheduled' ORDER BY ra.round LIMIT 1`)
+      .get(season.id),
+    db
+      .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='completed' ORDER BY ra.round DESC LIMIT 1`)
+      .get(season.id),
+  ]);
 
   // Posizione in classifica piloti
   let driver = null;
@@ -239,13 +251,6 @@ export const mobileSummary = asyncHandler(async (req, res) => {
       }
     }
   }
-
-  const next = await db
-    .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='scheduled' ORDER BY ra.round LIMIT 1`)
-    .get(season.id);
-  const last = await db
-    .prepare(`${RACE_SELECT} WHERE ra.season_id=? AND ra.status='completed' ORDER BY ra.round DESC LIMIT 1`)
-    .get(season.id);
 
   let lastRace = null;
   if (last) {

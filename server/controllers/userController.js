@@ -60,14 +60,16 @@ export const getUser = asyncHandler(async (req, res) => {
         WHERE u.id = ?`
     )
     .get(req.params.id);
-  if (!user) throw new HttpError(404, 'Pilota non trovato');
+  const viewer = req.user;
+  const isAdmin = !!viewer && viewer.role === ROLES.ADMIN;
+  // Profili disattivati: nascosti come in listUsers, tranne all'admin (form di modifica utente).
+  if (!user || (!user.is_active && !isAdmin)) throw new HttpError(404, 'Pilota non trovato');
   // Piattaforme di gioco dichiarate (dagli handle F1 25), senza esporre i nickname.
   const platRows = await db
     .prepare("SELECT DISTINCT platform FROM game_identities WHERE user_id = ? AND platform <> '' ORDER BY platform")
     .all(user.id);
   user.platforms = platRows.map((p) => p.platform);
-  const viewer = req.user;
-  const includePrivate = !!viewer && (viewer.id === user.id || viewer.role === ROLES.ADMIN);
+  const includePrivate = isAdmin || (!!viewer && viewer.id === user.id);
   res.json(toPublicUser(user, { includePrivate }));
 });
 
