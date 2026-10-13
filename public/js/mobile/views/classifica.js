@@ -2,6 +2,8 @@
    classifica.js — Vista "Classifica" della SPA mobile: piloti e
    costruttori con selettore segmentato. Su telefono mostra solo
    posizione, pilota/team e punti (Regola della Classifica Leggibile).
+   Tenendo premuta una scuderia si apre l'anteprima dei punti dei suoi
+   piloti (stile Haptic Touch); con mouse/tastiera basta il clic.
    ============================================================= */
 import api from '../../core/api.js';
 import { esc } from '../../core/ui.js';
@@ -10,6 +12,8 @@ import { handleAuthError } from '../session.js';
 import { pts, teamColor, seasonLabel, getSummary, bindAvatarFallback, errorBlock } from './_shared.js';
 
 const TAB_KEY = 'mx:classifica:tab';
+const HOLD_MS = 450;   // durata della pressione prolungata
+const MOVE_PX = 10;    // oltre questo spostamento è uno scroll, non una pressione
 
 const posClass = (p) => (p >= 1 && p <= 3 ? ` p${p}` : '');
 
@@ -53,7 +57,7 @@ function constructorRow(c, myTeamId) {
   ].filter(Boolean).join(' · ');
   return `
     <li>
-      <div class="mx-row mx-std-row${me ? ' mx-row--me' : ''}"${me ? ' aria-current="true"' : ''}>
+      <button type="button" class="mx-row mx-std-row mx-std-peekable${me ? ' mx-row--me' : ''}" data-team="${esc(c.team_id)}" aria-haspopup="dialog"${me ? ' aria-current="true"' : ''}>
         <span class="mx-pos${posClass(c.position)}">${esc(c.position)}</span>
         <span class="mx-team-bar mx-std-bar" style="--team:${teamColor(c.team_color)}" aria-hidden="true"></span>
         <span class="mx-row-main mx-std-main">
@@ -61,8 +65,136 @@ function constructorRow(c, myTeamId) {
           ${sub ? `<span class="mx-row-sub mx-std-sub"><span class="mx-std-subtext">${sub}</span></span>` : ''}
         </span>
         <span class="mx-num mx-std-pts">${pts(c.points)}<small> pt</small></span>
-      </div>
+        <span class="sr-only">, mostra i punti dei piloti</span>
+      </button>
     </li>`;
+}
+
+/** Contenuto dell'anteprima: piloti della scuderia con i punti portati. */
+function peekContent(c) {
+  const drivers = Array.isArray(c.drivers) ? c.drivers : [];
+  const total = Number(c.points) || 0;
+  const rows = drivers.map((d) => {
+    const share = total > 0 ? Math.round((Number(d.points) / total) * 100) : 0;
+    return `
+      <li class="mx-peek-row">
+        <img class="mx-std-avatar" src="${esc(avatarUrl(d))}" alt="" width="32" height="32">
+        <span class="mx-peek-main">
+          <span class="mx-std-name">${esc(d.display_name || 'Pilota')}</span>
+          <span class="mx-peek-bar" aria-hidden="true"><i style="width:${share}%"></i></span>
+        </span>
+        <span class="mx-num mx-std-pts">${pts(d.points)}<small> pt</small></span>
+      </li>`;
+  }).join('');
+  return `
+    <div class="mx-peek-card" style="--team:${teamColor(c.team_color)}">
+      <div class="mx-peek-head">
+        <span class="mx-team-bar" aria-hidden="true"></span>
+        <h2 class="mx-peek-title" id="mx-peek-h">${esc(c.team_name || 'Scuderia')}</h2>
+        <span class="mx-num mx-peek-total">${pts(c.points)}<small> pt</small></span>
+      </div>
+      ${rows
+        ? `<ol class="mx-peek-list" aria-label="Punti per pilota">${rows}</ol>`
+        : '<p class="mx-peek-empty">Nessun pilota ha ancora portato punti.</p>'}
+      <form method="dialog"><button class="mx-btn mx-peek-close" type="submit">Chiudi</button></form>
+    </div>`;
+}
+
+/**
+ * Anteprima in un <dialog> modale (top layer: sopra la chrome, focus e Esc
+ * gestiti dal browser). Si chiude anche toccando lo sfondo.
+ */
+function openPeek(c, opener) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'mx-peek';
+  dlg.setAttribute('aria-labelledby', 'mx-peek-h');
+  dlg.innerHTML = peekContent(c);
+  bindAvatarFallback(dlg, 'img.mx-std-avatar');
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => {
+    dlg.remove();
+    if (opener?.isConnected) opener.focus({ preventScroll: true });
+  });
+  document.body.append(dlg);
+  dlg.showModal();
+  requestAnimationFrame(() => dlg.classList.add('is-open'));
+  return dlg;
+}
+
+/**
+ * Al rilascio del dito il browser genera un click nel punto toccato, che ora
+ * cade sull'anteprima appena aperta (sfondo o "Chiudi") e la richiuderebbe:
+ * si scarta solo quel click, se arriva subito dopo il rilascio.
+ */
+function swallowReleaseClick() {
+  window.addEventListener('pointerup', () => {
+    const until = performance.now() + 400;
+    const stop = (e) => {
+      window.removeEventListener('click', stop, true);
+      if (performance.now() > until) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('click', stop, true);
+    setTimeout(() => window.removeEventListener('click', stop, true), 400);
+  }, { once: true, capture: true });
+}
+
+/**
+ * Pressione prolungata sulle righe costruttori (touch/penna): la riga si
+ * "comprime" durante l'attesa, poi vibrazione breve e anteprima. Il tap
+ * breve non apre nulla; mouse e tastiera aprono con il clic.
+ */
+function bindPeek(body, list) {
+  const byId = new Map(list.map((c) => [String(c.team_id), c]));
+  let hold = null;
+
+  const cancel = () => {
+    if (!hold) return;
+    clearTimeout(hold.timer);
+    hold.row.classList.remove('is-pressing');
+    hold = null;
+  };
+
+  body.querySelectorAll('.mx-std-peekable').forEach((row) => {
+    const team = byId.get(row.dataset.team);
+    if (!team) return;
+
+    let lastType = '';
+    row.addEventListener('pointerdown', (e) => {
+      lastType = e.pointerType;
+      if (e.pointerType === 'mouse') return;
+      cancel();
+      row.classList.add('is-pressing');
+      hold = {
+        row, x: e.clientX, y: e.clientY, fired: false,
+        timer: setTimeout(() => {
+          row.classList.remove('is-pressing');
+          hold.fired = true;
+          swallowReleaseClick();
+          try { navigator.vibrate?.(12); } catch { /* non supportato (es. iOS) */ }
+          openPeek(team, row);
+        }, HOLD_MS),
+      };
+    });
+    row.addEventListener('pointermove', (e) => {
+      if (hold && !hold.fired && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > MOVE_PX) cancel();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => row.addEventListener(t, () => {
+      if (hold && !hold.fired) cancel(); else hold = null;
+    }));
+    // Niente menu contestuale/selezione del sistema durante la pressione
+    row.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    row.addEventListener('click', (e) => {
+      // Tap breve su touch: nessuna azione (l'anteprima è sulla pressione
+      // prolungata). Click da tastiera (detail 0) o mouse: apre subito.
+      const touch = lastType === 'touch' || lastType === 'pen';
+      lastType = '';
+      if (touch && e.detail !== 0) return;
+      openPeek(team, row);
+    });
+  });
 }
 
 const skeleton = () => `
@@ -148,6 +280,7 @@ export default {
           ${list.map((x) => (tab === 'drivers' ? driverRow(x, meId) : constructorRow(x, myTeamId))).join('')}
         </ol>`;
       bindAvatarFallback(body, 'img.mx-std-avatar');
+      if (tab === 'constructors') bindPeek(body, list);
     };
 
     buttons.forEach((b) => b.addEventListener('click', () => {
@@ -156,6 +289,9 @@ export default {
 
     await show(state.tab);
 
-    return () => { state.disposed = true; };
+    return () => {
+      state.disposed = true;
+      document.querySelectorAll('dialog.mx-peek').forEach((d) => d.close());
+    };
   },
 };

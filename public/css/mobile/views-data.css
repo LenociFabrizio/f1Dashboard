@@ -376,6 +376,112 @@ a.mx-cal-row:focus-visible {
 }
 .mx-std-pts small { font-size: 0.72rem; font-weight: 600; color: var(--text-lo); }
 
+/* Righe costruttori con anteprima a pressione prolungata (stile Haptic Touch):
+   durante l'attesa la riga si comprime, niente callout/selezione di sistema. */
+.mx-std-peekable {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.45s cubic-bezier(0.2, 0, 0, 1), background-color var(--t-fast);
+}
+.mx-std-peekable.is-pressing {
+  transform: scale(0.96);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.mx-std-peekable:focus-visible {
+  outline: 2px solid var(--f1-red-light);
+  outline-offset: -2px;
+}
+
+.mx-peek {
+  width: min(360px, calc(100vw - 2 * var(--sp-4)));
+  max-width: none;
+  padding: 0;
+  margin: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+.mx-peek::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.mx-peek.is-open::backdrop { opacity: 1; }
+
+.mx-peek-card {
+  padding: var(--sp-4);
+  border-radius: var(--mx-radius);
+  background: var(--mx-glass);
+  border: 1px solid var(--mx-glass-border, var(--border));
+  border-top: 3px solid var(--team, var(--bg-300));
+  -webkit-backdrop-filter: var(--mx-blur);
+  backdrop-filter: var(--mx-blur);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  transform: scale(0.88);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.18s ease;
+}
+.mx-peek.is-open .mx-peek-card { transform: none; opacity: 1; }
+
+.mx-peek-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.mx-peek-head .mx-team-bar { height: 24px; }
+.mx-peek-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-hi);
+}
+.mx-peek-total { font-size: 1.15rem; font-weight: 900; color: var(--text-hi); white-space: nowrap; }
+.mx-peek-total small { font-size: 0.7rem; font-weight: 600; color: var(--text-lo); }
+
+.mx-peek-list {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+}
+.mx-peek-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  border-top: 1px solid var(--mx-glass-border, var(--border));
+}
+.mx-peek-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mx-peek-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mx-peek-bar i { display: block; height: 100%; background: var(--team, var(--f1-red)); }
+.mx-peek-empty { margin: var(--sp-3) 0 0; color: var(--text-lo); }
+.mx-peek-close { width: 100%; margin-top: var(--sp-3); }
+
 .mx-std-sk,
 .mx-cal-sk { height: 52px; border-radius: var(--r-md); }
 .mx-std-sk + .mx-std-sk,
@@ -477,4 +583,7 @@ a.mx-cal-row:focus-visible {
   .mx-home-tap { transition: none; }
   .mx-home-tap:active { transform: none; }
   .mx-home-live-dot { animation: none; }
+  .mx-std-peekable { transition: background-color var(--t-fast); }
+  .mx-std-peekable.is-pressing { transform: none; }
+  .mx-peek-card { transform: none; transition: opacity 0.18s ease; }
 }

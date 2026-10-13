@@ -122,7 +122,8 @@ export async function getConstructorStandings(seasonId) {
   // Così le due classifiche restano sempre allineate.
   const rows = await db
     .prepare(
-      `SELECT r.*, u.team_id AS cur_team_id, r.team_id AS race_team_id
+      `SELECT r.*, u.team_id AS cur_team_id, r.team_id AS race_team_id,
+              u.display_name, u.avatar
          FROM results r
          JOIN races ra ON ra.id = r.race_id
          JOIN users u  ON u.id  = r.user_id
@@ -164,10 +165,19 @@ export async function getConstructorStandings(seasonId) {
         fastest_laps: 0,
         entries: 0,
         race_ids: new Set(), // GP disputati (almeno una vettura in gara)
+        drivers: new Map(), // contributo di ogni pilota (anteprima nella app mobile)
       });
     }
     const s = map.get(row.tid);
     s.points += row.points;
+    if (!s.drivers.has(row.user_id)) {
+      s.drivers.set(row.user_id, {
+        user_id: row.user_id, display_name: row.display_name, avatar: row.avatar, points: 0, races: 0,
+      });
+    }
+    const d = s.drivers.get(row.user_id);
+    d.points += row.points;
+    d.races += 1;
     s.entries += 1;
     s.race_ids.add(row.race_id);
     if (row.pole) s.poles += 1;
@@ -180,8 +190,11 @@ export async function getConstructorStandings(seasonId) {
 
   // Media/gara = punti del team per GP disputato (non per singola vettura:
   // altrimenti la media di un team con due piloti risulterebbe dimezzata).
-  let standings = Array.from(map.values()).map(({ race_ids, ...s }) => ({
+  let standings = Array.from(map.values()).map(({ race_ids, drivers, ...s }) => ({
     ...s,
+    drivers: Array.from(drivers.values())
+      .map((d) => ({ ...d, points: round(d.points, 1) }))
+      .sort((a, b) => b.points - a.points),
     races: race_ids.size,
     points: round(s.points, 1),
     avg_points: race_ids.size ? round(s.points / race_ids.size, 2) : 0,
