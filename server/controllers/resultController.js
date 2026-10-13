@@ -71,7 +71,9 @@ export async function persistResults(raceId, rows, opts = {}) {
   //   1) la scuderia già salvata per quel pilota in QUESTA gara (ri-salvataggio
   //      o re-import telemetria): i punti costruttori restano al team con cui
   //      ha corso, anche se nel frattempo il pilota ha cambiato scuderia;
-  //   2) altrimenti la scuderia attuale del pilota.
+  //   2) altrimenti la scuderia attuale del pilota;
+  //   3) altrimenti (pilota senza scuderia di lega, es. dopo un reset
+  //      assegnazioni) il team in-game rilevato dalla telemetria (game_team_id).
   // Evita risultati con team_id NULL (che sparirebbero dalla classifica
   // costruttori) e spostamenti retroattivi di punti tra team.
   const teamByUser = new Map(
@@ -103,7 +105,9 @@ export async function persistResults(raceId, rows, opts = {}) {
         user_id: Number(r.user_id),
         team_id: r.team_id
           ? Number(r.team_id)
-          : (storedTeamByUser.get(Number(r.user_id)) ?? teamByUser.get(Number(r.user_id)) ?? null),
+          : (storedTeamByUser.get(Number(r.user_id))
+            ?? teamByUser.get(Number(r.user_id))
+            ?? (r.game_team_id ? Number(r.game_team_id) : null)),
         grid_position: r.grid_position ? Number(r.grid_position) : null,
         position,
         points,

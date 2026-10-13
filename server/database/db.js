@@ -138,6 +138,11 @@ async function runMigrations() {
   }
   // Risultati legacy senza team: fissa la scuderia (classifica costruttori stabile).
   await db.run(FREEZE_RESULT_TEAMS_SQL);
+  // Quelli ancora senza team (pilota senza scuderia di lega all'import
+  // telemetria): team in-game della sessione importata. Import dinamico per
+  // evitare il ciclo db.js ↔ captureService.js.
+  const { backfillResultTeamsFromCaptures } = await import('../services/captureService.js');
+  await backfillResultTeamsFromCaptures();
 
   const seasonCols = await db.all('PRAGMA table_info(seasons)');
   const hasSeason = (name) => seasonCols.some((c) => c.name === name);

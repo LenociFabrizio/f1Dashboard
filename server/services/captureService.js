@@ -19,7 +19,7 @@ import db from '../database/db.js';
 import { HttpError } from '../utils/helpers.js';
 import { persistResults } from '../controllers/resultController.js';
 import { persistQualifying } from '../controllers/raceController.js';
-import { resultStatusToDnf, msToLapTime, msToRaceTime, msToGap } from '../utils/f1-mappings.js';
+import { resultStatusToDnf, msToLapTime, msToRaceTime, msToGap, matchTeamId } from '../utils/f1-mappings.js';
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -207,6 +207,10 @@ export function buildRows(payload, resolved, opts = {}) {
       user_id: p.userId,
       // team_id lasciato null: persistResults usa la scuderia di lega del pilota.
       team_id: null,
+      // Team in-game della vettura (m_teamId → team del sito): solo fallback
+      // se il pilota non ha una scuderia di lega, così i punti non spariscono
+      // dalla classifica costruttori.
+      game_team_id: opts.teams ? matchTeamId(opts.teams, p.teamId) : null,
       grid_position: c.gridPosition || null,
       position: dnf ? null : (c.position || null),
       // points omesso: lo ricalcola persistResults con la config della stagione.
@@ -404,7 +408,8 @@ export async function commitCapture(capture, opts) {
   const poleRow = await db
     .prepare('SELECT user_id FROM qualifying WHERE race_id = ? AND position = 1')
     .get(raceId);
-  const { resultRows, skipped } = buildRows(payload, resolved, { poleUserId: poleRow ? poleRow.user_id : null });
+  const teams = await db.prepare('SELECT id, name FROM teams').all();
+  const { resultRows, skipped } = buildRows(payload, resolved, { poleUserId: poleRow ? poleRow.user_id : null, teams });
 
   // Fallback manuale: risultati di piloti (registrati) non rilevati dal collector.
   const rows = mergeManualRows(resultRows, opts.manualResults);
@@ -425,6 +430,53 @@ export async function commitCapture(capture, opts) {
   await markImported(capture.id, raceId);
 
   return { sessionType: 'race', results, qualifying: 0, lapTimes: lapRows.length, traces: traceRows.length, skipped };
+}
+
+/**
+ * Recupera la scuderia dei risultati rimasti senza team (team_id NULL: piloti
+ * importati dalla telemetria mentre non avevano una scuderia di lega), usando
+ * il team in-game della sessione importata in quella gara. Senza questo quei
+ * punti non compaiono nella classifica costruttori.
+ * Idempotente e leggera: esce subito se non ci sono risultati senza team.
+ * @returns {Promise<number>} risultati aggiornati
+ */
+export async function backfillResultTeamsFromCaptures() {
+  const orphanRaces = await db
+    .prepare('SELECT DISTINCT race_id FROM results WHERE team_id IS NULL')
+    .all();
+  if (!orphanRaces.length) return 0;
+
+  const teams = await db.prepare('SELECT id, name FROM teams').all();
+  const stmts = [];
+  for (const { race_id } of orphanRaces) {
+    const captures = await db
+      .prepare(
+        `SELECT payload_json, session_type FROM captured_sessions
+          WHERE race_id = ? AND status = 'imported'
+          ORDER BY imported_at DESC`
+      )
+      .all(race_id);
+    const capture = captures.find((c) => sessionKind(c.session_type) === 'race') || captures[0];
+    if (!capture) continue;
+    let payload;
+    try { payload = parsePayload(capture); } catch { continue; }
+
+    const resolved = await resolveIdentities(payload.participants || []);
+    const done = new Set();
+    for (const p of resolved) {
+      if (!p.userId || done.has(p.userId)) continue;
+      const teamId = matchTeamId(teams, p.teamId);
+      if (!teamId) continue;
+      done.add(p.userId);
+      stmts.push({
+        sql: 'UPDATE results SET team_id = ? WHERE race_id = ? AND user_id = ? AND team_id IS NULL',
+        args: [teamId, race_id, p.userId],
+      });
+    }
+  }
+  if (!stmts.length) return 0;
+  const rs = await db.raw.batch(stmts, 'write');
+  return rs.reduce((n, r) => n + (r.rowsAffected || 0), 0);
 }
 
 /** Marca una sessione catturata come importata nella gara indicata. */
